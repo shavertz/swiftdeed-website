@@ -201,9 +201,9 @@ export default function HomePage({ onGetStarted }) {
         </div>
         <div style={s.footerCopy}>© 2026 SwiftDeed. All rights reserved.</div>
         <div style={s.footerLinks}>
-          <a style={s.footerLink}>Privacy</a>
-          <a style={s.footerLink}>Terms</a>
-          <a style={s.footerLink}>Contact</a>
+          <a style={s.footerLink} href="#">Privacy</a>
+          <a style={s.footerLink} href="#">Terms</a>
+          <a style={s.footerLink} href="#">Contact</a>
         </div>
       </div>
 
