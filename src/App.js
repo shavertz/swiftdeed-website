@@ -5,6 +5,14 @@ import RequestForm from './components/RequestForm';
 export default function App() {
   const [page, setPage] = useState('home');
 
+  const scrollTo = (id) => {
+    setPage('home');
+    setTimeout(() => {
+      const el = document.getElementById(id);
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  };
+
   const nav = (
     <div style={{
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -17,12 +25,32 @@ export default function App() {
       >
         <span style={{ color: '#fff' }}>Swift</span><span style={{ color: '#FFD700' }}>Deed</span>
       </div>
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+
+      {page === 'home' && (
+        <div style={{ display: 'flex', gap: 32, alignItems: 'center' }}>
+          <span onClick={() => scrollTo('how')} style={{ fontSize: 14, color: '#aaa', cursor: 'pointer' }}>How it works</span>
+          <span onClick={() => scrollTo('pricing')} style={{ fontSize: 14, color: '#aaa', cursor: 'pointer' }}>Pricing</span>
+          <span onClick={() => scrollTo('why')} style={{ fontSize: 14, color: '#aaa', cursor: 'pointer' }}>Why SwiftDeed</span>
+        </div>
+      )}
+
+      {page === 'request' && (
         <button
           onClick={() => setPage('home')}
           style={{
             background: 'transparent', color: '#aaa', fontSize: 14,
-            padding: '8px 18px', borderRadius: 6, border: '0.5px solid #2a2a2a', cursor: 'pointer'
+            padding: '8px 0', border: 'none', cursor: 'pointer'
+          }}
+        >
+          ← Back to home
+        </button>
+      )}
+
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+        <button
+          style={{
+            background: 'transparent', color: '#aaa', fontSize: 14,
+            padding: '8px 18px', borderRadius: 6, border: '0.5px solid #2a2a2a', cursor: 'default'
           }}
         >
           Log in

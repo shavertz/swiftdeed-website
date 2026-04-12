@@ -95,7 +95,7 @@ export default function HomePage({ onGetStarted }) {
       </div>
 
       {/* HOW IT WORKS */}
-      <div style={s.howWrap}>
+      <div id="how" style={s.howWrap}>
         <div style={s.howInner}>
           <div style={s.sectionLabel}>How it works</div>
           <div style={s.sectionTitle}>Three steps. That's it.</div>
@@ -143,7 +143,7 @@ export default function HomePage({ onGetStarted }) {
       </div>
 
       {/* PRICING */}
-      <div style={s.pricingSection}>
+      <div id="pricing" style={s.pricingSection}>
         <div style={s.sectionLabel}>Pricing</div>
         <div style={s.sectionTitle}>Simple, flat pricing</div>
         <div style={s.sectionSub}>No hidden fees. No subscriptions. Pay per statement.</div>
@@ -173,7 +173,7 @@ export default function HomePage({ onGetStarted }) {
       </div>
 
       {/* WHY SWIFTDEED */}
-      <div style={s.whySection}>
+      <div id="why" style={s.whySection}>
         <div style={s.sectionLabel}>Why SwiftDeed</div>
         <div style={s.sectionTitle}>Built for speed. Built for lenders.</div>
         <div style={s.sectionSub}>We do one thing and we do it fast. No bloated loan servicing platform. Just payoff statements.</div>
