@@ -75,7 +75,7 @@ export default function HomePage({ onGetStarted }) {
   return (
     <div style={s.page}>
       <div style={s.hero}>
-        <div style={s.badge}><div style={s.badgeDot}></div> Payoff statements delivered in hours</div>
+        
         <h1 style={s.h1}>The fastest way to get your <span style={s.yellow}>payoff statement</span></h1>
         <p style={s.heroP}>Send us your loan docs. We generate a fully prepared payoff statement and deliver it straight to your inbox — guaranteed within 2 hours.</p>
         <div style={s.ctas}>
