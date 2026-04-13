@@ -26,7 +26,7 @@ export default function HomePage({ onGetStarted }) {
     stepH: { fontSize: 16, fontWeight: 500, marginBottom: 8 },
     stepP: { fontSize: 14, color: '#666', lineHeight: 1.6 },
 
-    emailSection: { padding: '80px 60px', maxWidth: 1000, margin: '0 auto', textAlign: 'center' },
+    emailSection: { padding: '80px 60px', maxWidth: 1000, margin: '0 auto', textAlign: 'left' },
     emailBox: { background: '#111', border: '0.5px solid #2a2a2a', borderRadius: 12, padding: 32, maxWidth: 560, margin: '40px auto 0', textAlign: 'left' },
     emailTo: { fontSize: 12, color: '#444', marginBottom: 8 },
     emailAddr: { fontSize: 15, color: '#4a90b8', fontFamily: 'monospace', marginBottom: 20 },

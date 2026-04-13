@@ -17,7 +17,7 @@ export default function App() {
     <div style={{
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       padding: '18px 60px', borderBottom: '0.5px solid #2a2a2a',
-      background: '#0f0f0f', position: 'sticky', top: 0, zIndex: 100
+      background: '#0f0f0f', position: 'sticky', top: 0, zIndex: 100, position: 'relative'
     }}>
       <div
         onClick={() => setPage('home')}
@@ -27,10 +27,10 @@ export default function App() {
       </div>
 
       {page === 'home' && (
-        <div style={{ display: 'flex', gap: 32, alignItems: 'center' }}>
-          <span onClick={() => scrollTo('how')} style={{ fontSize: 14, color: '#aaa', cursor: 'pointer' }}>How it works</span>
-          <span onClick={() => scrollTo('pricing')} style={{ fontSize: 14, color: '#aaa', cursor: 'pointer' }}>Pricing</span>
-          <span onClick={() => scrollTo('why')} style={{ fontSize: 14, color: '#aaa', cursor: 'pointer' }}>Why SwiftDeed</span>
+        <div style={{ display: 'flex', gap: 32, alignItems: 'center', position: 'absolute', left: '50%', transform: 'translateX(-50%)' }}>
+          <span onClick={() => scrollTo('how')} style={{ fontSize: 14, color: '#FFD700', cursor: 'pointer' }}>How it works</span>
+          <span onClick={() => scrollTo('pricing')} style={{ fontSize: 14, color: '#FFD700', cursor: 'pointer' }}>Pricing</span>
+          <span onClick={() => scrollTo('why')} style={{ fontSize: 14, color: '#FFD700', cursor: 'pointer' }}>Why SwiftDeed</span>
         </div>
       )}
 
