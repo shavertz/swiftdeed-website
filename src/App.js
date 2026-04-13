@@ -23,7 +23,7 @@ export default function App() {
         onClick={() => setPage('home')}
         style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
       >
-        <img src="/logo.png" alt="SwiftDeed logo" style={{ height: 36, width: 'auto', mixBlendMode: 'screen' }} />
+        
         <span style={{ fontSize: 20, fontWeight: 500, letterSpacing: -0.3 }}>
           <span style={{ color: '#fff' }}>Swift</span><span style={{ color: '#FFD700' }}>Deed</span>
         </span>
