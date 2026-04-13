@@ -13,7 +13,6 @@ export default function HomePage({ onGetStarted }) {
     statsRow: { display: 'flex', gap: 48, justifyContent: 'center', borderTop: '0.5px solid #1e1e1e', paddingTop: 40 },
     statNum: { fontSize: 28, fontWeight: 500, color: '#FFD700' },
     statLabel: { fontSize: 13, color: '#666', marginTop: 4 },
-
     howWrap: { background: '#111', borderTop: '0.5px solid #1e1e1e', borderBottom: '0.5px solid #1e1e1e', padding: '80px 60px' },
     howInner: { maxWidth: 1000, margin: '0 auto' },
     sectionLabel: { fontSize: 12, color: '#4a90b8', letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: 12 },
@@ -25,7 +24,6 @@ export default function HomePage({ onGetStarted }) {
     stepIcon: { width: 40, height: 40, borderRadius: 8, background: '#1a1a1a', border: '0.5px solid #2a2a2a', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16, fontSize: 18 },
     stepH: { fontSize: 16, fontWeight: 500, marginBottom: 8 },
     stepP: { fontSize: 14, color: '#666', lineHeight: 1.6 },
-
     emailSection: { padding: '80px 60px', maxWidth: 1000, margin: '0 auto', textAlign: 'left' },
     emailBox: { background: '#111', border: '0.5px solid #2a2a2a', borderRadius: 12, padding: 32, maxWidth: 560, margin: '40px auto 0', textAlign: 'left' },
     emailTo: { fontSize: 12, color: '#444', marginBottom: 8 },
@@ -47,7 +45,6 @@ export default function HomePage({ onGetStarted }) {
     respFooter: { fontSize: 11, color: '#444', marginTop: 14, lineHeight: 1.5, borderTop: '0.5px solid #1e1e1e', paddingTop: 12 },
     dlBtn: { display: 'flex', alignItems: 'center', gap: 6, marginTop: 14 },
     dlBtnInner: { background: '#222', border: '0.5px solid #333', borderRadius: 5, padding: '6px 12px', fontSize: 12, color: '#aaa', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 },
-
     pricingSection: { borderTop: '0.5px solid #1e1e1e', padding: '80px 60px', maxWidth: 1000, margin: '0 auto' },
     pricingCards: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 48 },
     pricingCard: (featured) => ({ background: '#111', border: `0.5px solid ${featured ? '#FFD700' : '#2a2a2a'}`, borderRadius: 12, padding: 32, position: 'relative' }),
@@ -60,14 +57,14 @@ export default function HomePage({ onGetStarted }) {
     priceFeat: { fontSize: 14, color: '#aaa', display: 'flex', gap: 10, alignItems: 'flex-start' },
     check: { color: '#4a90b8', fontSize: 14, flexShrink: 0 },
     priceBtn: (featured) => ({ width: '100%', marginTop: 28, padding: 12, borderRadius: 7, fontSize: 14, fontWeight: 500, cursor: 'pointer', background: featured ? '#FFD700' : 'transparent', color: featured ? '#0f0f0f' : '#fff', border: featured ? 'none' : '0.5px solid #333' }),
-
     whySection: { borderTop: '0.5px solid #1e1e1e', padding: '80px 60px', maxWidth: 1000, margin: '0 auto' },
     whyGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, background: '#1e1e1e', border: '0.5px solid #1e1e1e', borderRadius: 12, overflow: 'hidden', marginTop: 48 },
     whyItem: { background: '#111', padding: '28px 32px' },
+    whyItemSecurity: { background: '#0d1a0d', padding: '28px 32px' },
     whyIcon: { fontSize: 20, marginBottom: 14 },
     whyH: { fontSize: 15, fontWeight: 500, marginBottom: 8 },
     whyP: { fontSize: 14, color: '#666', lineHeight: 1.6 },
-
+    whyPSecurity: { fontSize: 14, color: '#3a5a3a', lineHeight: 1.6 },
     footer: { borderTop: '0.5px solid #1e1e1e', padding: '40px 60px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
     footerLogo: { fontSize: 18, fontWeight: 500 },
     footerCopy: { fontSize: 13, color: '#444' },
@@ -77,8 +74,6 @@ export default function HomePage({ onGetStarted }) {
 
   return (
     <div style={s.page}>
-
-      {/* HERO */}
       <div style={s.hero}>
         <div style={s.badge}><div style={s.badgeDot}></div> Payoff statements delivered in hours</div>
         <h1 style={s.h1}>The fastest way to get your <span style={s.yellow}>payoff statement</span></h1>
@@ -94,12 +89,11 @@ export default function HomePage({ onGetStarted }) {
         </div>
       </div>
 
-      {/* HOW IT WORKS */}
       <div id="how" style={s.howWrap}>
         <div style={s.howInner}>
           <div style={s.sectionLabel}>How it works</div>
           <div style={s.sectionTitle}>Three steps. That's it.</div>
-          <div style={s.sectionSub}>No portals to log into. No phone calls. Just send us your docs and we handle the rest.</div>
+          <div style={s.sectionSub}>Simple, fast, and secure. Upload your docs and receive your payoff statement — no back and forth needed.</div>
           <div style={s.stepsGrid}>
             <div style={s.step(false)}><div style={s.stepNum}>01</div><div style={s.stepIcon}>✉</div><div style={s.stepH}>Upload your loan docs</div><p style={s.stepP}>Submit your loan agreement, promissory note, or any supporting docs through our simple request form. PDF format.</p></div>
             <div style={s.step(false)}><div style={s.stepNum}>02</div><div style={s.stepIcon}>⚡</div><div style={s.stepH}>We extract & calculate</div><p style={s.stepP}>Our system reads your documents, extracts key loan details, and calculates the exact payoff amount including accrued interest.</p></div>
@@ -108,7 +102,6 @@ export default function HomePage({ onGetStarted }) {
         </div>
       </div>
 
-      {/* EMAIL PREVIEW */}
       <div style={s.emailSection}>
         <div style={s.sectionLabel}>The process</div>
         <div style={s.sectionTitle}>As simple as sending a form</div>
@@ -142,7 +135,6 @@ export default function HomePage({ onGetStarted }) {
         </div>
       </div>
 
-      {/* PRICING */}
       <div id="pricing" style={s.pricingSection}>
         <div style={s.sectionLabel}>Pricing</div>
         <div style={s.sectionTitle}>Simple, flat pricing</div>
@@ -165,35 +157,41 @@ export default function HomePage({ onGetStarted }) {
             <div style={s.priceTime}>Delivered within 15 minutes</div>
             <hr style={s.priceDivider} />
             <ul style={s.priceFeatures}>
-              {['Everything in Standard', 'Priority processing', 'Ideal for same-day closings', '15-minute guarantee or it\'s free'].map(f => <li key={f} style={s.priceFeat}><span style={s.check}>✓</span>{f}</li>)}
+              {['Everything in Standard', 'Priority processing', 'Ideal for same-day closings', "15-minute guarantee or it's free"].map(f => <li key={f} style={s.priceFeat}><span style={s.check}>✓</span>{f}</li>)}
             </ul>
             <button style={s.priceBtn(true)} onClick={onGetStarted}>Get started</button>
           </div>
         </div>
       </div>
 
-      {/* WHY SWIFTDEED */}
       <div id="why" style={s.whySection}>
         <div style={s.sectionLabel}>Why SwiftDeed</div>
         <div style={s.sectionTitle}>Built for speed. Built for lenders.</div>
         <div style={s.sectionSub}>We do one thing and we do it fast. No bloated loan servicing platform. Just payoff statements.</div>
         <div style={s.whyGrid}>
-          {[
-            { icon: '⚡', title: 'Guaranteed turnaround', body: '2-hour standard or 15-minute rush. If we miss the window, you don\'t pay. Simple as that.' },
-            { icon: '📬', title: 'No portal required', body: 'Just fill out a simple form. No logins, no onboarding, no software to install.' },
-            { icon: '🔍', title: 'AI-powered extraction', body: 'We read your loan docs automatically — loan agreements, promissory notes — and extract every relevant field to calculate an accurate payoff.' },
-            { icon: '💼', title: 'Flat, transparent pricing', body: '$35 per statement. No subscriptions, no monthly fees, no surprises. Perfect for lenders of any size.' },
-          ].map(item => (
-            <div key={item.title} style={s.whyItem}>
-              <div style={s.whyIcon}>{item.icon}</div>
-              <div style={s.whyH}>{item.title}</div>
-              <p style={s.whyP}>{item.body}</p>
-            </div>
-          ))}
+          <div style={s.whyItem}>
+            <div style={s.whyIcon}>⚡</div>
+            <div style={s.whyH}>Guaranteed turnaround</div>
+            <p style={s.whyP}>2-hour standard or 15-minute rush. If we miss the window, you don't pay. Simple as that.</p>
+          </div>
+          <div style={s.whyItemSecurity}>
+            <div style={s.whyIcon}>🔒</div>
+            <div style={{ ...s.whyH, color: '#4a9a4a' }}>Bank-level security</div>
+            <p style={s.whyPSecurity}>Your documents are encrypted in transit and at rest. We never share your files with third parties — ever.</p>
+          </div>
+          <div style={s.whyItem}>
+            <div style={s.whyIcon}>📬</div>
+            <div style={s.whyH}>Simple submission</div>
+            <p style={s.whyP}>Simple, fast, and secure. Upload your docs and receive your payoff statement — no back and forth needed.</p>
+          </div>
+          <div style={s.whyItem}>
+            <div style={s.whyIcon}>💼</div>
+            <div style={s.whyH}>Flat, transparent pricing</div>
+            <p style={s.whyP}>$35 per statement. No subscriptions, no monthly fees, no surprises. Perfect for lenders of any size.</p>
+          </div>
         </div>
       </div>
 
-      {/* FOOTER */}
       <div style={s.footer}>
         <div>
           <div style={s.footerLogo}><span style={{ color: '#fff' }}>Swift</span><span style={{ color: '#FFD700' }}>Deed</span></div>
@@ -206,7 +204,6 @@ export default function HomePage({ onGetStarted }) {
           <a style={s.footerLink} href="mailto:scott@theswiftdeed.com">Contact</a>
         </div>
       </div>
-
     </div>
   );
 }
