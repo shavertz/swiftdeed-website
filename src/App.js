@@ -17,7 +17,7 @@ export default function App() {
     <div style={{
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       padding: '18px 60px', borderBottom: '0.5px solid #2a2a2a',
-      background: '#0f0f0f', position: 'sticky', top: 0, zIndex: 100, position: 'relative'
+      background: '#0f0f0f', position: 'sticky', top: 0, zIndex: 100
     }}>
       <div
         onClick={() => setPage('home')}
