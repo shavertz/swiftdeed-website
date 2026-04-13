@@ -44,7 +44,7 @@ export default function RequestForm() {
       Object.entries(form).forEach(([k, v]) => data.append(k, v));
       data.append('turnaround', turnaround);
       files.forEach(f => data.append('files', f));
-      const res = await fetch('/api/submit', { method: 'POST', body: data });
+      const res = await fetch('https://swiftdeed.vercel.app/api/submit', { method: 'POST', body: data });
       if (!res.ok) throw new Error('Submission failed');
       setSubmitted(true);
     } catch (e) {
