@@ -1,7 +1,7 @@
 export default function HomePage({ onGetStarted }) {
   const s = {
     page: { background: '#0f0f0f', minHeight: '100vh', color: '#f0f0f0', fontFamily: 'inherit' },
-    hero: { padding: '100px 60px 80px', textAlign: 'center', maxWidth: 800, margin: '0 auto' },
+    hero: { padding: '40px 60px 80px', textAlign: 'center', maxWidth: 800, margin: '0 auto' },
     badge: { display: 'inline-flex', alignItems: 'center', gap: 8, background: '#1a1a1a', border: '0.5px solid #2e2e2e', padding: '6px 14px', borderRadius: 20, fontSize: 13, color: '#aaa', marginBottom: 28 },
     badgeDot: { width: 7, height: 7, borderRadius: '50%', background: '#4a90b8' },
     h1: { fontSize: 52, fontWeight: 500, lineHeight: 1.15, letterSpacing: -1, marginBottom: 20 },
