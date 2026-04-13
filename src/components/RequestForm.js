@@ -137,7 +137,7 @@ export default function RequestForm() {
           <div style={s.field}><div style={s.label}>Email <span style={s.req}>*</span></div><input style={s.input} type="email" value={form.email} onChange={set('email')} placeholder="john@company.com" /></div>
           <div style={s.field}><div style={s.label}>Company / Lender name <span style={s.req}>*</span></div><input style={s.input} value={form.company} onChange={set('company')} placeholder="Acme Lending LLC" /></div>
           <div style={s.field}><div style={s.label}>Phone number <span style={s.req}>*</span></div><input style={s.input} value={form.phone} onChange={set('phone')} placeholder="(555) 000-0000" /></div>
-          <div style={s.field}><div style={s.label}>Loan ID <span style={s.opt}>optional</span></div><input style={s.input} value={form.loanId} onChange={set('loanId')} placeholder="If known" /></div>
+          <div style={s.field}><div style={s.label}>Borrower ID <span style={s.opt}>optional</span></div><input style={s.input} value={form.loanId} onChange={set('loanId')} placeholder="If known" /></div>
           <div style={s.fieldFull}><div style={s.label}>Additional notes <span style={s.opt}>optional</span></div><textarea style={s.textarea} value={form.notes} onChange={set('notes')} placeholder="Anything else we should know about this request…" /></div>
         </div>
 
