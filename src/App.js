@@ -16,14 +16,17 @@ export default function App() {
   const nav = (
     <div style={{
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      padding: '18px 60px', borderBottom: '0.5px solid #2a2a2a',
+      padding: '14px 60px', borderBottom: '0.5px solid #2a2a2a',
       background: '#0f0f0f', position: 'sticky', top: 0, zIndex: 100
     }}>
       <div
         onClick={() => setPage('home')}
-        style={{ fontSize: 20, fontWeight: 500, letterSpacing: -0.3, cursor: 'pointer' }}
+        style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
       >
-        <span style={{ color: '#fff' }}>Swift</span><span style={{ color: '#FFD700' }}>Deed</span>
+        <img src="/logo.png" alt="SwiftDeed logo" style={{ height: 36, width: 'auto' }} />
+        <span style={{ fontSize: 20, fontWeight: 500, letterSpacing: -0.3 }}>
+          <span style={{ color: '#fff' }}>Swift</span><span style={{ color: '#FFD700' }}>Deed</span>
+        </span>
       </div>
 
       {page === 'home' && (
