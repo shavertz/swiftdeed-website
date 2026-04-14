@@ -77,7 +77,7 @@ export default function App() {
                 cursor: 'pointer', outline: 'none'
               }}
             >
-              My Requests
+              My requests
             </button>
             <button
               onClick={handleLogout}
