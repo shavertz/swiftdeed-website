@@ -78,10 +78,8 @@ export default function HomePage({ onGetStarted }) {
         
         <h1 style={s.h1}>The fastest way to get your <span style={s.yellow}>payoff statement</span></h1>
         <p style={s.heroP}>Send us your loan docs. We generate a fully prepared payoff statement and deliver it straight to your inbox — guaranteed within 2 hours.</p>
-        <div style={s.ctas}>
-          <button style={s.btnPrimary} onClick={onGetStarted}>Submit a request</button>
-          <button style={s.btnSecondary}>How it works ↓</button>
-        </div>
+        
+        <div style={{textAlign:'center',marginBottom:40}}><button style={s.btnPrimary} onClick={onGetStarted}>Submit a request</button></div>
         <div style={s.statsRow}>
           <div style={{ textAlign: 'center' }}><div style={s.statNum}>2hr</div><div style={s.statLabel}>Standard turnaround</div></div>
           <div style={{ textAlign: 'center' }}><div style={s.statNum}>15min</div><div style={s.statLabel}>Rush turnaround</div></div>
