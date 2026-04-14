@@ -156,8 +156,8 @@ export default function Portal() {
                 </span>
               </span>
               <span>
-                {r.pdf_url
-                  ? <a href={r.pdf_url} target="_blank" rel="noreferrer" style={s.dlBtn}>Download</a>
+                {r.payoff_statement_url
+                  ? <a href={r.payoff_statement_url} target="_blank" rel="noreferrer" style={s.dlBtn}>Download</a>
                   : <span style={{ color: '#333', fontSize: 12 }}>Pending</span>
                 }
               </span>
