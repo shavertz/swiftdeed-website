@@ -4,6 +4,7 @@ button:focus-visible { outline: none; }
 .cl-formFieldHintText { display: none !important; }
 [data-localization-key="formFieldHintText__optional"] { display: none !important; }
 .cl-socialButtonsBlockButton:hover { background: #fff !important; color: #0f0f0f !important; }
+.cl-lastAuthenticationStrategyBadge { display: none !important; }
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
