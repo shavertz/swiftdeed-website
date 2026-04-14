@@ -11,7 +11,7 @@ export default function App() {
   const { signOut } = useClerk();
 
   useEffect(() => {
-    if (isSignedIn && page === 'auth') {
+    if (isSignedIn && (page === 'auth' || page === 'home')) {
       setPage('portal');
     }
   }, [isSignedIn, page]);
@@ -154,6 +154,11 @@ export default function App() {
       formFieldHintText: { display: 'none' },
       identifierInputOptionalLabel: { display: 'none' },
       formFieldLabel__identifier: { '& span': { display: 'none' } },
+      socialButtonsBlockButton__google: {
+        background: '#fff !important',
+        color: '#0f0f0f !important',
+      },
+      badge: { display: 'none' },
     }
   };
 
