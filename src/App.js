@@ -143,7 +143,7 @@ export default function App() {
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 65px)', gap: 0 }}>
       <div style={{ marginBottom: 12, textAlign: 'center' }}>
         <div style={{ fontSize: 24, fontWeight: 600, color: '#fff', marginBottom: 8 }}>
-          Welcome{user?.primaryEmailAddress?.emailAddress ? `, ${user.primaryEmailAddress.emailAddress.split('@')[0]}` : ''}
+          Welcome back!
         </div>
         <div style={{ fontSize: 14, color: '#555' }}>What would you like to do?</div>
       </div>
