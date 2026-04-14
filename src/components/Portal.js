@@ -40,14 +40,14 @@ const s = {
   card: { background: '#141414', border: '0.5px solid #222', borderRadius: 10, overflow: 'hidden' },
   thead: {
     display: 'grid',
-    gridTemplateColumns: '130px 140px 1fr 130px 110px 100px 80px 80px',
+    gridTemplateColumns: '130px 140px 1fr 130px 110px 100px 80px',
     padding: '10px 20px',
     borderBottom: '0.5px solid #222',
     fontSize: 10, color: '#444', textTransform: 'uppercase', letterSpacing: 0.8
   },
   trow: {
     display: 'grid',
-    gridTemplateColumns: '130px 140px 1fr 130px 110px 100px 80px 80px',
+    gridTemplateColumns: '130px 140px 1fr 130px 110px 100px 80px',
     padding: '16px 20px',
     borderBottom: '0.5px solid #1a1a1a',
     alignItems: 'center',
@@ -133,7 +133,7 @@ export default function Portal() {
           <span>Total Processed</span>
           <span>Status</span>
           <span>Statement</span>
-          <span>Docs</span>
+          
           <span>Invoice</span>
         </div>
 
@@ -161,12 +161,7 @@ export default function Portal() {
                   : <span style={{ color: '#333', fontSize: 12 }}>Pending</span>
                 }
               </span>
-              <span>
-                {r.docs_url
-                  ? <a href={r.docs_url} target="_blank" rel="noreferrer" style={s.dlBtn}>View</a>
-                  : <span style={{ color: '#333', fontSize: 12 }}>—</span>
-                }
-              </span>
+              
               <span>
                 {r.invoice_url
                   ? <a href={r.invoice_url} target="_blank" rel="noreferrer" style={s.dlBtn}>View</a>
