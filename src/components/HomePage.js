@@ -199,7 +199,7 @@ export default function HomePage({ onGetStarted }) {
         <div style={s.footerLinks}>
           <a style={s.footerLink} href="/privacy">Privacy</a>
           <a style={s.footerLink} href="/terms">Terms</a>
-          <a style={s.footerLink} href="mailto:scott@theswiftdeed.com">Contact</a>
+          <a style={s.footerLink} href="mailto:support@theswiftdeed.com">Contact</a>
         </div>
       </div>
     </div>
