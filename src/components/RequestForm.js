@@ -1,34 +1,18 @@
 import { useState, useRef } from 'react';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 
-export default function RequestForm() {
-  const [turnaround, setTurnaround] = useState('standard');
-  const [files, setFiles] = useState([]);
-  const [dragging, setDragging] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY);
+
+const PRICES = { standard: 3500, rush: 4500 };
+
+function PaymentForm({ turnaround, form, files, onSuccess }) {
+  const stripe = useStripe();
+  const elements = useElements();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const fileInputRef = useRef();
 
-  const [form, setForm] = useState({
-    name: '', email: '', company: '', phone: '', loanId: '', notes: ''
-  });
-
-  const set = (field) => (e) => setForm({ ...form, [field]: e.target.value });
-
-  const addFiles = (newFiles) => {
-    const pdfs = Array.from(newFiles).filter(f => f.type === 'application/pdf');
-    setFiles(prev => [...prev, ...pdfs]);
-  };
-
-  const removeFile = (i) => setFiles(files.filter((_, idx) => idx !== i));
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    setDragging(false);
-    addFiles(e.dataTransfer.files);
-  };
-
-  const handleSubmit = async () => {
+  const handleSubmit = async (skipPayment = false) => {
     if (!form.name || !form.email || !form.company || !form.phone) {
       setError('Please fill in all required fields.');
       return;
@@ -39,19 +23,110 @@ export default function RequestForm() {
     }
     setError('');
     setSubmitting(true);
+
     try {
+      let paymentIntentId = null;
+
+      if (!skipPayment) {
+        // Step 1: Create payment intent
+        const intentRes = await fetch('https://swiftdeed.vercel.app/api/create-payment-intent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: PRICES[turnaround],
+            borrowerName: form.name,
+            propertyAddress: '',
+          }),
+        });
+        const { clientSecret, paymentIntentId: pid } = await intentRes.json();
+        paymentIntentId = pid;
+
+        // Step 2: Confirm card authorization
+        const { error: stripeError } = await stripe.confirmCardPayment(clientSecret, {
+          payment_method: { card: elements.getElement(CardElement), billing_details: { name: form.name, email: form.email } },
+        });
+        if (stripeError) {
+          setError(stripeError.message);
+          setSubmitting(false);
+          return;
+        }
+      }
+
+      // Step 3: Submit form
       const data = new FormData();
       Object.entries(form).forEach(([k, v]) => data.append(k, v));
       data.append('turnaround', turnaround);
+      data.append('paymentIntentId', paymentIntentId || '');
+      data.append('skipPayment', skipPayment ? 'true' : 'false');
       files.forEach(f => data.append('files', f));
+
       const res = await fetch('https://swiftdeed.vercel.app/api/submit', { method: 'POST', body: data });
       if (!res.ok) throw new Error('Submission failed');
-      setSubmitted(true);
+      onSuccess();
     } catch (e) {
-      setError('Something went wrong. Please try again or email us at scott@theswiftdeed.com');
+      setError('Something went wrong. Please try again.');
     }
     setSubmitting(false);
   };
+
+  const cardStyle = {
+    style: {
+      base: { color: '#f0f0f0', fontFamily: 'inherit', fontSize: '14px', '::placeholder': { color: '#444' } },
+      invalid: { color: '#e08080' },
+    },
+  };
+
+  return (
+    <div>
+      <div style={{ background: '#111', border: '0.5px solid #2a2a2a', borderRadius: 10, padding: '20px 24px', marginTop: 8 }}>
+        <div style={{ fontSize: 11, color: '#555', letterSpacing: '1.2px', textTransform: 'uppercase', marginBottom: 16 }}>Card details</div>
+        <CardElement options={cardStyle} />
+        <div style={{ marginTop: 16, fontSize: 12, color: '#444', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span>🔒</span> Your card will be authorized but not charged until your statement is delivered.
+        </div>
+      </div>
+
+      {error && (
+        <div style={{ background: '#2e1010', border: '0.5px solid #5a2020', borderRadius: 8, padding: '12px 16px', fontSize: 13, color: '#e08080', marginTop: 16 }}>
+          {error}
+        </div>
+      )}
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 28, paddingTop: 24, borderTop: '0.5px solid #1e1e1e' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <button
+            onClick={() => handleSubmit(true)}
+            disabled={submitting}
+            style={{ background: 'transparent', color: '#444', fontSize: 12, padding: '8px 16px', borderRadius: 7, border: '0.5px solid #2a2a2a', cursor: 'pointer' }}>
+            Skip Payment (Test Mode)
+          </button>
+        </div>
+        <button
+          onClick={() => handleSubmit(false)}
+          disabled={submitting || !stripe}
+          style={{ background: submitting ? '#a08800' : '#FFD700', color: '#0f0f0f', fontSize: 14, fontWeight: 500, padding: '13px 32px', borderRadius: 7, border: 'none', cursor: submitting ? 'not-allowed' : 'pointer' }}>
+          {submitting ? 'Processing…' : `Pay $${turnaround === 'rush' ? '45' : '35'} & Submit →`}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export default function RequestForm() {
+  const [turnaround, setTurnaround] = useState('standard');
+  const [files, setFiles] = useState([]);
+  const [dragging, setDragging] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [form, setForm] = useState({ name: '', email: '', company: '', phone: '', loanId: '', notes: '' });
+  const fileInputRef = useRef();
+
+  const set = (field) => (e) => setForm({ ...form, [field]: e.target.value });
+  const addFiles = (newFiles) => {
+    const pdfs = Array.from(newFiles).filter(f => f.type === 'application/pdf');
+    setFiles(prev => [...prev, ...pdfs]);
+  };
+  const removeFile = (i) => setFiles(files.filter((_, idx) => idx !== i));
+  const handleDrop = (e) => { e.preventDefault(); setDragging(false); addFiles(e.dataTransfer.files); };
 
   const s = {
     wrap: { maxWidth: 640, margin: '0 auto', padding: '52px 24px 80px' },
@@ -87,12 +162,6 @@ export default function RequestForm() {
     radioDot: { width: 8, height: 8, borderRadius: '50%', background: '#FFD700' },
     securityNote: { background: '#0d1a0d', border: '0.5px solid #1a3a1a', borderRadius: 8, padding: '14px 18px', display: 'flex', alignItems: 'flex-start', gap: 12, marginTop: 20 },
     securityText: { fontSize: 12, color: '#4a7a4a', lineHeight: 1.6 },
-    confirmBox: { background: '#141414', border: '0.5px solid #1e1e1e', borderRadius: 8, padding: '14px 18px', display: 'flex', alignItems: 'flex-start', gap: 12, marginTop: 12 },
-    confirmCheck: { width: 16, height: 16, borderRadius: 4, border: '0.5px solid #4a90b8', background: '#1a2535', flexShrink: 0, marginTop: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: '#4a90b8' },
-    submitRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 28, paddingTop: 24, borderTop: '0.5px solid #1e1e1e' },
-    submitNote: { display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, color: '#3a3a3a' },
-    submitBtn: { background: submitting ? '#a08800' : '#FFD700', color: '#0f0f0f', fontSize: 14, fontWeight: 500, padding: '13px 32px', borderRadius: 7, border: 'none', cursor: submitting ? 'not-allowed' : 'pointer' },
-    errorBox: { background: '#2e1010', border: '0.5px solid #5a2020', borderRadius: 8, padding: '12px 16px', fontSize: 13, color: '#e08080', marginTop: 16 },
   };
 
   if (submitted) {
@@ -128,7 +197,7 @@ export default function RequestForm() {
   return (
     <div style={s.wrap}>
       <div style={s.title}>Submit a payoff request</div>
-      <div style={s.sub}>Upload your loan documents and we'll deliver a fully prepared payoff statement to your inbox. Confirmation sent immediately on submission.</div>
+      <div style={s.sub}>Upload your loan documents and we'll deliver a fully prepared payoff statement to your inbox. Your card is authorized now and only charged after delivery.</div>
 
       <div style={s.card}>
         <div style={s.sectionLabel}>Your information</div>
@@ -138,7 +207,7 @@ export default function RequestForm() {
           <div style={s.field}><div style={s.label}>Company / Lender name <span style={s.req}>*</span></div><input style={s.input} value={form.company} onChange={set('company')} placeholder="Acme Lending LLC" /></div>
           <div style={s.field}><div style={s.label}>Phone number <span style={s.req}>*</span></div><input style={s.input} value={form.phone} onChange={set('phone')} placeholder="(555) 000-0000" /></div>
           <div style={s.field}><div style={s.label}>Borrower ID <span style={s.opt}>optional</span></div><input style={s.input} value={form.loanId} onChange={set('loanId')} placeholder="If known" /></div>
-          <div style={s.fieldFull}><div style={s.label}>Additional notes <span style={s.opt}>optional</span></div><textarea style={s.textarea} value={form.notes} onChange={set('notes')} placeholder="Anything else we should know about this request…" /></div>
+          <div style={s.fieldFull}><div style={s.label}>Additional notes <span style={s.opt}>optional</span></div><textarea style={s.textarea} value={form.notes} onChange={set('notes')} placeholder="Anything else we should know…" /></div>
         </div>
 
         <hr style={s.divider} />
@@ -171,20 +240,14 @@ export default function RequestForm() {
 
         <div style={s.securityNote}>
           <span style={{ fontSize: 14, flexShrink: 0 }}>🔒</span>
-          <div style={s.securityText}>Your documents are encrypted in transit and at rest. Files are stored securely and only accessible to SwiftDeed staff. We never share your documents with third parties.</div>
+          <div style={s.securityText}>Your documents are encrypted in transit and at rest. Your card is authorized now and only charged once your payoff statement is delivered.</div>
         </div>
 
-        <div style={s.confirmBox}>
-          <div style={s.confirmCheck}>✓</div>
-          <div style={{ fontSize: 12, color: '#555', lineHeight: 1.6 }}>A confirmation email will be sent immediately upon submission. Your payoff statement will be delivered within your selected timeframe.</div>
-        </div>
-
-        {error && <div style={s.errorBox}>{error}</div>}
-
-        <div style={s.submitRow}>
-          <div style={s.submitNote}><span style={{ width: 8, height: 8, border: '1.5px solid #3a3a3a', borderRadius: 2, display: 'inline-block' }}></span> 256-bit encryption</div>
-          <button style={s.submitBtn} onClick={handleSubmit} disabled={submitting}>{submitting ? 'Submitting…' : 'Submit request →'}</button>
-        </div>
+        <hr style={s.divider} />
+        <div style={s.sectionLabel}>Payment</div>
+        <Elements stripe={stripePromise}>
+          <PaymentForm turnaround={turnaround} form={form} files={files} onSuccess={() => setSubmitted(true)} />
+        </Elements>
       </div>
     </div>
   );
