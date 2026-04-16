@@ -1,8 +1,10 @@
 import { useState, useRef } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import { createClient } from '@supabase/supabase-js';
 
 const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY);
+const supabase = createClient(process.env.REACT_APP_SUPABASE_URL, process.env.REACT_APP_SUPABASE_ANON_KEY);
 
 const PRICES = { standard: 3500, rush: 4500 };
 
@@ -57,18 +59,31 @@ function PaymentForm({ turnaround, form, files, onSuccess }) {
         }
       }
 
+      // Upload files directly to Supabase Storage from the browser
+      const uploadedUrls = [];
+      for (const file of files) {
+        const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+        const { error: uploadError } = await supabase.storage
+          .from('loan-documents')
+          .upload(fileName, file, { contentType: 'application/pdf' });
+        if (uploadError) throw new Error('File upload failed: ' + uploadError.message);
+        const { data: urlData } = supabase.storage.from('loan-documents').getPublicUrl(fileName);
+        if (urlData?.publicUrl) uploadedUrls.push(urlData.publicUrl);
+      }
+
       const data = new FormData();
       Object.entries(form).forEach(([k, v]) => data.append(k, v));
       data.append('turnaround', turnaround);
       data.append('paymentIntentId', paymentIntentId || '');
       data.append('skipPayment', skipPayment ? 'true' : 'false');
-      files.forEach(f => data.append('files', f));
+      data.append('fileUrls', JSON.stringify(uploadedUrls));
 
       const res = await fetch('https://swiftdeed.vercel.app/api/submit', { method: 'POST', body: data });
       if (!res.ok) throw new Error('Submission failed');
       onSuccess();
     } catch (e) {
       setError('Something went wrong. Please try again.');
+      console.error(e);
     }
     setSubmitting(false);
   };
