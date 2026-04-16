@@ -6,6 +6,13 @@ const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY);
 
 const PRICES = { standard: 3500, rush: 4500 };
 
+const formatPhone = (value) => {
+  const digits = value.replace(/\D/g, '').slice(0, 10);
+  if (digits.length < 4) return digits;
+  if (digits.length < 7) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+};
+
 function PaymentForm({ turnaround, form, files, onSuccess }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -28,7 +35,6 @@ function PaymentForm({ turnaround, form, files, onSuccess }) {
       let paymentIntentId = null;
 
       if (!skipPayment) {
-        // Step 1: Create payment intent
         const intentRes = await fetch('https://swiftdeed.vercel.app/api/create-payment-intent', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -41,7 +47,6 @@ function PaymentForm({ turnaround, form, files, onSuccess }) {
         const { clientSecret, paymentIntentId: pid } = await intentRes.json();
         paymentIntentId = pid;
 
-        // Step 2: Confirm card authorization
         const { error: stripeError } = await stripe.confirmCardPayment(clientSecret, {
           payment_method: { card: elements.getElement(CardElement), billing_details: { name: form.name, email: form.email } },
         });
@@ -52,7 +57,6 @@ function PaymentForm({ turnaround, form, files, onSuccess }) {
         }
       }
 
-      // Step 3: Submit form
       const data = new FormData();
       Object.entries(form).forEach(([k, v]) => data.append(k, v));
       data.append('turnaround', turnaround);
@@ -121,6 +125,11 @@ export default function RequestForm() {
   const fileInputRef = useRef();
 
   const set = (field) => (e) => setForm({ ...form, [field]: e.target.value });
+
+  const handlePhoneChange = (e) => {
+    setForm({ ...form, phone: formatPhone(e.target.value) });
+  };
+
   const addFiles = (newFiles) => {
     const pdfs = Array.from(newFiles).filter(f => f.type === 'application/pdf');
     setFiles(prev => [...prev, ...pdfs]);
@@ -205,7 +214,7 @@ export default function RequestForm() {
           <div style={s.field}><div style={s.label}>Name <span style={s.req}>*</span></div><input style={s.input} value={form.name} onChange={set('name')} placeholder="John Davis" /></div>
           <div style={s.field}><div style={s.label}>Email <span style={s.req}>*</span></div><input style={s.input} type="email" value={form.email} onChange={set('email')} placeholder="john@company.com" /></div>
           <div style={s.field}><div style={s.label}>Company / Lender name <span style={s.req}>*</span></div><input style={s.input} value={form.company} onChange={set('company')} placeholder="Acme Lending LLC" /></div>
-          <div style={s.field}><div style={s.label}>Phone number <span style={s.req}>*</span></div><input style={s.input} value={form.phone} onChange={set('phone')} placeholder="(555) 000-0000" /></div>
+          <div style={s.field}><div style={s.label}>Phone number <span style={s.req}>*</span></div><input style={s.input} value={form.phone} onChange={handlePhoneChange} placeholder="(555) 000-0000" /></div>
           <div style={s.field}><div style={s.label}>Borrower ID <span style={s.opt}>optional</span></div><input style={s.input} value={form.loanId} onChange={set('loanId')} placeholder="If known" /></div>
           <div style={s.fieldFull}><div style={s.label}>Additional notes <span style={s.opt}>optional</span></div><textarea style={s.textarea} value={form.notes} onChange={set('notes')} placeholder="Anything else we should know…" /></div>
         </div>
