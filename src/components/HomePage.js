@@ -1,15 +1,14 @@
-export default function HomePage({ onGetStarted }) {
+export default function HomePage({ onLenderLogin, onBorrowerLogin }) {
   const s = {
     page: { background: '#0f0f0f', minHeight: '100vh', color: '#f0f0f0', fontFamily: 'inherit' },
     hero: { padding: '40px 60px 80px', textAlign: 'center', maxWidth: 800, margin: '0 auto' },
-    badge: { display: 'inline-flex', alignItems: 'center', gap: 8, background: '#1a1a1a', border: '0.5px solid #2e2e2e', padding: '6px 14px', borderRadius: 20, fontSize: 13, color: '#aaa', marginBottom: 28 },
-    badgeDot: { width: 7, height: 7, borderRadius: '50%', background: '#4a90b8' },
     h1: { fontSize: 52, fontWeight: 500, lineHeight: 1.15, letterSpacing: -1, marginBottom: 20 },
     yellow: { color: '#FFD700' },
     heroP: { fontSize: 18, color: '#888', lineHeight: 1.7, marginBottom: 36, maxWidth: 560, margin: '0 auto 36px' },
-    ctas: { display: 'flex', gap: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 56 },
+    ctas: { display: 'flex', gap: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
     btnPrimary: { background: '#FFD700', color: '#0f0f0f', fontSize: 15, fontWeight: 500, padding: '13px 28px', borderRadius: 7, border: 'none', cursor: 'pointer' },
-    btnSecondary: { background: 'transparent', color: '#fff', fontSize: 15, padding: '13px 28px', borderRadius: 7, border: '0.5px solid #333', cursor: 'pointer' },
+    btnSecondary: { background: 'transparent', color: '#fff', fontSize: 15, padding: '13px 28px', borderRadius: 7, border: '1px solid #FFD700', cursor: 'pointer' },
+    portalNote: { fontSize: 12, color: '#444', marginBottom: 56 },
     statsRow: { display: 'flex', gap: 48, justifyContent: 'center', borderTop: '0.5px solid #1e1e1e', paddingTop: 40 },
     statNum: { fontSize: 28, fontWeight: 500, color: '#FFD700' },
     statLabel: { fontSize: 13, color: '#666', marginTop: 4 },
@@ -24,27 +23,38 @@ export default function HomePage({ onGetStarted }) {
     stepIcon: { width: 40, height: 40, borderRadius: 8, background: '#1a1a1a', border: '0.5px solid #2a2a2a', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16, fontSize: 18 },
     stepH: { fontSize: 16, fontWeight: 500, marginBottom: 8 },
     stepP: { fontSize: 14, color: '#666', lineHeight: 1.6 },
-    emailSection: { padding: '80px 60px', maxWidth: 1000, margin: '0 auto', textAlign: 'left' },
-    emailBox: { background: '#111', border: '0.5px solid #2a2a2a', borderRadius: 12, padding: 32, maxWidth: 560, margin: '40px auto 0', textAlign: 'left' },
-    emailTo: { fontSize: 12, color: '#444', marginBottom: 8 },
-    emailAddr: { fontSize: 15, color: '#4a90b8', fontFamily: 'monospace', marginBottom: 20 },
-    emailLabel: { fontSize: 12, color: '#555', marginBottom: 6 },
-    emailSubject: { fontSize: 14, color: '#888', marginBottom: 16 },
-    attachRow: { display: 'flex', gap: 8, flexWrap: 'wrap' },
-    attachPill: { background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 6, padding: '6px 12px', fontSize: 12, color: '#aaa', display: 'flex', alignItems: 'center', gap: 6 },
-    attachIcon: { width: 14, height: 14, background: '#4a90b8', borderRadius: 2, flexShrink: 0 },
-    arrowRow: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, margin: '20px 0', color: '#444', fontSize: 13 },
-    arrowLine: { flex: 1, height: 0.5, background: '#2a2a2a' },
-    responseBox: { background: '#1a1a1a', border: '0.5px solid #FFD700', borderRadius: 10, padding: '20px 24px' },
-    respHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-    respTitle: { fontSize: 15, fontWeight: 500, color: '#fff' },
-    respTime: { fontSize: 12, color: '#4a90b8' },
-    respSectionLabel: { fontSize: 11, color: '#555', letterSpacing: '1px', textTransform: 'uppercase', margin: '14px 0 8px' },
-    respRow: { display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '6px 0', borderBottom: '0.5px solid #242424', color: '#666' },
-    respTotal: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, paddingTop: 14, borderTop: '0.5px solid #2e2e2e' },
-    respFooter: { fontSize: 11, color: '#444', marginTop: 14, lineHeight: 1.5, borderTop: '0.5px solid #1e1e1e', paddingTop: 12 },
-    dlBtn: { display: 'flex', alignItems: 'center', gap: 6, marginTop: 14 },
-    dlBtnInner: { background: '#222', border: '0.5px solid #333', borderRadius: 5, padding: '6px 12px', fontSize: 12, color: '#aaa', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 },
+    portalSection: { padding: '80px 60px', maxWidth: 1000, margin: '0 auto' },
+    portalGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, alignItems: 'start' },
+    portalCard: (accent) => ({ background: '#111', border: `0.5px solid ${accent ? '#2a2a3a' : '#2a2a2a'}`, borderRadius: 12, overflow: 'hidden' }),
+    cardHeader: { padding: '14px 20px', borderBottom: '0.5px solid #1e1e1e', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+    cardTitle: { fontSize: 13, fontWeight: 500, color: '#fff' },
+    badgeLender: { fontSize: 11, padding: '3px 10px', borderRadius: 20, background: '#1a2a1a', color: '#4a9a4a' },
+    badgeBorrower: { fontSize: 11, padding: '3px 10px', borderRadius: 20, background: '#1a1a2a', color: '#4a70b8' },
+    cardBody: { padding: 20 },
+    tableHead: { display: 'grid', gridTemplateColumns: '1fr 1.4fr 0.9fr', gap: 8, paddingBottom: 8, borderBottom: '0.5px solid #1e1e1e', marginBottom: 4 },
+    th: { fontSize: 11, color: '#444', letterSpacing: '0.5px', textTransform: 'uppercase' },
+    tableRow: { display: 'grid', gridTemplateColumns: '1fr 1.4fr 0.9fr', gap: 8, padding: '10px 0', borderBottom: '0.5px solid #1a1a1a', alignItems: 'center' },
+    tdId: { fontSize: 11, color: '#4a90b8', fontFamily: 'monospace' },
+    tdName: { fontSize: 13, color: '#ccc' },
+    statusReady: { fontSize: 11, padding: '3px 8px', borderRadius: 4, display: 'inline-block', background: '#1a2a1a', color: '#4a9a4a' },
+    statusActive: { fontSize: 11, padding: '3px 8px', borderRadius: 4, display: 'inline-block', background: '#1e1e1e', color: '#555' },
+    divider: { border: 'none', borderTop: '0.5px solid #1e1e1e', margin: '14px 0' },
+    loanBar: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', borderBottom: '0.5px solid #1e1e1e', marginBottom: 16 },
+    loanStat: (last) => ({ padding: '12px 14px', borderRight: last ? 'none' : '0.5px solid #1e1e1e' }),
+    loanStatLabel: { fontSize: 11, color: '#555', marginBottom: 4 },
+    loanStatVal: { fontSize: 13, fontWeight: 500, color: '#ccc' },
+    chartPayRow: { display: 'grid', gridTemplateColumns: '140px 1fr', gap: 16, alignItems: 'center', marginBottom: 16 },
+    payGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 },
+    payBox: { background: '#1a1a1a', borderRadius: 8, padding: '12px 14px' },
+    payLabel: { fontSize: 11, color: '#555', marginBottom: 4 },
+    payVal: { fontSize: 15, fontWeight: 500, color: '#fff' },
+    paySub: { fontSize: 11, color: '#444', marginTop: 2 },
+    btnRow: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 14 },
+    btnYellow: { background: '#FFD700', color: '#0f0f0f', border: 'none', borderRadius: 6, padding: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer' },
+    btnOutline: { background: 'transparent', color: '#fff', border: '0.5px solid #333', borderRadius: 6, padding: 10, fontSize: 13, cursor: 'pointer' },
+    portalBtns: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 48 },
+    pbLender: { background: '#FFD700', color: '#0f0f0f', border: 'none', borderRadius: 7, padding: 13, fontSize: 14, fontWeight: 500, cursor: 'pointer' },
+    pbBorrower: { background: 'transparent', color: '#fff', border: '1px solid #FFD700', borderRadius: 7, padding: 13, fontSize: 14, fontWeight: 500, cursor: 'pointer' },
     pricingSection: { borderTop: '0.5px solid #1e1e1e', padding: '80px 60px', maxWidth: 1000, margin: '0 auto' },
     pricingCards: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 48 },
     pricingCard: (featured) => ({ background: '#111', border: `0.5px solid ${featured ? '#FFD700' : '#2a2a2a'}`, borderRadius: 12, padding: 32, position: 'relative' }),
@@ -56,15 +66,12 @@ export default function HomePage({ onGetStarted }) {
     priceFeatures: { listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 10 },
     priceFeat: { fontSize: 14, color: '#aaa', display: 'flex', gap: 10, alignItems: 'flex-start' },
     check: { color: '#4a90b8', fontSize: 14, flexShrink: 0 },
-    priceBtn: (featured) => ({ width: '100%', marginTop: 28, padding: 12, borderRadius: 7, fontSize: 14, fontWeight: 500, cursor: 'pointer', background: featured ? '#FFD700' : 'transparent', color: featured ? '#0f0f0f' : '#fff', border: featured ? 'none' : '0.5px solid #333' }),
     whySection: { borderTop: '0.5px solid #1e1e1e', padding: '80px 60px', maxWidth: 1000, margin: '0 auto' },
     whyGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, background: '#1e1e1e', border: '0.5px solid #1e1e1e', borderRadius: 12, overflow: 'hidden', marginTop: 48 },
     whyItem: { background: '#111', padding: '28px 32px' },
-    whyItemSecurity: { background: '#0d1a0d', padding: '28px 32px' },
     whyIcon: { fontSize: 20, marginBottom: 14 },
     whyH: { fontSize: 15, fontWeight: 500, marginBottom: 8 },
     whyP: { fontSize: 14, color: '#666', lineHeight: 1.6 },
-    whyPSecurity: { fontSize: 14, color: '#3a5a3a', lineHeight: 1.6 },
     footer: { borderTop: '0.5px solid #1e1e1e', padding: '40px 60px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
     footerLogo: { fontSize: 18, fontWeight: 500 },
     footerCopy: { fontSize: 13, color: '#444' },
@@ -74,65 +81,148 @@ export default function HomePage({ onGetStarted }) {
 
   return (
     <div style={s.page}>
+
+      {/* HERO */}
       <div style={s.hero}>
-        
-        <h1 style={s.h1}>The fastest way to get your <span style={s.yellow}>payoff statement</span></h1>
-        <p style={s.heroP}>Send us your loan docs. We generate a fully prepared payoff statement and deliver it straight to your inbox — guaranteed within 2 hours.</p>
-        
-        <div style={{textAlign:'center',marginBottom:40}}><button style={s.btnPrimary} onClick={onGetStarted}>Submit a request</button></div>
+        <h1 style={s.h1}>Fast. Accurate. <span style={s.yellow}>Done.</span></h1>
+        <p style={s.heroP}>We handle the servicing so you can focus on lending. Your borrowers stay informed, your statements are always on time.</p>
+        <div style={s.ctas}>
+          <button style={s.btnPrimary} onClick={onLenderLogin}>I'm a lender</button>
+          <button style={s.btnSecondary} onClick={onBorrowerLogin}>I'm a borrower</button>
+        </div>
+        <div style={s.portalNote}>New here? Create an account in seconds.</div>
         <div style={s.statsRow}>
-          <div style={{ textAlign: 'center' }}><div style={s.statNum}>2hr</div><div style={s.statLabel}>Standard turnaround</div></div>
           <div style={{ textAlign: 'center' }}><div style={s.statNum}>15min</div><div style={s.statLabel}>Rush turnaround</div></div>
-          <div style={{ textAlign: 'center' }}><div style={s.statNum}>$35</div><div style={s.statLabel}>Starting price</div></div>
+          <div style={{ textAlign: 'center' }}><div style={s.statNum}>24hr</div><div style={s.statLabel}>Standard turnaround</div></div>
+          <div style={{ textAlign: 'center' }}><div style={s.statNum}>$40</div><div style={s.statLabel}>Starting price</div></div>
         </div>
       </div>
 
+      {/* HOW IT WORKS */}
       <div id="how" style={s.howWrap}>
         <div style={s.howInner}>
           <div style={s.sectionLabel}>How it works</div>
-          <div style={s.sectionTitle}>Three steps. That's it.</div>
-          <div style={s.sectionSub}>Simple, fast, and secure. Upload your docs and receive your payoff statement — no back and forth needed.</div>
+          <div style={s.sectionTitle}>Loans managed. Borrowers informed. Always.</div>
+          <div style={s.sectionSub}>Simple, fast, and secure. Onboard your loan and we handle the rest — no back and forth needed.</div>
           <div style={s.stepsGrid}>
-            <div style={s.step(false)}><div style={s.stepNum}>01</div><div style={s.stepIcon}>✉</div><div style={s.stepH}>Upload your loan docs</div><p style={s.stepP}>Submit your loan agreement, promissory note, or any supporting docs through our simple request form. PDF format.</p></div>
-            <div style={s.step(false)}><div style={s.stepNum}>02</div><div style={s.stepIcon}>⚡</div><div style={s.stepH}>We extract & calculate</div><p style={s.stepP}>Our system reads your documents, extracts key loan details, and calculates the exact payoff amount including accrued interest.</p></div>
-            <div style={s.step(true)}><div style={s.stepNum}>03</div><div style={s.stepIcon}>📄</div><div style={s.stepH}>Receive your statement</div><p style={s.stepP}>A professionally formatted payoff statement PDF lands in your inbox. Guaranteed in 2 hours, or 15 minutes for rush requests.</p></div>
+            <div style={s.step(false)}>
+              <div style={s.stepNum}>01</div>
+              <div style={s.stepIcon}>🏠</div>
+              <div style={s.stepH}>Onboard your loan</div>
+              <p style={s.stepP}>Send us the loan details once through your lender portal. Setup takes under two minutes.</p>
+            </div>
+            <div style={s.step(false)}>
+              <div style={s.stepNum}>02</div>
+              <div style={s.stepIcon}>⚙️</div>
+              <div style={s.stepH}>We manage the servicing</div>
+              <p style={s.stepP}>Statements, borrower communications, and payment tracking — handled automatically on your behalf.</p>
+            </div>
+            <div style={s.step(true)}>
+              <div style={s.stepNum}>03</div>
+              <div style={s.stepIcon}>📊</div>
+              <div style={s.stepH}>You stay in control</div>
+              <p style={s.stepP}>Monitor every loan in your portal. Your borrowers get what they need, when they need it.</p>
+            </div>
           </div>
         </div>
       </div>
 
-      <div style={s.emailSection}>
-        <div style={s.sectionLabel}>The process</div>
-        <div style={s.sectionTitle}>As simple as sending a form</div>
-        <div style={s.sectionSub}>No accounts required. Submit your docs, get your statement back — with everything calculated and ready to use.</div>
-        <div style={s.emailBox}>
-          <div style={s.emailTo}>To:</div>
-          <div style={s.emailAddr}>scott@theswiftdeed.com</div>
-          <div style={s.emailLabel}>Subject:</div>
-          <div style={s.emailSubject}>Payoff Request — 123 House Street, Atlanta GA</div>
-          <div style={s.emailLabel}>Attachments:</div>
-          <div style={s.attachRow}>
-            <div style={s.attachPill}><div style={s.attachIcon}></div> Loan_Agreement.pdf</div>
-            <div style={s.attachPill}><div style={s.attachIcon}></div> Promissory_Note.pdf</div>
+      {/* PORTAL PREVIEW */}
+      <div style={s.portalSection}>
+        <div style={s.sectionLabel}>The platform</div>
+        <div style={s.sectionTitle}>One platform, two portals</div>
+        <div style={{ ...s.sectionSub, marginBottom: 48 }}>Lenders manage their loan portfolio. Borrowers stay informed and in control. Everyone gets what they need.</div>
+
+        <div style={s.portalGrid}>
+
+          {/* LENDER CARD */}
+          <div style={s.portalCard(false)}>
+            <div style={s.cardHeader}>
+              <div style={s.cardTitle}>Lender portal</div>
+              <span style={s.badgeLender}>Your dashboard</span>
+            </div>
+            <div style={s.cardBody}>
+              <div style={s.tableHead}>
+                <span style={s.th}>Loan ID</span>
+                <span style={s.th}>Borrower</span>
+                <span style={s.th}>Status</span>
+              </div>
+              <div style={{ ...s.tableRow, borderBottom: '0.5px solid #1a1a1a' }}>
+                <span style={s.tdId}>SD-2026-4421</span>
+                <span style={s.tdName}>J. Martinez</span>
+                <span style={s.statusReady}>Statement ready</span>
+              </div>
+              <div style={{ ...s.tableRow, borderBottom: '0.5px solid #1a1a1a' }}>
+                <span style={s.tdId}>SD-2026-3817</span>
+                <span style={s.tdName}>R. Thompson</span>
+                <span style={s.statusActive}>Active</span>
+              </div>
+              <div style={{ ...s.tableRow, borderBottom: 'none' }}>
+                <span style={s.tdId}>SD-2026-3102</span>
+                <span style={s.tdName}>K. Patel</span>
+                <span style={s.statusActive}>Active</span>
+              </div>
+              <div style={s.divider}></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ fontSize: 12, color: '#555' }}>3 active loans · 1 statement ready</div>
+                <div style={{ fontSize: 12, color: '#4a90b8', cursor: 'pointer' }}>View all →</div>
+              </div>
+            </div>
           </div>
-          <div style={s.arrowRow}><div style={s.arrowLine}></div><span>within 2 hours</span><div style={s.arrowLine}></div></div>
-          <div style={s.responseBox}>
-            <div style={s.respHeader}><span style={s.respTitle}>Payoff Statement</span><span style={s.respTime}>Delivered in 30 min</span></div>
-            <div style={s.respSectionLabel}>Borrower information</div>
-            <div style={s.respRow}><span>Borrower</span><span style={{ color: '#ccc' }}>Sample - 145 LLC</span></div>
-            <div style={s.respRow}><span>Property</span><span style={{ color: '#ccc' }}>123 House Street, Atlanta GA 30316</span></div>
-            <div style={s.respRow}><span>Loan ID</span><span style={{ color: '#ccc' }}>SD-2026-279206</span></div>
-            <div style={s.respRow}><span>Lender</span><span style={{ color: '#ccc' }}>CL-LM RESI Purchaser Trust 1</span></div>
-            <div style={s.respSectionLabel}>Payoff details</div>
-            <div style={s.respRow}><span>Unpaid principal balance</span><span style={{ color: '#ccc' }}>$123,750.00</span></div>
-            <div style={s.respRow}><span>Interest due (26 days @ $33.90/day)</span><span style={{ color: '#ccc' }}>$881.51</span></div>
-            <div style={{ ...s.respRow, borderBottom: 'none' }}><span>Servicer fee</span><span style={{ color: '#ccc' }}>$618.75</span></div>
-            <div style={s.respTotal}><span style={{ fontSize: 13, fontWeight: 500, color: '#aaa' }}>Total payoff amount</span><span style={{ fontSize: 20, fontWeight: 500, color: '#FFD700', letterSpacing: -0.5 }}>$125,250.26</span></div>
-            <div style={s.dlBtn}><div style={s.dlBtnInner}>↓ Download statement</div><span style={{ fontSize: 12, color: '#444' }}>PDF · SD-2026-279206</span></div>
-            <div style={s.respFooter}>This payoff statement is subject to final lender verification. All payments must be made via wire transfer or certified funds.</div>
+
+          {/* BORROWER CARD */}
+          <div style={s.portalCard(true)}>
+            <div style={s.cardHeader}>
+              <div style={s.cardTitle}>Borrower portal</div>
+              <span style={s.badgeBorrower}>Your account</span>
+            </div>
+            <div style={s.cardBody}>
+              <div style={s.loanBar}>
+                <div style={s.loanStat(false)}><div style={s.loanStatLabel}>Homeowner</div><div style={s.loanStatVal}>J. Martinez</div></div>
+                <div style={s.loanStat(false)}><div style={s.loanStatLabel}>Interest rate</div><div style={s.loanStatVal}>8.500%</div></div>
+                <div style={s.loanStat(false)}><div style={s.loanStatLabel}>Principal balance</div><div style={{ ...s.loanStatVal, color: '#FFD700' }}>$124,500</div></div>
+                <div style={s.loanStat(true)}><div style={s.loanStatLabel}>Per diem</div><div style={s.loanStatVal}>$33.90</div></div>
+              </div>
+              <div style={s.chartPayRow}>
+                <div>
+                  <svg width="120" height="120" viewBox="0 0 120 120">
+                    <circle cx="60" cy="60" r="45" fill="none" stroke="#1a1a1a" strokeWidth="18"/>
+                    <circle cx="60" cy="60" r="45" fill="none" stroke="#4a90b8" strokeWidth="18" strokeDasharray="169 114" strokeDashoffset="0" transform="rotate(-90 60 60)"/>
+                    <circle cx="60" cy="60" r="45" fill="none" stroke="#FFD700" strokeWidth="18" strokeDasharray="28 255" strokeDashoffset="-169" transform="rotate(-90 60 60)"/>
+                    <circle cx="60" cy="60" r="45" fill="none" stroke="#2a2a2a" strokeWidth="18" strokeDasharray="86 197" strokeDashoffset="-197" transform="rotate(-90 60 60)"/>
+                    <text x="60" y="56" textAnchor="middle" fontSize="11" fill="#555">Balance</text>
+                    <text x="60" y="70" textAnchor="middle" fontSize="13" fontWeight="500" fill="#fff">$124.5k</text>
+                  </svg>
+                  <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 5 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#555' }}><div style={{ width: 8, height: 8, borderRadius: '50%', background: '#4a90b8', flexShrink: 0 }}></div>Principal paid</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#555' }}><div style={{ width: 8, height: 8, borderRadius: '50%', background: '#FFD700', flexShrink: 0 }}></div>Interest paid</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#555' }}><div style={{ width: 8, height: 8, borderRadius: '50%', background: '#2a2a2a', flexShrink: 0 }}></div>Remaining</div>
+                  </div>
+                </div>
+                <div>
+                  <div style={s.payGrid}>
+                    <div style={s.payBox}><div style={s.payLabel}>Last payment</div><div style={s.payVal}>$2,306</div><div style={s.paySub}>04/01/2026</div></div>
+                    <div style={s.payBox}><div style={s.payLabel}>Due date</div><div style={s.payVal}>05/01/2026</div><div style={s.paySub}>Next payment</div></div>
+                    <div style={s.payBox}><div style={s.payLabel}>Interest accrued</div><div style={{ ...s.payVal, color: '#FFD700' }}>$881</div><div style={s.paySub}>This period</div></div>
+                    <div style={s.payBox}><div style={s.payLabel}>Statement</div><div style={{ ...s.payVal, color: '#4a9a4a', fontSize: 13 }}>Ready</div><div style={s.paySub}>Apr 2026</div></div>
+                  </div>
+                  <div style={s.btnRow}>
+                    <button style={s.btnYellow}>Request payoff</button>
+                    <button style={s.btnOutline}>View statements</button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
+        </div>
+
+        <div style={s.portalBtns}>
+          <button style={s.pbLender} onClick={onLenderLogin}>I'm a lender</button>
+          <button style={s.pbBorrower} onClick={onBorrowerLogin}>I'm a borrower</button>
         </div>
       </div>
 
+      {/* PRICING */}
       <div id="pricing" style={s.pricingSection}>
         <div style={s.sectionLabel}>Pricing</div>
         <div style={s.sectionTitle}>Simple, flat pricing</div>
@@ -140,56 +230,56 @@ export default function HomePage({ onGetStarted }) {
         <div style={s.pricingCards}>
           <div style={s.pricingCard(false)}>
             <div style={s.priceName}>Standard</div>
-            <div style={s.priceAmt}><sup style={{ fontSize: 20, verticalAlign: 'top', marginTop: 10, display: 'inline-block' }}>$</sup>35</div>
-            <div style={s.priceTime}>Delivered within 2 hours</div>
+            <div style={s.priceAmt}><sup style={{ fontSize: 20, verticalAlign: 'top', marginTop: 10, display: 'inline-block' }}>$</sup>40</div>
+            <div style={s.priceTime}>Delivered within 24 hours</div>
             <hr style={s.priceDivider} />
             <ul style={s.priceFeatures}>
               {['Professionally formatted PDF', 'Principal, interest & fee breakdown', 'Delivered directly to your inbox', 'Works with any loan documents'].map(f => <li key={f} style={s.priceFeat}><span style={s.check}>✓</span>{f}</li>)}
             </ul>
-            <button style={s.priceBtn(false)} onClick={onGetStarted}>Get started</button>
           </div>
           <div style={s.pricingCard(true)}>
-            <div style={s.featBadge}>Rush — fastest option</div>
+            <div style={s.featBadge}>Most popular</div>
             <div style={s.priceName}>Rush</div>
-            <div style={s.priceAmt}><sup style={{ fontSize: 20, verticalAlign: 'top', marginTop: 10, display: 'inline-block' }}>$</sup>45</div>
+            <div style={s.priceAmt}><sup style={{ fontSize: 20, verticalAlign: 'top', marginTop: 10, display: 'inline-block' }}>$</sup>50</div>
             <div style={s.priceTime}>Delivered within 15 minutes</div>
             <hr style={s.priceDivider} />
             <ul style={s.priceFeatures}>
               {['Everything in Standard', 'Priority processing', 'Ideal for same-day closings', "15-minute guarantee or it's free"].map(f => <li key={f} style={s.priceFeat}><span style={s.check}>✓</span>{f}</li>)}
             </ul>
-            <button style={s.priceBtn(true)} onClick={onGetStarted}>Get started</button>
           </div>
         </div>
       </div>
 
+      {/* WHY SWIFTDEED */}
       <div id="why" style={s.whySection}>
         <div style={s.sectionLabel}>Why SwiftDeed</div>
         <div style={s.sectionTitle}>Built for speed. Built for lenders.</div>
-        <div style={s.sectionSub}>We do one thing and we do it fast. No bloated loan servicing platform. Just payoff statements.</div>
+        <div style={s.sectionSub}>Most servicers take 3–5 days. We deliver same-day, every time — because your deals don't wait.</div>
         <div style={s.whyGrid}>
           <div style={s.whyItem}>
             <div style={s.whyIcon}>⚡</div>
-            <div style={s.whyH}>Guaranteed turnaround</div>
-            <p style={s.whyP}>2-hour standard or 15-minute rush. If we miss the window, you don't pay. Simple as that.</p>
-          </div>
-          <div style={s.whyItemSecurity}>
-            <div style={s.whyIcon}>🔒</div>
-            <div style={{ ...s.whyH, color: '#4a9a4a' }}>Bank-level security</div>
-            <p style={s.whyPSecurity}>Your documents are encrypted in transit and at rest. We never share your files with third parties — ever.</p>
+            <div style={s.whyH}>Built for speed</div>
+            <p style={s.whyP}>Most servicers take 3–5 days. We deliver same-day, every time. Rush requests in 15 minutes.</p>
           </div>
           <div style={s.whyItem}>
-            <div style={s.whyIcon}>📬</div>
-            <div style={s.whyH}>Simple submission</div>
-            <p style={s.whyP}>Simple, fast, and secure. Upload your docs and receive your payoff statement — no back and forth needed.</p>
+            <div style={s.whyIcon}>🎯</div>
+            <div style={s.whyH}>Always accurate</div>
+            <p style={s.whyP}>Real-time calculations with live per diem adjustments. Your borrowers get the right number, not one that expires before they can act.</p>
           </div>
           <div style={s.whyItem}>
             <div style={s.whyIcon}>💼</div>
-            <div style={s.whyH}>Flat, transparent pricing</div>
-            <p style={s.whyP}>$35 per statement. No subscriptions, no monthly fees, no surprises. Perfect for lenders of any size.</p>
+            <div style={s.whyH}>Built for private lenders</div>
+            <p style={s.whyP}>Designed around how private lending actually works, not retrofitted from big bank servicing software.</p>
+          </div>
+          <div style={s.whyItem}>
+            <div style={s.whyIcon}>🚀</div>
+            <div style={s.whyH}>No complicated setup</div>
+            <p style={s.whyP}>Onboard a loan in minutes. No software to install, no lengthy onboarding calls, no back and forth.</p>
           </div>
         </div>
       </div>
 
+      {/* FOOTER */}
       <div style={s.footer}>
         <div>
           <div style={s.footerLogo}><span style={{ color: '#fff' }}>Swift</span><span style={{ color: '#FFD700' }}>Deed</span></div>
@@ -202,6 +292,7 @@ export default function HomePage({ onGetStarted }) {
           <a style={s.footerLink} href="mailto:support@theswiftdeed.com">Contact</a>
         </div>
       </div>
+
     </div>
   );
 }

@@ -187,7 +187,7 @@ export default function App() {
   return (
     <div style={{ background: '#0f0f0f', minHeight: '100vh', fontFamily: 'system-ui, sans-serif' }}>
       {nav}
-      {page === 'home' && <HomePage onGetStarted={() => { setAuthMode('signup'); setPage('auth'); }} />}
+      {page === 'home' && <HomePage onLenderLogin={() => { setAuthMode('signup'); setPage('auth'); }} onBorrowerLogin={() => { setAuthMode('signup'); setPage('auth'); }} />}
       {page === 'request' && <RequestForm />}
       {page === 'portal' && <Portal />}
       {page === 'choice' && choicePage}
