@@ -24,7 +24,7 @@ export default function HomePage({ onLenderLogin, onBorrowerLogin }) {
     stepH: { fontSize: 16, fontWeight: 500, marginBottom: 8 },
     stepP: { fontSize: 14, color: '#666', lineHeight: 1.6 },
     portalSection: { padding: '80px 60px', maxWidth: 1000, margin: '0 auto' },
-    portalGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, alignItems: 'start' },
+    portalGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, alignItems: 'stretch' },
     portalCard: (accent) => ({ background: '#111', border: `0.5px solid ${accent ? '#2a2a3a' : '#2a2a2a'}`, borderRadius: 12, overflow: 'hidden' }),
     cardHeader: { padding: '14px 20px', borderBottom: '0.5px solid #1e1e1e', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
     cardTitle: { fontSize: 13, fontWeight: 500, color: '#fff' },
@@ -206,10 +206,7 @@ export default function HomePage({ onLenderLogin, onBorrowerLogin }) {
                     <div style={s.payBox}><div style={s.payLabel}>Interest accrued</div><div style={{ ...s.payVal, color: '#FFD700' }}>$881</div><div style={s.paySub}>This period</div></div>
                     <div style={s.payBox}><div style={s.payLabel}>Statement</div><div style={{ ...s.payVal, color: '#4a9a4a', fontSize: 13 }}>Ready</div><div style={s.paySub}>Apr 2026</div></div>
                   </div>
-                  <div style={s.btnRow}>
-                    <button style={s.btnYellow}>Request payoff</button>
-                    <button style={s.btnOutline}>View statements</button>
-                  </div>
+                  
                 </div>
               </div>
             </div>
