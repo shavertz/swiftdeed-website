@@ -3,18 +3,24 @@ import { useUser, useClerk, SignIn, SignUp } from '@clerk/clerk-react';
 import HomePage from './components/HomePage';
 import RequestForm from './components/RequestForm';
 import Portal from './components/Portal';
+import BorrowerPortal from './components/BorrowerPortal';
 
 export default function App() {
   const [page, setPage] = useState('home');
   const [authMode, setAuthMode] = useState('signup');
+  const [portalType, setPortalType] = useState('lender');
   const { isSignedIn, user } = useUser();
   const { signOut } = useClerk();
 
   useEffect(() => {
     if (isSignedIn && page === 'auth') {
-      setPage('choice');
+      if (portalType === 'borrower') {
+        setPage('borrower-portal');
+      } else {
+        setPage('choice');
+      }
     }
-  }, [isSignedIn, page]);
+  }, [isSignedIn, page, portalType]);
 
   const scrollTo = (id) => {
     setPage('home');
@@ -27,6 +33,7 @@ export default function App() {
   const handleLogout = () => {
     signOut();
     setPage('home');
+    setPortalType('lender');
   };
 
   const toggleBtn = (mode) => ({
@@ -69,16 +76,29 @@ export default function App() {
             <span style={{ fontSize: 13, color: '#aaa' }}>
               {user.primaryEmailAddress?.emailAddress}
             </span>
-            <button
-              onClick={() => setPage('portal')}
-              style={{
-                background: '#FFD700', color: '#0f0f0f', fontSize: 14, fontWeight: 500,
-                padding: '8px 18px', borderRadius: 6, border: 'none',
-                cursor: 'pointer', outline: 'none'
-              }}
-            >
-              My requests
-            </button>
+            {portalType === 'borrower' ? (
+              <button
+                onClick={() => setPage('borrower-portal')}
+                style={{
+                  background: '#FFD700', color: '#0f0f0f', fontSize: 14, fontWeight: 500,
+                  padding: '8px 18px', borderRadius: 6, border: 'none',
+                  cursor: 'pointer', outline: 'none'
+                }}
+              >
+                My loan
+              </button>
+            ) : (
+              <button
+                onClick={() => setPage('portal')}
+                style={{
+                  background: '#FFD700', color: '#0f0f0f', fontSize: 14, fontWeight: 500,
+                  padding: '8px 18px', borderRadius: 6, border: 'none',
+                  cursor: 'pointer', outline: 'none'
+                }}
+              >
+                My requests
+              </button>
+            )}
             <button
               onClick={handleLogout}
               style={{
@@ -103,7 +123,7 @@ export default function App() {
               Log in
             </button>
             <button
-              onClick={() => { setAuthMode('signup'); setPage('auth'); }}
+              onClick={() => { setPortalType('lender'); setAuthMode('signup'); setPage('auth'); }}
               style={{
                 background: '#FFD700', color: '#0f0f0f', fontSize: 14,
                 fontWeight: 500, padding: '8px 18px', borderRadius: 6,
@@ -154,8 +174,7 @@ export default function App() {
           style={{
             background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: 12,
             padding: '40px 48px', cursor: 'pointer', textAlign: 'center',
-            transition: 'border-color 0.15s',
-            width: 220,
+            transition: 'border-color 0.15s', width: 220,
           }}
           onMouseEnter={e => e.currentTarget.style.borderColor = '#FFD700'}
           onMouseLeave={e => e.currentTarget.style.borderColor = '#2a2a2a'}
@@ -170,8 +189,7 @@ export default function App() {
           style={{
             background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: 12,
             padding: '40px 48px', cursor: 'pointer', textAlign: 'center',
-            transition: 'border-color 0.15s',
-            width: 220,
+            transition: 'border-color 0.15s', width: 220,
           }}
           onMouseEnter={e => e.currentTarget.style.borderColor = '#FFD700'}
           onMouseLeave={e => e.currentTarget.style.borderColor = '#2a2a2a'}
@@ -187,9 +205,15 @@ export default function App() {
   return (
     <div style={{ background: '#0f0f0f', minHeight: '100vh', fontFamily: 'system-ui, sans-serif' }}>
       {nav}
-      {page === 'home' && <HomePage onLenderLogin={() => { setAuthMode('signup'); setPage('auth'); }} onBorrowerLogin={() => { setAuthMode('signup'); setPage('auth'); }} />}
+      {page === 'home' && (
+        <HomePage
+          onLenderLogin={() => { setPortalType('lender'); setAuthMode('signup'); setPage('auth'); }}
+          onBorrowerLogin={() => { setPortalType('borrower'); setAuthMode('signup'); setPage('auth'); }}
+        />
+      )}
       {page === 'request' && <RequestForm />}
       {page === 'portal' && <Portal />}
+      {page === 'borrower-portal' && <BorrowerPortal onHome={() => setPage('home')} />}
       {page === 'choice' && choicePage}
       {page === 'auth' && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 60 }}>
