@@ -34,9 +34,7 @@ export default function App() {
         setPage('choice');
       }
     }
-    if (isSignedIn && page === 'home' && portalType === 'lender') {
-      setPage('choice');
-    }
+
   }, [isSignedIn, page, portalType]);
 
   const scrollTo = (id) => {
@@ -71,7 +69,7 @@ export default function App() {
       background: '#0f0f0f', position: 'sticky', top: 0, zIndex: 100
     }}>
       <div
-        onClick={() => setPage('home')}
+        onClick={() => { setPage('home'); setPortalType('lender'); }}
         style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
       >
         <span style={{ fontSize: 20, fontWeight: 500, letterSpacing: -0.3 }}>
@@ -197,7 +195,7 @@ export default function App() {
           onMouseLeave={e => e.currentTarget.style.borderColor = '#2a2a2a'}
         >
           <div style={{ fontSize: 32, marginBottom: 16 }}>📄</div>
-          <div style={{ fontSize: 16, fontWeight: 600, color: '#fff', marginBottom: 8 }}>Submit a request</div>
+          <div style={{ fontSize: 16, fontWeight: 400, color: '#fff', marginBottom: 8 }}>Submit a request</div>
           <div style={{ fontSize: 13, color: '#555', lineHeight: 1.5 }}>Upload your loan docs and get a payoff statement</div>
         </div>
 
@@ -212,7 +210,7 @@ export default function App() {
           onMouseLeave={e => e.currentTarget.style.borderColor = '#2a2a2a'}
         >
           <div style={{ fontSize: 32, marginBottom: 16 }}>📋</div>
-          <div style={{ fontSize: 16, fontWeight: 600, color: '#fff', marginBottom: 8 }}>View my requests</div>
+          <div style={{ fontSize: 16, fontWeight: 400, color: '#fff', marginBottom: 8 }}>View my requests</div>
           <div style={{ fontSize: 13, color: '#555', lineHeight: 1.5 }}>Check the status of your existing requests</div>
         </div>
       </div>
