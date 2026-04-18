@@ -83,9 +83,10 @@ function fmtPct(v) {
   return parseFloat(v).toFixed(3) + '%';
 }
 
-function normalizeAddress(addr) {
+function extractStreetCore(addr) {
   if (!addr) return '';
-  return addr.toLowerCase()
+  // Normalize abbreviations
+  let a = addr.toLowerCase()
     .replace(/\bstreet\b/g, 'st').replace(/\bst\.\b/g, 'st')
     .replace(/\bavenue\b/g, 'ave').replace(/\bave\.\b/g, 'ave')
     .replace(/\bdrive\b/g, 'dr').replace(/\bdr\.\b/g, 'dr')
@@ -94,14 +95,14 @@ function normalizeAddress(addr) {
     .replace(/\bboulevard\b/g, 'blvd').replace(/\bblvd\.\b/g, 'blvd')
     .replace(/\bcourt\b/g, 'ct').replace(/\bct\.\b/g, 'ct')
     .replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim();
+  // Take only the first 4 words (street number + street name), drop city/state/zip
+  return a.split(' ').slice(0, 4).join(' ');
 }
 
 function addressesMatch(input, stored) {
-  const a = normalizeAddress(input);
-  const b = normalizeAddress(stored);
-  // Extract just the street number + street name from input for partial match
-  const inputWords = a.split(' ').slice(0, 3).join(' ');
-  return b.includes(a) || b.includes(inputWords) || a.includes(b.split(' ').slice(0, 3).join(' '));
+  const a = extractStreetCore(input);
+  const b = extractStreetCore(stored);
+  return b.includes(a) || a.includes(b);
 }
 
 export default function BorrowerPortal({ onHome }) {
