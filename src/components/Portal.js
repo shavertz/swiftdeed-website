@@ -29,7 +29,7 @@ function avgTurnaround(requests) {
 const s = {
   page: { padding: '48px 60px', maxWidth: 1100, margin: '0 auto' },
   topRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 36 },
-  heading: { fontSize: 24, fontWeight: 600, color: '#fff', marginBottom: 4 },
+  heading: { fontSize: 24, fontWeight: 400, color: '#fff', marginBottom: 4 },
   sub: { fontSize: 13, color: '#555' },
   submitBtn: {
     background: '#FFD700', color: '#0f0f0f', fontSize: 14, fontWeight: 600,
