@@ -88,7 +88,7 @@ export default function BorrowerPortal({ onHome }) {
   useEffect(() => {
     if (!user) return;
     fetchBorrower();
-  }, [user]);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function fetchBorrower() {
     setLoading(true);
@@ -105,7 +105,6 @@ export default function BorrowerPortal({ onHome }) {
   }
 
   const email = user?.primaryEmailAddress?.emailAddress || '';
-  const displayName = user?.fullName || email;
 
   const perDiem = borrower?.per_diem || 0;
   const today = new Date();
@@ -209,7 +208,7 @@ export default function BorrowerPortal({ onHome }) {
                     </div>
                     <div style={s.statBox}>
                       <div style={s.sbLabel}>Loan start</div>
-                      <div style={s.sbVal} style={{ fontSize: 13, fontWeight: 500, color: '#fff' }}>{borrower.loan_start_date || '—'}</div>
+                      <div style={{ ...s.sbVal, fontSize: 13, fontWeight: 500, color: '#fff' }}>{borrower.loan_start_date || '—'}</div>
                     </div>
                   </div>
                   <div style={s.accrualBar}>
