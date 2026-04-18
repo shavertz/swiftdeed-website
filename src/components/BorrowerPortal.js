@@ -59,9 +59,18 @@ const s = {
   stmtName: { fontSize: 13, color: '#ccc' },
   stmtDate: { fontSize: 11, color: '#555' },
   stmtBtn: { background: '#1a1a1a', border: '0.5px solid #2a2a2a', color: '#4a90b8', fontSize: 12, padding: '5px 12px', borderRadius: 5, cursor: 'pointer' },
-  emptyWrap: { textAlign: 'center', padding: '80px 40px' },
+  emptyWrap: { textAlign: 'center', padding: '60px 40px 32px' },
   emptyTitle: { fontSize: 18, fontWeight: 500, color: '#fff', marginBottom: 12 },
-  emptyText: { fontSize: 14, color: '#555', lineHeight: 1.7, maxWidth: 400, margin: '0 auto' },
+  emptyText: { fontSize: 14, color: '#555', lineHeight: 1.7, maxWidth: 400, margin: '0 auto 36px' },
+  verifyCard: { background: '#111', border: '0.5px solid #2a2a2a', borderRadius: 12, padding: '32px 36px', maxWidth: 460, margin: '0 auto', textAlign: 'left' },
+  verifyTitle: { fontSize: 15, fontWeight: 600, color: '#fff', marginBottom: 6 },
+  verifySub: { fontSize: 13, color: '#555', marginBottom: 24, lineHeight: 1.6 },
+  fieldLabel: { fontSize: 12, color: '#888', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 7, display: 'block' },
+  fieldInput: { width: '100%', background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 7, padding: '11px 14px', fontSize: 14, color: '#fff', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box', marginBottom: 16 },
+  fieldInputFocus: { border: '0.5px solid #D4A017' },
+  btnVerify: { width: '100%', background: '#D4A017', color: '#0f0f0f', border: 'none', borderRadius: 7, padding: 12, fontSize: 14, fontWeight: 600, cursor: 'pointer', marginTop: 4 },
+  btnVerifyDisabled: { width: '100%', background: '#3a3000', color: '#888', border: 'none', borderRadius: 7, padding: 12, fontSize: 14, fontWeight: 600, cursor: 'not-allowed', marginTop: 4 },
+  errorMsg: { fontSize: 13, color: '#c0392b', background: '#1a0a0a', border: '0.5px solid #3a1010', borderRadius: 7, padding: '10px 14px', marginTop: 12, lineHeight: 1.5 },
 };
 
 function fmt$(v) {
@@ -74,11 +83,38 @@ function fmtPct(v) {
   return parseFloat(v).toFixed(3) + '%';
 }
 
+function normalizeAddress(addr) {
+  if (!addr) return '';
+  return addr.toLowerCase()
+    .replace(/\bstreet\b/g, 'st').replace(/\bst\.\b/g, 'st')
+    .replace(/\bavenue\b/g, 'ave').replace(/\bave\.\b/g, 'ave')
+    .replace(/\bdrive\b/g, 'dr').replace(/\bdr\.\b/g, 'dr')
+    .replace(/\blane\b/g, 'ln').replace(/\bln\.\b/g, 'ln')
+    .replace(/\broad\b/g, 'rd').replace(/\brd\.\b/g, 'rd')
+    .replace(/\bboulevard\b/g, 'blvd').replace(/\bblvd\.\b/g, 'blvd')
+    .replace(/\bcourt\b/g, 'ct').replace(/\bct\.\b/g, 'ct')
+    .replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim();
+}
+
+function addressesMatch(input, stored) {
+  const a = normalizeAddress(input);
+  const b = normalizeAddress(stored);
+  // Extract just the street number + street name from input for partial match
+  const inputWords = a.split(' ').slice(0, 3).join(' ');
+  return b.includes(a) || b.includes(inputWords) || a.includes(b.split(' ').slice(0, 3).join(' '));
+}
+
 export default function BorrowerPortal({ onHome }) {
   const { user } = useUser();
 
   const [borrower, setBorrower] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [verifying, setVerifying] = useState(false);
+  const [verifyName, setVerifyName] = useState('');
+  const [verifyAddress, setVerifyAddress] = useState('');
+  const [verifyError, setVerifyError] = useState('');
+  const [verifyLoading, setVerifyLoading] = useState(false);
+  const [focusedField, setFocusedField] = useState(null);
 
   useEffect(() => {
     if (!user) return;
@@ -117,8 +153,55 @@ export default function BorrowerPortal({ onHome }) {
       .or(`borrower_email.ilike.${userEmail},legal_name.ilike.${fullName}`)
       .limit(1)
       .single();
-    if (!error && data) setBorrower(data);
+    if (!error && data) {
+      setBorrower(data);
+      setLoading(false);
+      return;
+    }
+
+    // No match found — show verification form
+    setVerifying(true);
     setLoading(false);
+  }
+
+  async function handleVerify() {
+    if (!verifyName.trim() || !verifyAddress.trim()) return;
+    setVerifyLoading(true);
+    setVerifyError('');
+
+    const userEmail = user?.primaryEmailAddress?.emailAddress;
+
+    // Fetch all borrowers without an email assigned (or with a different email)
+    // and try to match on legal name + address
+    const { data: allBorrowers, error } = await supabase
+      .from('borrowers')
+      .select('*')
+      .ilike('legal_name', verifyName.trim());
+
+    if (error || !allBorrowers || allBorrowers.length === 0) {
+      setVerifyError("We couldn't find a loan matching that name and address. Please double-check that both match exactly what's on your loan documents, or contact your lender.");
+      setVerifyLoading(false);
+      return;
+    }
+
+    // Among name matches, find one where address also matches
+    const match = allBorrowers.find(b => addressesMatch(verifyAddress, b.property_address));
+
+    if (!match) {
+      setVerifyError("We couldn't find a loan matching that name and address. Please double-check that both match exactly what's on your loan documents, or contact your lender.");
+      setVerifyLoading(false);
+      return;
+    }
+
+    // Match found — link their email and activate
+    await supabase
+      .from('borrowers')
+      .update({ borrower_email: userEmail })
+      .eq('id', match.id);
+
+    setBorrower({ ...match, borrower_email: userEmail });
+    setVerifying(false);
+    setVerifyLoading(false);
   }
 
   const email = user?.primaryEmailAddress?.emailAddress || '';
@@ -136,6 +219,53 @@ export default function BorrowerPortal({ onHome }) {
     ? borrower.loan_document_urls.split(',').map(u => u.trim()).filter(Boolean)
     : [];
 
+  const verificationForm = (
+    <div style={{ padding: '60px 40px' }}>
+      <div style={s.emptyWrap}>
+        <div style={s.emptyTitle}>Let's find your loan</div>
+        <div style={s.emptyText}>
+          Enter your legal name and property address exactly as they appear on your loan documents. This is how we'll connect your account to your loan.
+        </div>
+      </div>
+      <div style={s.verifyCard}>
+        <div style={s.verifyTitle}>Verify your identity</div>
+        <div style={s.verifySub}>Use the exact name and address from your loan documents.</div>
+
+        <label style={s.fieldLabel}>Legal full name</label>
+        <input
+          style={{ ...s.fieldInput, ...(focusedField === 'name' ? s.fieldInputFocus : {}) }}
+          placeholder="e.g. John Robert Martinez"
+          value={verifyName}
+          onChange={e => setVerifyName(e.target.value)}
+          onFocus={() => setFocusedField('name')}
+          onBlur={() => setFocusedField(null)}
+        />
+
+        <label style={s.fieldLabel}>Property address</label>
+        <input
+          style={{ ...s.fieldInput, ...(focusedField === 'address' ? s.fieldInputFocus : {}) }}
+          placeholder="e.g. 123 Main St, Atlanta GA 30316"
+          value={verifyAddress}
+          onChange={e => setVerifyAddress(e.target.value)}
+          onFocus={() => setFocusedField('address')}
+          onBlur={() => setFocusedField(null)}
+        />
+
+        <button
+          style={verifyLoading || !verifyName.trim() || !verifyAddress.trim() ? s.btnVerifyDisabled : s.btnVerify}
+          onClick={handleVerify}
+          disabled={verifyLoading || !verifyName.trim() || !verifyAddress.trim()}
+        >
+          {verifyLoading ? 'Searching...' : 'Find my loan'}
+        </button>
+
+        {verifyError && (
+          <div style={s.errorMsg}>{verifyError}</div>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <div style={{ background: '#0f0f0f', minHeight: '100vh', color: '#f0f0f0', fontFamily: 'inherit' }}>
 
@@ -152,6 +282,8 @@ export default function BorrowerPortal({ onHome }) {
       <div style={s.main}>
         {loading ? (
           <div style={{ textAlign: 'center', padding: 80, color: '#555', fontSize: 14 }}>Loading your loan...</div>
+        ) : verifying ? (
+          verificationForm
         ) : !borrower ? (
           <div style={s.emptyWrap}>
             <div style={s.emptyTitle}>Your loan hasn't been processed yet</div>
