@@ -32,7 +32,7 @@ const s = {
   heading: { fontSize: 24, fontWeight: 400, color: '#fff', marginBottom: 4 },
   sub: { fontSize: 13, color: '#555' },
   submitBtn: {
-    background: '#FFD700', color: '#0f0f0f', fontSize: 14, fontWeight: 600,
+    background: '#FFD700', color: '#0f0f0f', fontSize: 14, fontWeight: 500,
     padding: '10px 22px', borderRadius: 7, border: 'none', cursor: 'pointer',
   },
   statRow: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 32 },
