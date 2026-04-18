@@ -28,7 +28,7 @@ const s = {
   loanStat: (last) => ({ padding: '16px 18px', borderRight: last ? 'none' : '0.5px solid #1e1e1e', background: '#111' }),
   lsLabel: { fontSize: 11, color: '#555', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px' },
   lsVal: { fontSize: 15, fontWeight: 500, color: '#fff' },
-  grid2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 },
+  grid2: { display: 'grid', gridTemplateColumns: '340px 1fr 1fr', gap: 20, marginBottom: 20 },
   card: { background: '#111', border: '0.5px solid #2a2a2a', borderRadius: 10, overflow: 'hidden' },
   cardHead: { padding: '14px 18px', borderBottom: '0.5px solid #1e1e1e', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   cardTitle: { fontSize: 13, fontWeight: 500, color: '#fff' },
@@ -224,6 +224,31 @@ export default function BorrowerPortal({ onHome }) {
                 </div>
               </div>
 
+              <div style={s.card}>
+                <div style={s.cardHead}>
+                  <div style={s.cardTitle}>Loan breakdown</div>
+                </div>
+                <div style={s.cardBody}>
+                  <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+                    <svg width="130" height="130" viewBox="0 0 130 130">
+                      <circle cx="65" cy="65" r="48" fill="none" stroke="#1a1a1a" strokeWidth="18"/>
+                      <circle cx="65" cy="65" r="48" fill="none" stroke="#2a2a2a" strokeWidth="18" strokeDasharray="301 0" transform="rotate(-90 65 65)"/>
+                      <text x="65" y="60" textAnchor="middle" fontSize="11" fill="#555">Remaining</text>
+                      <text x="65" y="76" textAnchor="middle" fontSize="14" fontWeight="500" fill="#fff">100%</text>
+                    </svg>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#666' }}><div style={{ width: 9, height: 9, borderRadius: '50%', background: '#2a2a2a', flexShrink: 0 }}></div>Remaining balance</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#666' }}><div style={{ width: 9, height: 9, borderRadius: '50%', background: '#4a90b8', flexShrink: 0 }}></div>Principal paid</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#666' }}><div style={{ width: 9, height: 9, borderRadius: '50%', background: '#D4A017', flexShrink: 0 }}></div>Interest paid</div>
+                  </div>
+                  <div style={s.statGrid}>
+                    <div style={s.statBox}><div style={s.sbLabel}>Principal balance</div><div style={{ ...s.sbVal, color: '#D4A017' }}>{fmt$(borrower.principal_balance)}</div></div>
+                    <div style={s.statBox}><div style={s.sbLabel}>Interest rate</div><div style={s.sbVal}>{fmtPct(borrower.interest_rate)}</div></div>
+                  </div>
+                </div>
+              </div>
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                 <div style={s.card}>
                   <div style={s.cardHead}>
@@ -252,7 +277,6 @@ export default function BorrowerPortal({ onHome }) {
                     </div>
                   </div>
                 </div>
-
                 <div style={s.card}>
                   <div style={s.cardHead}>
                     <div style={s.cardTitle}>Loan documents</div>
