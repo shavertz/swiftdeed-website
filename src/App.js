@@ -13,6 +13,20 @@ export default function App() {
   const { signOut } = useClerk();
 
   useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('activate');
+    if (token) {
+      setPortalType('borrower');
+      if (isSignedIn) {
+        setPage('borrower-portal');
+      } else {
+        setAuthMode('signup');
+        setPage('auth');
+      }
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
     if (isSignedIn && page === 'auth') {
       if (portalType === 'borrower') {
         setPage('borrower-portal');
