@@ -87,12 +87,34 @@ export default function BorrowerPortal({ onHome }) {
 
   async function fetchBorrower() {
     setLoading(true);
-    const email = user?.primaryEmailAddress?.emailAddress;
+    const userEmail = user?.primaryEmailAddress?.emailAddress;
     const fullName = user?.fullName || '';
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('activate');
+
+    if (token) {
+      const { data, error } = await supabase
+        .from('borrowers')
+        .select('*')
+        .eq('verification_token', token)
+        .limit(1)
+        .single();
+      if (!error && data) {
+        await supabase
+          .from('borrowers')
+          .update({ borrower_email: userEmail })
+          .eq('verification_token', token);
+        setBorrower({ ...data, borrower_email: userEmail });
+        setLoading(false);
+        return;
+      }
+    }
+
     const { data, error } = await supabase
       .from('borrowers')
       .select('*')
-      .or(`email.ilike.${email},legal_name.ilike.${fullName}`)
+      .or(`borrower_email.ilike.${userEmail},legal_name.ilike.${fullName}`)
       .limit(1)
       .single();
     if (!error && data) setBorrower(data);
