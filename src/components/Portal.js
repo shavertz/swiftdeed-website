@@ -28,8 +28,13 @@ function avgTurnaround(requests) {
 
 const s = {
   page: { padding: '48px 60px', maxWidth: 1100, margin: '0 auto' },
+  topRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 36 },
   heading: { fontSize: 24, fontWeight: 600, color: '#fff', marginBottom: 4 },
-  sub: { fontSize: 13, color: '#555', marginBottom: 36 },
+  sub: { fontSize: 13, color: '#555' },
+  submitBtn: {
+    background: '#FFD700', color: '#0f0f0f', fontSize: 14, fontWeight: 600,
+    padding: '10px 22px', borderRadius: 7, border: 'none', cursor: 'pointer',
+  },
   statRow: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 32 },
   statCard: {
     background: '#141414', border: '0.5px solid #222',
@@ -71,7 +76,7 @@ const s = {
   empty: { padding: '60px 20px', textAlign: 'center', color: '#444', fontSize: 14 },
 };
 
-export default function Portal() {
+export default function Portal({ onSubmitRequest }) {
   const { user } = useUser();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -107,8 +112,15 @@ export default function Portal() {
 
   return (
     <div style={s.page}>
-      <div style={s.heading}>My Requests</div>
-      <div style={s.sub}>{email}</div>
+      <div style={s.topRow}>
+        <div>
+          <div style={s.heading}>My Requests</div>
+          <div style={s.sub}>{email}</div>
+        </div>
+        <button style={s.submitBtn} onClick={onSubmitRequest}>
+          + Submit a request
+        </button>
+      </div>
 
       <div style={s.statRow}>
         <div style={s.statCard}>
@@ -133,7 +145,6 @@ export default function Portal() {
           <span>Total Processed</span>
           <span>Status</span>
           <span>Statement</span>
-          
           <span>Invoice</span>
         </div>
 
@@ -161,7 +172,6 @@ export default function Portal() {
                   : <span style={{ color: '#333', fontSize: 12 }}>Pending</span>
                 }
               </span>
-              
               <span>
                 {r.invoice_url
                   ? <a href={r.invoice_url} target="_blank" rel="noreferrer" style={s.dlBtn}>View</a>

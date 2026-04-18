@@ -34,6 +34,9 @@ export default function App() {
         setPage('choice');
       }
     }
+    if (isSignedIn && page === 'home' && portalType === 'lender') {
+      setPage('choice');
+    }
   }, [isSignedIn, page, portalType]);
 
   const scrollTo = (id) => {
@@ -226,7 +229,7 @@ export default function App() {
         />
       )}
       {page === 'request' && <RequestForm />}
-      {page === 'portal' && <Portal />}
+      {page === 'portal' && <Portal onSubmitRequest={() => setPage('request')} />}
       {page === 'borrower-portal' && <BorrowerPortal onHome={() => setPage('home')} />}
       {page === 'choice' && choicePage}
       {page === 'auth' && (
