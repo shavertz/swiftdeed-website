@@ -135,7 +135,7 @@ export default function RequestForm() {
   const [files, setFiles] = useState([]);
   const [dragging, setDragging] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [form, setForm] = useState({ name: '', email: '', company: '', phone: '', loanId: '', borrowerEmail: '', notes: '' });
+  const [form, setForm] = useState({ name: '', email: '', company: '', phone: '', loanId: '', borrowerEmail: '', borrowerName: '', notes: '' });
   const fileInputRef = useRef();
 
   const set = (field) => (e) => setForm({ ...form, [field]: e.target.value });
@@ -212,7 +212,7 @@ export default function RequestForm() {
             ))}
           </div>
           <button style={{ background: 'transparent', color: '#aaa', fontSize: 14, padding: '10px 24px', borderRadius: 7, border: '0.5px solid #2a2a2a', cursor: 'pointer' }}
-            onClick={() => { setSubmitted(false); setFiles([]); setForm({ name: '', email: '', company: '', phone: '', loanId: '', borrowerEmail: '', notes: '' }); }}>
+            onClick={() => { setSubmitted(false); setFiles([]); setForm({ name: '', email: '', company: '', phone: '', loanId: '', borrowerEmail: '', borrowerName: '', notes: '' }); }}>
             Submit another request
           </button>
         </div>
@@ -233,6 +233,10 @@ export default function RequestForm() {
           <div style={s.field}><div style={s.label}>Company / Lender name <span style={s.req}>*</span></div><input style={s.input} value={form.company} onChange={set('company')} placeholder="Acme Lending LLC" /></div>
           <div style={s.field}><div style={s.label}>Phone number <span style={s.req}>*</span></div><input style={s.input} value={form.phone} onChange={handlePhoneChange} placeholder="(555) 000-0000" /></div>
           <div style={s.field}><div style={s.label}>Borrower ID <span style={s.opt}>optional</span></div><input style={s.input} value={form.loanId} onChange={set('loanId')} placeholder="If known" /></div>
+          <div style={s.field}>
+            <div style={s.label}>Borrower name <span style={s.opt}>optional</span></div>
+            <input style={s.input} value={form.borrowerName} onChange={set('borrowerName')} placeholder="John Martinez" />
+          </div>
           <div style={s.field}>
             <div style={s.label}>Borrower email <span style={s.opt}>optional</span></div>
             <input style={s.input} type="email" value={form.borrowerEmail} onChange={set('borrowerEmail')} placeholder="borrower@email.com" />
