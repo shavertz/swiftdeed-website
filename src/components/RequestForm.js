@@ -6,7 +6,7 @@ import { createClient } from '@supabase/supabase-js';
 const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY);
 const supabase = createClient(process.env.REACT_APP_SUPABASE_URL, process.env.REACT_APP_SUPABASE_ANON_KEY);
 
-const PRICES = { standard: 3500, rush: 4500 };
+const PRICES = { standard: 4000, rush: 5000 };
 
 const formatPhone = (value) => {
   const digits = value.replace(/\D/g, '').slice(0, 10);
@@ -59,7 +59,6 @@ function PaymentForm({ turnaround, form, files, onSuccess }) {
         }
       }
 
-      // Upload files directly to Supabase Storage from the browser
       const uploadedUrls = [];
       for (const file of files) {
         const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
@@ -124,7 +123,7 @@ function PaymentForm({ turnaround, form, files, onSuccess }) {
           onClick={() => handleSubmit(false)}
           disabled={submitting || !stripe}
           style={{ background: submitting ? '#a08800' : '#FFD700', color: '#0f0f0f', fontSize: 14, fontWeight: 500, padding: '13px 32px', borderRadius: 7, border: 'none', cursor: submitting ? 'not-allowed' : 'pointer' }}>
-          {submitting ? 'Processing…' : `Pay $${turnaround === 'rush' ? '45' : '35'} & Submit →`}
+          {submitting ? 'Processing…' : `Pay $${turnaround === 'rush' ? '50' : '40'} & Submit →`}
         </button>
       </div>
     </div>
@@ -136,7 +135,7 @@ export default function RequestForm() {
   const [files, setFiles] = useState([]);
   const [dragging, setDragging] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [form, setForm] = useState({ name: '', email: '', company: '', phone: '', loanId: '', notes: '' });
+  const [form, setForm] = useState({ name: '', email: '', company: '', phone: '', loanId: '', borrowerEmail: '', notes: '' });
   const fileInputRef = useRef();
 
   const set = (field) => (e) => setForm({ ...form, [field]: e.target.value });
@@ -196,12 +195,15 @@ export default function RequestForm() {
           <div style={{ fontSize: 22, fontWeight: 500, marginBottom: 10, color: '#f0f0f0' }}>Request submitted</div>
           <div style={{ fontSize: 14, color: '#555', lineHeight: 1.7, maxWidth: 420, margin: '0 auto 28px' }}>
             We've received your documents and will deliver your payoff statement within your selected timeframe. Check your inbox for a confirmation email.
+            {form.borrowerEmail && (
+              <span> An activation email has been sent to your borrower at <strong style={{ color: '#D4A017' }}>{form.borrowerEmail}</strong>.</span>
+            )}
           </div>
           <div style={{ background: '#111', border: '0.5px solid #2a2a2a', borderRadius: 10, padding: '20px 24px', maxWidth: 380, margin: '0 auto 28px', textAlign: 'left' }}>
             {[
               ['Name', form.name],
               ['Confirmation sent to', form.email],
-              ['Turnaround', turnaround === 'standard' ? 'Within 2 hours' : 'Within 15 minutes'],
+              ['Turnaround', turnaround === 'standard' ? 'Within 24 hours' : 'Within 15 minutes'],
               ['Documents', `${files.length} file${files.length !== 1 ? 's' : ''} uploaded`],
             ].map(([label, value], i, arr) => (
               <div key={label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '6px 0', borderBottom: i < arr.length - 1 ? '0.5px solid #1a1a1a' : 'none', color: '#666' }}>
@@ -210,7 +212,7 @@ export default function RequestForm() {
             ))}
           </div>
           <button style={{ background: 'transparent', color: '#aaa', fontSize: 14, padding: '10px 24px', borderRadius: 7, border: '0.5px solid #2a2a2a', cursor: 'pointer' }}
-            onClick={() => { setSubmitted(false); setFiles([]); setForm({ name: '', email: '', company: '', phone: '', loanId: '', notes: '' }); }}>
+            onClick={() => { setSubmitted(false); setFiles([]); setForm({ name: '', email: '', company: '', phone: '', loanId: '', borrowerEmail: '', notes: '' }); }}>
             Submit another request
           </button>
         </div>
@@ -231,6 +233,11 @@ export default function RequestForm() {
           <div style={s.field}><div style={s.label}>Company / Lender name <span style={s.req}>*</span></div><input style={s.input} value={form.company} onChange={set('company')} placeholder="Acme Lending LLC" /></div>
           <div style={s.field}><div style={s.label}>Phone number <span style={s.req}>*</span></div><input style={s.input} value={form.phone} onChange={handlePhoneChange} placeholder="(555) 000-0000" /></div>
           <div style={s.field}><div style={s.label}>Borrower ID <span style={s.opt}>optional</span></div><input style={s.input} value={form.loanId} onChange={set('loanId')} placeholder="If known" /></div>
+          <div style={s.field}>
+            <div style={s.label}>Borrower email <span style={s.opt}>optional</span></div>
+            <input style={s.input} type="email" value={form.borrowerEmail} onChange={set('borrowerEmail')} placeholder="borrower@email.com" />
+            <div style={{ fontSize: 11, color: '#444', marginTop: 3 }}>We'll send the borrower an activation link for their portal</div>
+          </div>
           <div style={s.fieldFull}><div style={s.label}>Additional notes <span style={s.opt}>optional</span></div><textarea style={s.textarea} value={form.notes} onChange={set('notes')} placeholder="Anything else we should know…" /></div>
         </div>
 
@@ -254,12 +261,12 @@ export default function RequestForm() {
         <hr style={s.divider} />
         <div style={s.sectionLabel}>Turnaround</div>
         <div style={s.tOption(turnaround === 'standard')} onClick={() => setTurnaround('standard')}>
-          <div><div style={s.tName}>Standard — within 2 hours</div><div style={s.tDesc}>Best for most requests</div></div>
-          <div style={{ display: 'flex', alignItems: 'center' }}><span style={s.tPrice}>$35</span><div style={s.radio(turnaround === 'standard')}>{turnaround === 'standard' && <div style={s.radioDot}></div>}</div></div>
+          <div><div style={s.tName}>Standard — within 24 hours</div><div style={s.tDesc}>Best for most requests</div></div>
+          <div style={{ display: 'flex', alignItems: 'center' }}><span style={s.tPrice}>$40</span><div style={s.radio(turnaround === 'standard')}>{turnaround === 'standard' && <div style={s.radioDot}></div>}</div></div>
         </div>
         <div style={s.tOption(turnaround === 'rush')} onClick={() => setTurnaround('rush')}>
           <div><div style={s.tName}>Rush — within 15 minutes</div><div style={s.tDesc}>For same-day closings and urgent requests</div></div>
-          <div style={{ display: 'flex', alignItems: 'center' }}><span style={s.tPrice}>$45</span><div style={s.radio(turnaround === 'rush')}>{turnaround === 'rush' && <div style={s.radioDot}></div>}</div></div>
+          <div style={{ display: 'flex', alignItems: 'center' }}><span style={s.tPrice}>$50</span><div style={s.radio(turnaround === 'rush')}>{turnaround === 'rush' && <div style={s.radioDot}></div>}</div></div>
         </div>
 
         <div style={s.securityNote}>
