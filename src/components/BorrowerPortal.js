@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useUser, useClerk } from '@clerk/clerk-react';
+import { useUser } from '@clerk/clerk-react';
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
@@ -76,7 +76,7 @@ function fmtPct(v) {
 
 export default function BorrowerPortal({ onHome }) {
   const { user } = useUser();
-  const { signOut } = useClerk();
+
   const [borrower, setBorrower] = useState(null);
   const [loading, setLoading] = useState(true);
 
