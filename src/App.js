@@ -137,14 +137,14 @@ export default function App() {
               Log in
             </button>
             <button
-              onClick={() => { setPortalType('lender'); setAuthMode('signup'); setPage('auth'); }}
+              onClick={() => { setAuthMode('signup'); setPage('auth'); }}
               style={{
                 background: '#FFD700', color: '#0f0f0f', fontSize: 14,
                 fontWeight: 500, padding: '8px 18px', borderRadius: 6,
                 border: 'none', cursor: 'pointer', outline: 'none'
               }}
             >
-              Submit a request
+              Sign up
             </button>
           </>
         )}
