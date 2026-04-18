@@ -9,12 +9,7 @@ const supabase = createClient(
 
 const s = {
   page: { background: '#0f0f0f', minHeight: '100vh', color: '#f0f0f0', fontFamily: 'inherit' },
-  nav: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 32px', borderBottom: '0.5px solid #1e1e1e' },
-  navLogo: { fontSize: 16, fontWeight: 500 },
-  navRight: { display: 'flex', alignItems: 'center', gap: 16 },
-  navUser: { fontSize: 13, color: '#555' },
-  navBadge: { background: '#1a2a1a', color: '#4a9a4a', fontSize: 11, padding: '3px 10px', borderRadius: 20 },
-  btnLogout: { background: 'transparent', border: '0.5px solid #2a2a2a', color: '#888', fontSize: 12, padding: '6px 14px', borderRadius: 6, cursor: 'pointer' },
+  nav: { display: 'none' },
   alertBar: { background: '#1a1800', borderBottom: '0.5px solid #3a3000', padding: '10px 32px', display: 'flex', alignItems: 'center', gap: 10 },
   alertDot: { width: 7, height: 7, borderRadius: '50%', background: '#D4A017', flexShrink: 0 },
   alertText: { fontSize: 13, color: '#D4A017' },
@@ -28,7 +23,7 @@ const s = {
   loanStat: (last) => ({ padding: '16px 18px', borderRight: last ? 'none' : '0.5px solid #1e1e1e', background: '#111' }),
   lsLabel: { fontSize: 11, color: '#555', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px' },
   lsVal: { fontSize: 15, fontWeight: 500, color: '#fff' },
-  grid2: { display: 'grid', gridTemplateColumns: '300px 1fr 340px', gap: 20, marginBottom: 20 },
+  grid2: { display: 'grid', gridTemplateColumns: '1fr 2fr 2fr', gap: 20, marginBottom: 20 },
   card: { background: '#111', border: '0.5px solid #2a2a2a', borderRadius: 10, overflow: 'hidden' },
   cardHead: { padding: '14px 18px', borderBottom: '0.5px solid #1e1e1e', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   cardTitle: { fontSize: 13, fontWeight: 500, color: '#fff' },
@@ -120,18 +115,7 @@ export default function BorrowerPortal({ onHome }) {
     : [];
 
   return (
-    <div style={s.page}>
-      <div style={s.nav}>
-        <div style={s.navLogo}>
-          <span style={{ color: '#fff' }}>Swift</span>
-          <span style={{ color: '#D4A017' }}>Deed</span>
-        </div>
-        <div style={s.navRight}>
-          <span style={s.navBadge}>Borrower portal</span>
-          <span style={s.navUser}>{email}</span>
-          <button style={s.btnLogout} onClick={() => signOut().then(onHome)}>Log out</button>
-        </div>
-      </div>
+    <div style={{ background: '#0f0f0f', minHeight: '100vh', color: '#f0f0f0', fontFamily: 'inherit' }}>
 
       {borrower && daysUntil !== null && daysUntil <= 14 && (
         <div style={s.alertBar}>
