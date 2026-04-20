@@ -248,7 +248,7 @@ export default function App() {
       {nav}
       {page === 'home' && (
         <HomePage
-          onLenderLogin={() => { setPortalType('lender'); setAuthMode('signup'); setPage('auth'); }}
+          onLenderLogin={() => { setPortalType('lender'); if (isSignedIn) { checkLenderOnboarding(); } else { setAuthMode('signup'); setPage('auth'); } }}
           onBorrowerLogin={() => { setPortalType('borrower'); setAuthMode('signup'); setPage('auth'); }}
         />
       )}
