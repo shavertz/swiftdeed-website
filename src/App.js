@@ -1,9 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useUser, useClerk, SignIn, SignUp } from '@clerk/clerk-react';
+import { createClient } from '@supabase/supabase-js';
 import HomePage from './components/HomePage';
 import RequestForm from './components/RequestForm';
 import Portal from './components/Portal';
 import BorrowerPortal from './components/BorrowerPortal';
+import LenderOnboarding from './components/LenderOnboarding';
+
+const supabase = createClient(
+  process.env.REACT_APP_SUPABASE_URL,
+  process.env.REACT_APP_SUPABASE_ANON_KEY
+);
 
 export default function App() {
   const [page, setPage] = useState('home');
@@ -31,11 +38,30 @@ export default function App() {
       if (portalType === 'borrower') {
         setPage('borrower-portal');
       } else {
-        setPage('choice');
+        checkLenderOnboarding();
       }
     }
+  }, [isSignedIn, page, portalType]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  }, [isSignedIn, page, portalType]);
+  async function checkLenderOnboarding() {
+    const email = user?.primaryEmailAddress?.emailAddress;
+    if (!email) return;
+    try {
+      const { data, error } = await supabase
+        .from('lenders')
+        .select('id')
+        .eq('email', email)
+        .limit(1)
+        .single();
+      if (error || !data) {
+        setPage('onboarding');
+      } else {
+        setPage('choice');
+      }
+    } catch {
+      setPage('onboarding');
+    }
+  }
 
   const scrollTo = (id) => {
     setPage('home');
@@ -230,6 +256,7 @@ export default function App() {
       {page === 'portal' && <Portal onSubmitRequest={() => setPage('request')} />}
       {page === 'borrower-portal' && <BorrowerPortal onHome={() => setPage('home')} />}
       {page === 'choice' && choicePage}
+      {page === 'onboarding' && <LenderOnboarding onComplete={() => setPage('choice')} />}
       {page === 'auth' && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 60 }}>
           <div style={{
