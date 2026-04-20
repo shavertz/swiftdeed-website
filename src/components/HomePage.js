@@ -49,12 +49,9 @@ export default function HomePage({ onLenderLogin, onBorrowerLogin }) {
     payLabel: { fontSize: 11, color: '#555', marginBottom: 4 },
     payVal: { fontSize: 15, fontWeight: 500, color: '#fff' },
     paySub: { fontSize: 11, color: '#444', marginTop: 2 },
-    btnRow: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 14 },
-    btnYellow: { background: '#FFD700', color: '#0f0f0f', border: 'none', borderRadius: 6, padding: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer' },
-    btnOutline: { background: 'transparent', color: '#fff', border: '0.5px solid #333', borderRadius: 6, padding: 10, fontSize: 13, cursor: 'pointer' },
     portalBtns: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 48 },
-    pbLender: { background: '#FFD700', color: '#0f0f0f', border: 'none', borderRadius: 7, padding: 13, fontSize: 14, fontWeight: 500, cursor: 'pointer' },
-    pbBorrower: { background: 'transparent', color: '#fff', border: '1px solid #FFD700', borderRadius: 7, padding: 13, fontSize: 14, fontWeight: 500, cursor: 'pointer' },
+    pbBorrower: { background: '#FFD700', color: '#0f0f0f', border: 'none', borderRadius: 7, padding: 13, fontSize: 14, fontWeight: 500, cursor: 'pointer' },
+    pbLender: { background: 'transparent', color: '#fff', border: '1px solid #FFD700', borderRadius: 7, padding: 13, fontSize: 14, fontWeight: 500, cursor: 'pointer' },
     pricingSection: { borderTop: '0.5px solid #1e1e1e', padding: '80px 60px', maxWidth: 1000, margin: '0 auto' },
     pricingCards: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 48 },
     pricingCard: (featured) => ({ background: '#111', border: `0.5px solid ${featured ? '#FFD700' : '#2a2a2a'}`, borderRadius: 12, padding: 32, position: 'relative' }),
@@ -84,11 +81,11 @@ export default function HomePage({ onLenderLogin, onBorrowerLogin }) {
 
       {/* HERO */}
       <div style={s.hero}>
-        <h1 style={s.h1}>Fast. Accurate. <span style={s.yellow}>Done.</span></h1>
+        <h1 style={s.h1}>Swift. Serviced. <span style={s.yellow}>Secure.</span></h1>
         <p style={s.heroP}>We handle the servicing so you can focus on lending. Your borrowers stay informed, your statements are always on time.</p>
         <div style={s.ctas}>
-          <button style={s.btnPrimary} onClick={onLenderLogin}>I'm a lender</button>
-          <button style={s.btnSecondary} onClick={onBorrowerLogin}>I'm a borrower</button>
+          <button style={s.btnPrimary} onClick={onBorrowerLogin}>I'm a borrower</button>
+          <button style={s.btnSecondary} onClick={onLenderLogin}>I'm a lender</button>
         </div>
         <div style={s.portalNote}>New here? Create an account in seconds.</div>
         <div style={s.statsRow}>
@@ -130,45 +127,10 @@ export default function HomePage({ onLenderLogin, onBorrowerLogin }) {
       {/* PORTAL PREVIEW */}
       <div style={s.portalSection}>
         <div style={s.sectionLabel}>The platform</div>
-        <div style={s.sectionTitle}>One platform, two portals</div>
+        <div style={s.sectionTitle}>Your loan. Fully serviced.</div>
         <div style={{ ...s.sectionSub, marginBottom: 48 }}>Lenders manage their loan portfolio. Borrowers stay informed and in control. Everyone gets what they need.</div>
 
         <div style={s.portalGrid}>
-
-          {/* LENDER CARD */}
-          <div style={s.portalCard(false)}>
-            <div style={s.cardHeader}>
-              <div style={s.cardTitle}>Lender portal</div>
-              <span style={s.badgeLender}>Your dashboard</span>
-            </div>
-            <div style={s.cardBody}>
-              <div style={s.tableHead}>
-                <span style={s.th}>Loan ID</span>
-                <span style={s.th}>Borrower</span>
-                <span style={s.th}>Status</span>
-              </div>
-              <div style={{ ...s.tableRow, borderBottom: '0.5px solid #1a1a1a' }}>
-                <span style={s.tdId}>SD-2026-4421</span>
-                <span style={s.tdName}>J. Martinez</span>
-                <span style={s.statusReady}>Statement ready</span>
-              </div>
-              <div style={{ ...s.tableRow, borderBottom: '0.5px solid #1a1a1a' }}>
-                <span style={s.tdId}>SD-2026-3817</span>
-                <span style={s.tdName}>R. Thompson</span>
-                <span style={s.statusActive}>Active</span>
-              </div>
-              <div style={{ ...s.tableRow, borderBottom: 'none' }}>
-                <span style={s.tdId}>SD-2026-3102</span>
-                <span style={s.tdName}>K. Patel</span>
-                <span style={s.statusActive}>Active</span>
-              </div>
-              <div style={s.divider}></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ fontSize: 12, color: '#555' }}>3 active loans · 1 statement ready</div>
-                <div style={{ fontSize: 12, color: '#4a90b8', cursor: 'pointer' }}>View all →</div>
-              </div>
-            </div>
-          </div>
 
           {/* BORROWER CARD */}
           <div style={s.portalCard(true)}>
@@ -206,16 +168,51 @@ export default function HomePage({ onLenderLogin, onBorrowerLogin }) {
                     <div style={s.payBox}><div style={s.payLabel}>Interest accrued</div><div style={{ ...s.payVal, color: '#FFD700' }}>$881</div><div style={s.paySub}>This period</div></div>
                     <div style={s.payBox}><div style={s.payLabel}>Statement</div><div style={{ ...s.payVal, color: '#4a9a4a', fontSize: 13 }}>Ready</div><div style={s.paySub}>Apr 2026</div></div>
                   </div>
-                  
                 </div>
               </div>
             </div>
           </div>
+
+          {/* LENDER CARD */}
+          <div style={s.portalCard(false)}>
+            <div style={s.cardHeader}>
+              <div style={s.cardTitle}>Lender portal</div>
+              <span style={s.badgeLender}>Your dashboard</span>
+            </div>
+            <div style={s.cardBody}>
+              <div style={s.tableHead}>
+                <span style={s.th}>Loan ID</span>
+                <span style={s.th}>Borrower</span>
+                <span style={s.th}>Status</span>
+              </div>
+              <div style={{ ...s.tableRow, borderBottom: '0.5px solid #1a1a1a' }}>
+                <span style={s.tdId}>SD-2026-4421</span>
+                <span style={s.tdName}>J. Martinez</span>
+                <span style={s.statusReady}>Statement ready</span>
+              </div>
+              <div style={{ ...s.tableRow, borderBottom: '0.5px solid #1a1a1a' }}>
+                <span style={s.tdId}>SD-2026-3817</span>
+                <span style={s.tdName}>R. Thompson</span>
+                <span style={s.statusActive}>Active</span>
+              </div>
+              <div style={{ ...s.tableRow, borderBottom: 'none' }}>
+                <span style={s.tdId}>SD-2026-3102</span>
+                <span style={s.tdName}>K. Patel</span>
+                <span style={s.statusActive}>Active</span>
+              </div>
+              <div style={s.divider}></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ fontSize: 12, color: '#555' }}>3 active loans · 1 statement ready</div>
+                <div style={{ fontSize: 12, color: '#4a90b8', cursor: 'pointer' }}>View all →</div>
+              </div>
+            </div>
+          </div>
+
         </div>
 
         <div style={s.portalBtns}>
-          <button style={s.pbLender} onClick={onLenderLogin}>I'm a lender</button>
           <button style={s.pbBorrower} onClick={onBorrowerLogin}>I'm a borrower</button>
+          <button style={s.pbLender} onClick={onLenderLogin}>I'm a lender</button>
         </div>
       </div>
 
