@@ -1,16 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useUser, useClerk, SignIn, SignUp } from '@clerk/clerk-react';
-import { createClient } from '@supabase/supabase-js';
 import HomePage from './components/HomePage';
 import RequestForm from './components/RequestForm';
 import Portal from './components/Portal';
 import BorrowerPortal from './components/BorrowerPortal';
 import LenderOnboarding from './components/LenderOnboarding';
 
-const supabase = createClient(
-  process.env.REACT_APP_SUPABASE_URL,
-  process.env.REACT_APP_SUPABASE_ANON_KEY
-);
+const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY;
 
 export default function App() {
   const [page, setPage] = useState('home');
@@ -50,12 +47,17 @@ export default function App() {
       return;
     }
     try {
-      const { data } = await supabase
-        .from('lenders')
-        .select('id')
-        .eq('email', email)
-        .limit(1);
-      if (data && data.length > 0) {
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/lenders?email=eq.${encodeURIComponent(email)}&select=id&limit=1`,
+        {
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          }
+        }
+      );
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
         setPage('choice');
       } else {
         setPage('onboarding');
