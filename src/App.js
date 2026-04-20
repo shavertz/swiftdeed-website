@@ -45,7 +45,10 @@ export default function App() {
 
   async function checkLenderOnboarding() {
     const email = user?.primaryEmailAddress?.emailAddress;
-    if (!email) return;
+    if (!email) {
+      setPage('choice');
+      return;
+    }
     try {
       const { data, error } = await supabase
         .from('lenders')
@@ -59,7 +62,7 @@ export default function App() {
         setPage('choice');
       }
     } catch {
-      setPage('onboarding');
+      setPage('choice');
     }
   }
 
