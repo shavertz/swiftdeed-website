@@ -45,6 +45,13 @@ export default function LenderOnboarding({ onComplete }) {
   const [error, setError] = useState('');
   const [focused, setFocused] = useState(null);
 
+  function formatPhone(val) {
+    const digits = val.replace(/\D/g, '').slice(0, 10);
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+  }
+
   const isValid = fullName.trim() && companyName.trim() && phone.trim() && state && agreed;
 
   async function handleSubmit() {
@@ -90,7 +97,7 @@ export default function LenderOnboarding({ onComplete }) {
     <div style={s.wrap}>
       <div style={s.card}>
         <div style={s.topLabel}>Welcome to SwiftDeed</div>
-        <div style={s.title}>Let's set up your account</div>
+        <div style={s.title}>Let's get you onboarded.</div>
         <div style={s.sub}>Just a few details before you get started. This only takes a minute.</div>
 
         {error && <div style={s.errorMsg}>{error}</div>}
@@ -120,7 +127,7 @@ export default function LenderOnboarding({ onComplete }) {
           style={{ ...s.input, ...(focused === 'phone' ? s.inputFocus : {}) }}
           placeholder="e.g. (801) 555-0123"
           value={phone}
-          onChange={e => setPhone(e.target.value)}
+          onChange={e => setPhone(formatPhone(e.target.value))}
           onFocus={() => setFocused('phone')}
           onBlur={() => setFocused(null)}
         />
