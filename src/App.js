@@ -50,16 +50,15 @@ export default function App() {
       return;
     }
     try {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('lenders')
         .select('id')
         .eq('email', email)
-        .limit(1)
-        .single();
-      if (error || !data) {
-        setPage('onboarding');
-      } else {
+        .limit(1);
+      if (data && data.length > 0) {
         setPage('choice');
+      } else {
+        setPage('onboarding');
       }
     } catch {
       setPage('choice');
