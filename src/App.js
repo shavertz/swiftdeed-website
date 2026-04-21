@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useUser, useClerk, SignIn, SignUp } from '@clerk/clerk-react';
 import HomePage from './components/HomePage';
 import RequestForm from './components/RequestForm';
@@ -17,6 +17,7 @@ export default function App() {
   const [portalType, setPortalType] = useState('lender');
   const { isSignedIn, user } = useUser();
   const { signOut } = useClerk();
+  const justSignedIn = useRef(false);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -33,7 +34,8 @@ export default function App() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (isSignedIn && (page === 'auth' || page === 'home')) {
+    if (isSignedIn && page === 'auth') {
+      justSignedIn.current = true;
       if (portalType === 'borrower') {
         setPage('borrower-portal');
       } else {
@@ -41,6 +43,13 @@ export default function App() {
       }
     }
   }, [isSignedIn, page, portalType]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (isSignedIn && justSignedIn.current && page === 'home' && portalType === 'lender') {
+      justSignedIn.current = false;
+      checkLenderOnboarding();
+    }
+  }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function checkLenderOnboarding() {
     const email = user?.primaryEmailAddress?.emailAddress;
