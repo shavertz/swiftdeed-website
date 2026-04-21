@@ -75,11 +75,7 @@ export default function App() {
     }
   }, [isSignedIn, page, portalType]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    if (isSignedIn && page === 'home' && portalType === 'lender') {
-      checkLenderOnboarding();
-    }
-  }, [isSignedIn]); // eslint-disable-line react-hooks/exhaustive-deps
+
 
   async function checkLenderOnboarding() {
     const email = user?.primaryEmailAddress?.emailAddress;
@@ -294,7 +290,7 @@ export default function App() {
       {page === 'home' && (
         <HomePage
           onLenderLogin={() => { setPortalType('lender'); if (isSignedIn) { checkLenderOnboarding(); } else { setAuthMode('signup'); setPage('auth'); } }}
-          onBorrowerLogin={() => { setPortalType('borrower'); setAuthMode('signin'); setPage('auth'); }}
+          onBorrowerLogin={() => { if (isSignedIn) { setPage('borrower-no-access'); } else { setPortalType('borrower'); setAuthMode('signin'); setPage('auth'); } }}
           onTerms={() => setPage('terms')}
           onPrivacy={() => setPage('privacy')}
         />
