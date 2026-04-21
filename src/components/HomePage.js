@@ -247,28 +247,28 @@ export default function HomePage({ onLenderLogin, onBorrowerLogin }) {
       {/* WHY SWIFTDEED */}
       <div id="why" style={s.whySection}>
         <div style={s.sectionLabel}>Why SwiftDeed</div>
-        <div style={s.sectionTitle}>Built for speed. Built for lenders.</div>
-        <div style={s.sectionSub}>Most servicers take 3–5 days. We deliver same-day, every time — because your deals don't wait.</div>
+        <div style={s.sectionTitle}>Why onboard with SwiftDeed?</div>
+        <div style={s.sectionSub}>Private lenders come to us when servicing starts getting in the way of lending.</div>
         <div style={s.whyGrid}>
           <div style={s.whyItem}>
+            <div style={s.whyIcon}>📋</div>
+            <div style={s.whyH}>Focus on lending, not paperwork</div>
+            <p style={s.whyP}>Most private lenders manage servicing in-house until it becomes a second job. Statements, borrower calls, payment tracking — we take all of it off your plate so you can focus on closing deals.</p>
+          </div>
+          <div style={s.whyItem}>
             <div style={s.whyIcon}>⚡</div>
-            <div style={s.whyH}>Built for speed</div>
-            <p style={s.whyP}>Most servicers take 3–5 days. We deliver same-day, every time. Rush requests in 15 minutes.</p>
+            <div style={s.whyH}>Same-day turnaround, every time</div>
+            <p style={s.whyP}>Most servicers take 3–5 days. We deliver payoff statements same-day, rush requests in 15 minutes. Your deals don't wait on us.</p>
           </div>
           <div style={s.whyItem}>
             <div style={s.whyIcon}>🎯</div>
-            <div style={s.whyH}>Always accurate</div>
-            <p style={s.whyP}>Real-time calculations with live per diem adjustments. Your borrowers get the right number, not one that expires before they can act.</p>
+            <div style={s.whyH}>Deep expertise, zero fluff</div>
+            <p style={s.whyP}>We know private lending inside and out. Every feature we've built exists because private lenders asked for it. Nothing more, nothing less.</p>
           </div>
           <div style={s.whyItem}>
-            <div style={s.whyIcon}>💼</div>
-            <div style={s.whyH}>Built for private lenders</div>
-            <p style={s.whyP}>Designed around how private lending actually works, not retrofitted from big bank servicing software.</p>
-          </div>
-          <div style={s.whyItem}>
-            <div style={s.whyIcon}>🚀</div>
-            <div style={s.whyH}>No complicated setup</div>
-            <p style={s.whyP}>Onboard a loan in minutes. No software to install, no lengthy onboarding calls, no back and forth.</p>
+            <div style={s.whyIcon}>💰</div>
+            <div style={s.whyH}>Predictable flat pricing</div>
+            <p style={s.whyP}>No monthly fees, no setup costs, no surprises. You pay per statement. At $40–$50 per payoff, you're getting enterprise-level servicing at a fraction of the cost of in-house staff.</p>
           </div>
         </div>
       </div>
@@ -283,7 +283,7 @@ export default function HomePage({ onLenderLogin, onBorrowerLogin }) {
         <div style={s.footerLinks}>
           <a style={s.footerLink} href="/privacy">Privacy</a>
           <a style={s.footerLink} href="/terms">Terms</a>
-          <a style={s.footerLink} href="mailto:support@theswiftdeed.com">Contact</a>
+          <a style={s.footerLink} href="mailto:scott@theswiftdeed.com">Contact</a>
         </div>
       </div>
 
