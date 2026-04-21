@@ -1,15 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useUser } from '@clerk/clerk-react';
-import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.REACT_APP_SUPABASE_URL,
-  process.env.REACT_APP_SUPABASE_ANON_KEY
-);
+const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY;
 
 const s = {
   page: { background: '#0f0f0f', minHeight: '100vh', color: '#f0f0f0', fontFamily: 'inherit' },
-  nav: { display: 'none' },
   alertBar: { background: '#1a1800', borderBottom: '0.5px solid #3a3000', padding: '10px 32px', display: 'flex', alignItems: 'center', gap: 10 },
   alertDot: { width: 7, height: 7, borderRadius: '50%', background: '#D4A017', flexShrink: 0 },
   alertText: { fontSize: 13, color: '#D4A017' },
@@ -44,33 +40,21 @@ const s = {
   accSub: { fontSize: 11, color: '#555', marginTop: 2 },
   accVal: { fontSize: 15, fontWeight: 500, color: '#D4A017', textAlign: 'right' },
   accValSub: { fontSize: 11, color: '#555', marginTop: 2, textAlign: 'right' },
-  chartRow: { display: 'grid', gridTemplateColumns: '130px 1fr', gap: 16, alignItems: 'center' },
-  legend: { display: 'flex', flexDirection: 'column', gap: 7, marginTop: 12 },
-  legItem: { display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#666' },
-  legDot: { width: 9, height: 9, borderRadius: '50%', flexShrink: 0 },
-  infoRow: { display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '0.5px solid #1a1a1a' },
+  infoRow: { display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '0.5px solid #1a1a1a', alignItems: 'center' },
   irLabel: { fontSize: 13, color: '#555' },
   irVal: { fontSize: 13, color: '#ccc' },
-  histHead: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8, paddingBottom: 8, borderBottom: '0.5px solid #1e1e1e', marginBottom: 2 },
-  hh: { fontSize: 11, color: '#444', textTransform: 'uppercase', letterSpacing: '0.4px' },
-  histRow: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8, padding: '10px 0', borderBottom: '0.5px solid #1a1a1a', alignItems: 'center' },
   stmtRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '0.5px solid #1a1a1a' },
   stmtInfo: { display: 'flex', flexDirection: 'column', gap: 2 },
   stmtName: { fontSize: 13, color: '#ccc' },
   stmtDate: { fontSize: 11, color: '#555' },
   stmtBtn: { background: '#1a1a1a', border: '0.5px solid #2a2a2a', color: '#4a90b8', fontSize: 12, padding: '5px 12px', borderRadius: 5, cursor: 'pointer' },
-  emptyWrap: { textAlign: 'center', padding: '60px 40px 32px' },
+  emptyWrap: { textAlign: 'center', padding: '80px 40px' },
   emptyTitle: { fontSize: 18, fontWeight: 500, color: '#fff', marginBottom: 12 },
-  emptyText: { fontSize: 14, color: '#555', lineHeight: 1.7, maxWidth: 400, margin: '0 auto 36px' },
-  verifyCard: { background: '#111', border: '0.5px solid #2a2a2a', borderRadius: 12, padding: '32px 36px', maxWidth: 460, margin: '0 auto', textAlign: 'left' },
-  verifyTitle: { fontSize: 15, fontWeight: 600, color: '#fff', marginBottom: 6 },
-  verifySub: { fontSize: 13, color: '#555', marginBottom: 24, lineHeight: 1.6 },
-  fieldLabel: { fontSize: 12, color: '#888', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 7, display: 'block' },
-  fieldInput: { width: '100%', background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 7, padding: '11px 14px', fontSize: 14, color: '#fff', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box', marginBottom: 16 },
-  fieldInputFocus: { border: '0.5px solid #D4A017' },
-  btnVerify: { width: '100%', background: '#D4A017', color: '#0f0f0f', border: 'none', borderRadius: 7, padding: 12, fontSize: 14, fontWeight: 600, cursor: 'pointer', marginTop: 4 },
-  btnVerifyDisabled: { width: '100%', background: '#3a3000', color: '#888', border: 'none', borderRadius: 7, padding: 12, fontSize: 14, fontWeight: 600, cursor: 'not-allowed', marginTop: 4 },
-  errorMsg: { fontSize: 13, color: '#c0392b', background: '#1a0a0a', border: '0.5px solid #3a1010', borderRadius: 7, padding: '10px 14px', marginTop: 12, lineHeight: 1.5 },
+  emptyText: { fontSize: 14, color: '#555', lineHeight: 1.7, maxWidth: 400, margin: '0 auto' },
+  editInput: { background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 6, padding: '6px 10px', fontSize: 13, color: '#fff', fontFamily: 'inherit', outline: 'none', width: '200px' },
+  editBtn: { background: '#D4A017', color: '#0f0f0f', border: 'none', borderRadius: 6, padding: '6px 14px', fontSize: 12, fontWeight: 500, cursor: 'pointer', marginLeft: 8 },
+  cancelBtn: { background: 'transparent', color: '#555', border: '0.5px solid #2a2a2a', borderRadius: 6, padding: '6px 12px', fontSize: 12, cursor: 'pointer', marginLeft: 4 },
+  editIcon: { fontSize: 11, color: '#4a90b8', cursor: 'pointer', marginLeft: 8 },
 };
 
 function fmt$(v) {
@@ -83,39 +67,51 @@ function fmtPct(v) {
   return parseFloat(v).toFixed(3) + '%';
 }
 
-function extractStreetCore(addr) {
-  if (!addr) return '';
-  // Normalize abbreviations
-  let a = addr.toLowerCase()
-    .replace(/\bstreet\b/g, 'st').replace(/\bst\.\b/g, 'st')
-    .replace(/\bavenue\b/g, 'ave').replace(/\bave\.\b/g, 'ave')
-    .replace(/\bdrive\b/g, 'dr').replace(/\bdr\.\b/g, 'dr')
-    .replace(/\blane\b/g, 'ln').replace(/\bln\.\b/g, 'ln')
-    .replace(/\broad\b/g, 'rd').replace(/\brd\.\b/g, 'rd')
-    .replace(/\bboulevard\b/g, 'blvd').replace(/\bblvd\.\b/g, 'blvd')
-    .replace(/\bcourt\b/g, 'ct').replace(/\bct\.\b/g, 'ct')
-    .replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim();
-  // Take only the first 4 words (street number + street name), drop city/state/zip
-  return a.split(' ').slice(0, 4).join(' ');
+function formatPhone(val) {
+  const digits = val.replace(/\D/g, '').slice(0, 10);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
 }
 
-function addressesMatch(input, stored) {
-  const a = extractStreetCore(input);
-  const b = extractStreetCore(stored);
-  return b.includes(a) || a.includes(b);
+function EditableRow({ label, value, field, onSave }) {
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState(value || '');
+
+  function handleSave() {
+    onSave(field, val);
+    setEditing(false);
+  }
+
+  return (
+    <div style={s.infoRow}>
+      <span style={s.irLabel}>{label}</span>
+      {editing ? (
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <input
+            style={s.editInput}
+            value={val}
+            onChange={e => field.includes('phone') ? setVal(formatPhone(e.target.value)) : setVal(e.target.value)}
+            autoFocus
+          />
+          <button style={s.editBtn} onClick={handleSave}>Save</button>
+          <button style={s.cancelBtn} onClick={() => setEditing(false)}>Cancel</button>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <span style={s.irVal}>{value || '—'}</span>
+          <span style={s.editIcon} onClick={() => { setVal(value || ''); setEditing(true); }}>Edit</span>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function BorrowerPortal({ onHome }) {
   const { user } = useUser();
-
   const [borrower, setBorrower] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [verifying, setVerifying] = useState(false);
-  const [verifyName, setVerifyName] = useState('');
-  const [verifyAddress, setVerifyAddress] = useState('');
-  const [verifyError, setVerifyError] = useState('');
-  const [verifyLoading, setVerifyLoading] = useState(false);
-  const [focusedField, setFocusedField] = useState(null);
+  const [saveMsg, setSaveMsg] = useState('');
 
   useEffect(() => {
     if (!user) return;
@@ -125,151 +121,58 @@ export default function BorrowerPortal({ onHome }) {
   async function fetchBorrower() {
     setLoading(true);
     const userEmail = user?.primaryEmailAddress?.emailAddress;
-    const fullName = user?.fullName || '';
 
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('activate');
 
     if (token) {
-      const { data, error } = await supabase
-        .from('borrowers')
-        .select('*')
-        .eq('verification_token', token)
-        .limit(1)
-        .single();
-      if (!error && data) {
-        await supabase
-          .from('borrowers')
-          .update({ borrower_email: userEmail })
-          .eq('verification_token', token);
-        setBorrower({ ...data, borrower_email: userEmail });
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/borrowers?verification_token=eq.${token}&limit=1`,
+        { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
+      );
+      const data = await res.json();
+      if (data && data.length > 0) {
+        await fetch(`${SUPABASE_URL}/rest/v1/borrowers?id=eq.${data[0].id}`, {
+          method: 'PATCH',
+          headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+          body: JSON.stringify({ borrower_email: userEmail }),
+        });
+        setBorrower({ ...data[0], borrower_email: userEmail });
         setLoading(false);
         return;
       }
     }
 
-    const { data, error } = await supabase
-      .from('borrowers')
-      .select('*')
-      .or(`borrower_email.ilike.${userEmail},legal_name.ilike.${fullName}`)
-      .limit(1)
-      .single();
-    if (!error && data) {
-      setBorrower(data);
-      setLoading(false);
-      return;
-    }
-
-    // No match found — show verification form
-    setVerifying(true);
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/borrowers?borrower_email=ilike.${encodeURIComponent(userEmail)}&limit=1`,
+      { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
+    );
+    const data = await res.json();
+    if (data && data.length > 0) setBorrower(data[0]);
     setLoading(false);
   }
 
-  async function handleVerify() {
-    if (!verifyName.trim() || !verifyAddress.trim()) return;
-    setVerifyLoading(true);
-    setVerifyError('');
-
-    const userEmail = user?.primaryEmailAddress?.emailAddress;
-
-    // Fetch all borrowers without an email assigned (or with a different email)
-    // and try to match on legal name + address
-    const { data: allBorrowers, error } = await supabase
-      .from('borrowers')
-      .select('*')
-      .ilike('legal_name', verifyName.trim());
-
-    if (error || !allBorrowers || allBorrowers.length === 0) {
-      setVerifyError("We couldn't find a loan matching that name and address. Please double-check that both match exactly what's on your loan documents, or contact your lender.");
-      setVerifyLoading(false);
-      return;
-    }
-
-    // Among name matches, find one where address also matches
-    const match = allBorrowers.find(b => addressesMatch(verifyAddress, b.property_address));
-
-    if (!match) {
-      setVerifyError("We couldn't find a loan matching that name and address. Please double-check that both match exactly what's on your loan documents, or contact your lender.");
-      setVerifyLoading(false);
-      return;
-    }
-
-    // Match found — link their email and activate
-    await supabase
-      .from('borrowers')
-      .update({ borrower_email: userEmail })
-      .eq('id', match.id);
-
-    setBorrower({ ...match, borrower_email: userEmail });
-    setVerifying(false);
-    setVerifyLoading(false);
+  async function handleSaveField(field, value) {
+    if (!borrower) return;
+    await fetch(`${SUPABASE_URL}/rest/v1/borrowers?id=eq.${borrower.id}`, {
+      method: 'PATCH',
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+      body: JSON.stringify({ [field]: value }),
+    });
+    setBorrower(prev => ({ ...prev, [field]: value }));
+    setSaveMsg('Saved.');
+    setTimeout(() => setSaveMsg(''), 2000);
   }
 
   const email = user?.primaryEmailAddress?.emailAddress || '';
-
   const perDiem = borrower?.per_diem || 0;
   const today = new Date();
-  const nextPayment = borrower?.next_payment_date
-    ? new Date(borrower.next_payment_date)
-    : null;
-  const daysUntil = nextPayment
-    ? Math.ceil((nextPayment - today) / (1000 * 60 * 60 * 24))
-    : null;
-
-  const docUrls = borrower?.loan_document_urls
-    ? borrower.loan_document_urls.split(',').map(u => u.trim()).filter(Boolean)
-    : [];
-
-  const verificationForm = (
-    <div style={{ padding: '60px 40px' }}>
-      <div style={s.emptyWrap}>
-        <div style={s.emptyTitle}>Let's find your loan</div>
-        <div style={s.emptyText}>
-          Enter your legal name and property address exactly as they appear on your loan documents. This is how we'll connect your account to your loan.
-        </div>
-      </div>
-      <div style={s.verifyCard}>
-        <div style={s.verifyTitle}>Verify your identity</div>
-        <div style={s.verifySub}>Use the exact name and address from your loan documents.</div>
-
-        <label style={s.fieldLabel}>Legal full name</label>
-        <input
-          style={{ ...s.fieldInput, ...(focusedField === 'name' ? s.fieldInputFocus : {}) }}
-          placeholder="e.g. John Robert Martinez"
-          value={verifyName}
-          onChange={e => setVerifyName(e.target.value)}
-          onFocus={() => setFocusedField('name')}
-          onBlur={() => setFocusedField(null)}
-        />
-
-        <label style={s.fieldLabel}>Property address</label>
-        <input
-          style={{ ...s.fieldInput, ...(focusedField === 'address' ? s.fieldInputFocus : {}) }}
-          placeholder="e.g. 123 Main St, Atlanta GA 30316"
-          value={verifyAddress}
-          onChange={e => setVerifyAddress(e.target.value)}
-          onFocus={() => setFocusedField('address')}
-          onBlur={() => setFocusedField(null)}
-        />
-
-        <button
-          style={verifyLoading || !verifyName.trim() || !verifyAddress.trim() ? s.btnVerifyDisabled : s.btnVerify}
-          onClick={handleVerify}
-          disabled={verifyLoading || !verifyName.trim() || !verifyAddress.trim()}
-        >
-          {verifyLoading ? 'Searching...' : 'Find my loan'}
-        </button>
-
-        {verifyError && (
-          <div style={s.errorMsg}>{verifyError}</div>
-        )}
-      </div>
-    </div>
-  );
+  const nextPayment = borrower?.next_payment_date ? new Date(borrower.next_payment_date) : null;
+  const daysUntil = nextPayment ? Math.ceil((nextPayment - today) / (1000 * 60 * 60 * 24)) : null;
+  const docUrls = borrower?.loan_document_urls ? borrower.loan_document_urls.split(',').map(u => u.trim()).filter(Boolean) : [];
 
   return (
-    <div style={{ background: '#0f0f0f', minHeight: '100vh', color: '#f0f0f0', fontFamily: 'inherit' }}>
-
+    <div style={s.page}>
       {borrower && daysUntil !== null && daysUntil <= 14 && (
         <div style={s.alertBar}>
           <div style={s.alertDot}></div>
@@ -283,8 +186,6 @@ export default function BorrowerPortal({ onHome }) {
       <div style={s.main}>
         {loading ? (
           <div style={{ textAlign: 'center', padding: 80, color: '#555', fontSize: 14 }}>Loading your loan...</div>
-        ) : verifying ? (
-          verificationForm
         ) : !borrower ? (
           <div style={s.emptyWrap}>
             <div style={s.emptyTitle}>Your loan hasn't been processed yet</div>
@@ -347,7 +248,7 @@ export default function BorrowerPortal({ onHome }) {
                     </div>
                     <div style={s.statBox}>
                       <div style={s.sbLabel}>Loan start</div>
-                      <div style={{ ...s.sbVal, fontSize: 13, fontWeight: 500, color: '#fff' }}>{borrower.loan_start_date || '—'}</div>
+                      <div style={{ ...s.sbVal, fontSize: 13 }}>{borrower.loan_start_date || '—'}</div>
                     </div>
                   </div>
                   <div style={s.accrualBar}>
@@ -440,13 +341,37 @@ export default function BorrowerPortal({ onHome }) {
               </div>
             </div>
 
-            <div style={s.card}>
+            <div style={{ ...s.card, marginBottom: 20 }}>
               <div style={s.cardHead}>
                 <div style={s.cardTitle}>Statements</div>
                 <span style={{ fontSize: 12, color: '#555' }}>Monthly statements coming soon</span>
               </div>
               <div style={{ padding: '32px', textAlign: 'center', color: '#555', fontSize: 13 }}>
                 Monthly statements will appear here once generated. Your first statement will be sent to <span style={{ color: '#D4A017' }}>{email}</span>.
+              </div>
+            </div>
+
+            <div style={s.card}>
+              <div style={s.cardHead}>
+                <div style={s.cardTitle}>My information</div>
+                {saveMsg && <span style={{ fontSize: 12, color: '#4a9a4a' }}>{saveMsg}</span>}
+              </div>
+              <div style={s.cardBody}>
+                <div style={{ fontSize: 12, color: '#555', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>Contact</div>
+                <EditableRow label="Full legal name" value={borrower.legal_name} field="legal_name" onSave={handleSaveField} />
+                <EditableRow label="Phone" value={borrower.phone} field="phone" onSave={handleSaveField} />
+                <EditableRow label="Email" value={borrower.borrower_email} field="borrower_email" onSave={handleSaveField} />
+                <EditableRow label="Mailing address" value={borrower.mailing_address} field="mailing_address" onSave={handleSaveField} />
+
+                <div style={{ fontSize: 12, color: '#555', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: 20, marginBottom: 10 }}>Guarantor</div>
+                <EditableRow label="Guarantor name" value={borrower.guarantor_name} field="guarantor_name" onSave={handleSaveField} />
+                <EditableRow label="Guarantor phone" value={borrower.guarantor_phone} field="guarantor_phone" onSave={handleSaveField} />
+                <div style={{ ...s.infoRow, borderBottom: 'none' }}>
+                  <span style={s.irLabel}>Guarantor email</span>
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <span style={s.irVal}>{borrower.guarantor_email || '—'}</span>
+                  </div>
+                </div>
               </div>
             </div>
           </>

@@ -4,6 +4,7 @@ import HomePage from './components/HomePage';
 import RequestForm from './components/RequestForm';
 import Portal from './components/Portal';
 import BorrowerPortal from './components/BorrowerPortal';
+import BorrowerOnboarding from './components/BorrowerOnboarding';
 import LenderOnboarding from './components/LenderOnboarding';
 import TermsPage from './components/TermsPage';
 import PrivacyPage from './components/PrivacyPage';
@@ -15,6 +16,7 @@ export default function App() {
   const [page, setPage] = useState('home');
   const [authMode, setAuthMode] = useState('signup');
   const [portalType, setPortalType] = useState('lender');
+  const [borrowerOnboardingId, setBorrowerOnboardingId] = useState(null);
   const { isSignedIn, user } = useUser();
   const { signOut } = useClerk();
 
@@ -24,7 +26,7 @@ export default function App() {
     if (token) {
       setPortalType('borrower');
       if (isSignedIn) {
-        setPage('borrower-portal');
+        checkBorrowerOnboarding(token);
       } else {
         setAuthMode('signup');
         setPage('auth');
@@ -32,10 +34,41 @@ export default function App() {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  async function checkBorrowerOnboarding(token) {
+    const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
+    const SUPABASE_ANON_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY;
+    try {
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/borrowers?verification_token=eq.${token}&select=id,phone,mailing_address&limit=1`,
+        { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
+      );
+      const data = await res.json();
+      if (data && data.length > 0) {
+        const borrower = data[0];
+        if (!borrower.phone || !borrower.mailing_address) {
+          setBorrowerOnboardingId(borrower.id);
+          setPage('borrower-onboarding');
+        } else {
+          setPage('borrower-portal');
+        }
+      } else {
+        setPage('borrower-portal');
+      }
+    } catch {
+      setPage('borrower-portal');
+    }
+  }
+
   useEffect(() => {
     if (isSignedIn && page === 'auth') {
       if (portalType === 'borrower') {
-        setPage('borrower-portal');
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('activate');
+        if (token) {
+          checkBorrowerOnboarding(token);
+        } else {
+          setPage('borrower-no-access');
+        }
       } else {
         checkLenderOnboarding();
       }
@@ -261,7 +294,7 @@ export default function App() {
       {page === 'home' && (
         <HomePage
           onLenderLogin={() => { setPortalType('lender'); if (isSignedIn) { checkLenderOnboarding(); } else { setAuthMode('signup'); setPage('auth'); } }}
-          onBorrowerLogin={() => { setPortalType('borrower'); setAuthMode('signup'); setPage('auth'); }}
+          onBorrowerLogin={() => { setPortalType('borrower'); setAuthMode('signin'); setPage('auth'); }}
           onTerms={() => setPage('terms')}
           onPrivacy={() => setPage('privacy')}
         />
@@ -269,6 +302,17 @@ export default function App() {
       {page === 'request' && <RequestForm />}
       {page === 'portal' && <Portal onSubmitRequest={() => setPage('request')} />}
       {page === 'borrower-portal' && <BorrowerPortal onHome={() => setPage('home')} />}
+      {page === 'borrower-onboarding' && <BorrowerOnboarding borrowerId={borrowerOnboardingId} onComplete={() => setPage('borrower-portal')} />}
+      {page === 'borrower-no-access' && (
+        <div style={{ minHeight: 'calc(100vh - 65px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40 }}>
+          <div style={{ textAlign: 'center', maxWidth: 440 }}>
+            <div style={{ fontSize: 20, fontWeight: 500, color: '#fff', marginBottom: 12 }}>Access your loan portal</div>
+            <div style={{ fontSize: 14, color: '#555', lineHeight: 1.7 }}>
+              To access your borrower portal, please use the activation link sent to your email by your lender. If you haven't received one, contact your lender directly.
+            </div>
+          </div>
+        </div>
+      )}
       {page === 'choice' && choicePage}
       {page === 'onboarding' && <LenderOnboarding onComplete={() => setPage('choice')} />}
       {page === 'terms' && <TermsPage onHome={() => setPage('home')} />}
