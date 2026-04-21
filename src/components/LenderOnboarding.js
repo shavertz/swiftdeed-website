@@ -96,7 +96,7 @@ export default function LenderOnboarding({ onComplete }) {
   return (
     <div style={s.wrap}>
       <div style={s.card}>
-        <div style={s.topLabel}>Welcome to SwiftDeed</div>
+        <div style={s.topLabel}>Step 2 of 2 · Welcome to SwiftDeed</div>
         <div style={s.title}>Let's get you onboarded.</div>
         <div style={s.sub}>Just a few details before you get started. This only takes a minute.</div>
 
