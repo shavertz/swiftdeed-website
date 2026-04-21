@@ -60,8 +60,20 @@ export default function App() {
   }
 
   useEffect(() => {
-    if (isSignedIn && page === 'auth') {
+    if (isSignedIn && page === 'home') {
       if (portalType === 'borrower') {
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('activate');
+        if (token) {
+          checkBorrowerOnboarding(token);
+        } else {
+          setPage('borrower-no-access');
+        }
+      } else if (portalType === 'lender') {
+        checkLenderOnboarding();
+      }
+    }
+  }, [isSignedIn]); // eslint-disable-line react-hooks/exhaustive-deps
         const urlParams = new URLSearchParams(window.location.search);
         const token = urlParams.get('activate');
         if (token) {
