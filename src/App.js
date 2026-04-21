@@ -33,7 +33,7 @@ export default function App() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (isSignedIn && page === 'auth') {
+    if (isSignedIn && (page === 'auth' || page === 'home')) {
       if (portalType === 'borrower') {
         setPage('borrower-portal');
       } else {
@@ -269,6 +269,12 @@ export default function App() {
       {page === 'privacy' && <PrivacyPage onHome={() => setPage('home')} />}
       {page === 'auth' && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 60 }}>
+          {portalType === 'lender' && authMode === 'signup' && (
+            <div style={{ marginBottom: 24, textAlign: 'center' }}>
+              <div style={{ fontSize: 12, color: '#4a90b8', letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: 6 }}>Step 1 of 2</div>
+              <div style={{ fontSize: 15, color: '#555' }}>Create your account — then we'll set up your lender profile.</div>
+            </div>
+          )}
           <div style={{
             display: 'flex', gap: 0, marginBottom: 32,
             background: '#1a1a1a', borderRadius: 8, padding: 4,
