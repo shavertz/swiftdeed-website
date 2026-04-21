@@ -5,6 +5,8 @@ import RequestForm from './components/RequestForm';
 import Portal from './components/Portal';
 import BorrowerPortal from './components/BorrowerPortal';
 import LenderOnboarding from './components/LenderOnboarding';
+import TermsPage from './components/TermsPage';
+import PrivacyPage from './components/PrivacyPage';
 
 const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY;
@@ -254,6 +256,8 @@ export default function App() {
         <HomePage
           onLenderLogin={() => { setPortalType('lender'); if (isSignedIn) { checkLenderOnboarding(); } else { setAuthMode('signup'); setPage('auth'); } }}
           onBorrowerLogin={() => { setPortalType('borrower'); setAuthMode('signup'); setPage('auth'); }}
+          onTerms={() => setPage('terms')}
+          onPrivacy={() => setPage('privacy')}
         />
       )}
       {page === 'request' && <RequestForm />}
@@ -261,6 +265,8 @@ export default function App() {
       {page === 'borrower-portal' && <BorrowerPortal onHome={() => setPage('home')} />}
       {page === 'choice' && choicePage}
       {page === 'onboarding' && <LenderOnboarding onComplete={() => setPage('choice')} />}
+      {page === 'terms' && <TermsPage onHome={() => setPage('home')} />}
+      {page === 'privacy' && <PrivacyPage onHome={() => setPage('home')} />}
       {page === 'auth' && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 60 }}>
           <div style={{

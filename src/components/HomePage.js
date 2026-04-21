@@ -1,4 +1,4 @@
-export default function HomePage({ onLenderLogin, onBorrowerLogin }) {
+export default function HomePage({ onLenderLogin, onBorrowerLogin, onTerms, onPrivacy }) {
   const s = {
     page: { background: '#0f0f0f', minHeight: '100vh', color: '#f0f0f0', fontFamily: 'inherit' },
     hero: { padding: '40px 60px 80px', textAlign: 'center', maxWidth: 800, margin: '0 auto' },
@@ -92,6 +92,28 @@ export default function HomePage({ onLenderLogin, onBorrowerLogin }) {
           <div style={{ textAlign: 'center' }}><div style={s.statNum}>15min</div><div style={s.statLabel}>Rush turnaround</div></div>
           <div style={{ textAlign: 'center' }}><div style={s.statNum}>24hr</div><div style={s.statLabel}>Standard turnaround</div></div>
           <div style={{ textAlign: 'center' }}><div style={s.statNum}>$40</div><div style={s.statLabel}>Starting price</div></div>
+        </div>
+      </div>
+
+      {/* TRUST BAR */}
+      <div style={{ padding: '0 60px 60px', maxWidth: 860, margin: '0 auto' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1, background: '#2a2a2a', border: '0.5px solid #2a2a2a', borderRadius: 10, overflow: 'hidden' }}>
+          <div style={{ background: '#111', padding: '18px 16px', textAlign: 'center' }}>
+            <div style={{ fontSize: 15, fontWeight: 500, color: '#FFD700', marginBottom: 4 }}>Same-day</div>
+            <div style={{ fontSize: 12, color: '#555' }}>Statement delivery</div>
+          </div>
+          <div style={{ background: '#111', padding: '18px 16px', textAlign: 'center' }}>
+            <div style={{ fontSize: 15, fontWeight: 500, color: '#FFD700', marginBottom: 4 }}>$0 setup fees</div>
+            <div style={{ fontSize: 12, color: '#555' }}>No monthly costs</div>
+          </div>
+          <div style={{ background: '#111', padding: '18px 16px', textAlign: 'center' }}>
+            <div style={{ fontSize: 15, fontWeight: 500, color: '#FFD700', marginBottom: 4 }}>No contracts</div>
+            <div style={{ fontSize: 12, color: '#555' }}>Cancel anytime</div>
+          </div>
+          <div style={{ background: '#111', padding: '18px 16px', textAlign: 'center' }}>
+            <div style={{ fontSize: 15, fontWeight: 500, color: '#FFD700', marginBottom: 4 }}>24/7 access</div>
+            <div style={{ fontSize: 12, color: '#555' }}>Lender & borrower portals</div>
+          </div>
         </div>
       </div>
 
@@ -281,8 +303,8 @@ export default function HomePage({ onLenderLogin, onBorrowerLogin }) {
         </div>
         <div style={s.footerCopy}>© 2026 SwiftDeed. All rights reserved.</div>
         <div style={s.footerLinks}>
-          <a style={s.footerLink} href="/privacy">Privacy</a>
-          <a style={s.footerLink} href="/terms">Terms</a>
+          <span style={{ ...s.footerLink, cursor: 'pointer' }} onClick={onPrivacy}>Privacy</span>
+          <span style={{ ...s.footerLink, cursor: 'pointer' }} onClick={onTerms}>Terms</span>
           <a style={s.footerLink} href="mailto:scott@theswiftdeed.com">Contact</a>
         </div>
       </div>
