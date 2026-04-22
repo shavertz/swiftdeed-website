@@ -11,25 +11,19 @@ import PrivacyPage from './components/PrivacyPage';
 
 const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY;
-
 const ACTIVATION_TOKEN = new URLSearchParams(window.location.search).get('activate');
 
 export default function App() {
-  const [page, setPage] = useState(() => {
-    if (ACTIVATION_TOKEN) return 'auth';
-    return 'home';
-  });
+  const [page, setPage] = useState(() => ACTIVATION_TOKEN ? 'auth' : 'home');
   const [authMode, setAuthMode] = useState('signin');
-  const [portalType, setPortalType] = useState(() => {
-    if (ACTIVATION_TOKEN) return 'borrower';
-    return null;
-  });
+  const [portalType, setPortalType] = useState(() => ACTIVATION_TOKEN ? 'borrower' : null);
   const [borrowerOnboardingId, setBorrowerOnboardingId] = useState(null);
   const { isSignedIn, user } = useUser();
   const { signOut } = useClerk();
 
+  // Fire whenever isSignedIn OR user changes — catches both fresh login and already-signed-in cases
   useEffect(() => {
-    if (!isSignedIn) return;
+    if (!isSignedIn || !user) return;
 
     if (ACTIVATION_TOKEN) {
       checkBorrowerOnboarding(ACTIVATION_TOKEN);
@@ -38,12 +32,11 @@ export default function App() {
 
     if (portalType === 'borrower') {
       setPage('borrower-no-access');
-    } else if (portalType === 'lender') {
-      if (page === 'auth' || page === 'home') {
-        checkLenderOnboarding();
-      }
+    } else {
+      // lender or unset — always route to choice (via onboarding check)
+      checkLenderOnboarding();
     }
-  }, [isSignedIn]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isSignedIn, user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function checkBorrowerOnboarding(token) {
     try {
@@ -129,15 +122,8 @@ export default function App() {
   };
 
   const nav = (
-    <div style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      padding: '14px 60px', borderBottom: '0.5px solid #2a2a2a',
-      background: '#0f0f0f', position: 'sticky', top: 0, zIndex: 100
-    }}>
-      <div
-        onClick={() => { setPage('home'); setPortalType(null); }}
-        style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
-      >
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 60px', borderBottom: '0.5px solid #2a2a2a', background: '#0f0f0f', position: 'sticky', top: 0, zIndex: 100 }}>
+      <div onClick={() => { setPage('home'); setPortalType(null); }} style={{ cursor: 'pointer' }}>
         <span style={{ fontSize: 20, fontWeight: 500, letterSpacing: -0.3 }}>
           <span style={{ color: '#fff' }}>Swift</span><span style={{ color: '#FFD700' }}>Deed</span>
         </span>
@@ -174,55 +160,27 @@ export default function App() {
 
   const authPage = (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 52, paddingBottom: 80 }}>
-
-      {/* Log in / Sign up toggle */}
       <div style={{ display: 'flex', gap: 0, marginBottom: 32, background: '#1a1a1a', borderRadius: 8, padding: 4, border: '0.5px solid #2a2a2a' }}>
-        <button
-          onClick={() => { setAuthMode('signin'); if (portalType === null) setPortalType(null); }}
-          style={{ background: authMode === 'signin' ? '#FFD700' : 'transparent', color: authMode === 'signin' ? '#0f0f0f' : '#fff', fontSize: 15, fontWeight: 600, padding: '10px 32px', borderRadius: 6, border: 'none', cursor: 'pointer', fontFamily: 'system-ui, sans-serif' }}
-        >Log in</button>
-        <button
-          onClick={() => { setAuthMode('signup'); if (portalType === 'borrower') setPortalType(null); }}
-          style={{ background: authMode === 'signup' ? '#FFD700' : 'transparent', color: authMode === 'signup' ? '#0f0f0f' : '#fff', fontSize: 15, fontWeight: 600, padding: '10px 32px', borderRadius: 6, border: 'none', cursor: 'pointer', fontFamily: 'system-ui, sans-serif' }}
-        >Sign up</button>
+        <button onClick={() => setAuthMode('signin')} style={{ background: authMode === 'signin' ? '#FFD700' : 'transparent', color: authMode === 'signin' ? '#0f0f0f' : '#fff', fontSize: 15, fontWeight: 600, padding: '10px 32px', borderRadius: 6, border: 'none', cursor: 'pointer', fontFamily: 'system-ui, sans-serif' }}>Log in</button>
+        <button onClick={() => { setAuthMode('signup'); if (portalType === 'borrower') setPortalType(null); }} style={{ background: authMode === 'signup' ? '#FFD700' : 'transparent', color: authMode === 'signup' ? '#0f0f0f' : '#fff', fontSize: 15, fontWeight: 600, padding: '10px 32px', borderRadius: 6, border: 'none', cursor: 'pointer', fontFamily: 'system-ui, sans-serif' }}>Sign up</button>
       </div>
 
-      {/* Portal type selector */}
       {!ACTIVATION_TOKEN && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 28, width: '100%', maxWidth: 420 }}>
-
-          {/* Borrower card — left */}
           {authMode === 'signin' ? (
-            <div
-              onClick={() => setPortalType('borrower')}
-              style={{
-                background: portalType === 'borrower' ? '#171400' : '#141414',
-                border: portalType === 'borrower' ? '1.5px solid #FFD700' : '0.5px solid #2a2a2a',
-                borderRadius: 10, padding: '20px 16px', cursor: 'pointer', textAlign: 'center',
-              }}
-            >
+            <div onClick={() => setPortalType('borrower')} style={{ background: portalType === 'borrower' ? '#171400' : '#141414', border: portalType === 'borrower' ? '1.5px solid #FFD700' : '0.5px solid #2a2a2a', borderRadius: 10, padding: '20px 16px', cursor: 'pointer', textAlign: 'center' }}>
               <div style={{ fontSize: 22, marginBottom: 10 }}>🏠</div>
               <div style={{ fontSize: 15, fontWeight: 500, color: '#fff', marginBottom: 4 }}>Borrower</div>
               <div style={{ fontSize: 12, color: '#555', lineHeight: 1.4 }}>View your loan & statements</div>
             </div>
           ) : (
-            // Sign up mode — borrower card is disabled
             <div style={{ background: '#0d0d0d', border: '0.5px solid #2a2a2a', borderRadius: 10, padding: '20px 16px', textAlign: 'center' }}>
               <div style={{ fontSize: 22, marginBottom: 10 }}>🏠</div>
               <div style={{ fontSize: 15, fontWeight: 500, color: '#666', marginBottom: 8 }}>Borrower</div>
               <div style={{ fontSize: 12, color: '#FFD700', lineHeight: 1.5 }}>⚠️ <em>Activation email required — contact your lender</em></div>
             </div>
           )}
-
-          {/* Lender card — right */}
-          <div
-            onClick={() => setPortalType('lender')}
-            style={{
-              background: portalType === 'lender' ? '#171400' : '#141414',
-              border: portalType === 'lender' ? '1.5px solid #FFD700' : '0.5px solid #2a2a2a',
-              borderRadius: 10, padding: '20px 16px', cursor: 'pointer', textAlign: 'center',
-            }}
-          >
+          <div onClick={() => setPortalType('lender')} style={{ background: portalType === 'lender' ? '#171400' : '#141414', border: portalType === 'lender' ? '1.5px solid #FFD700' : '0.5px solid #2a2a2a', borderRadius: 10, padding: '20px 16px', cursor: 'pointer', textAlign: 'center' }}>
             <div style={{ fontSize: 22, marginBottom: 10 }}>🏦</div>
             <div style={{ fontSize: 15, fontWeight: 500, color: '#fff', marginBottom: 4 }}>Lender</div>
             <div style={{ fontSize: 12, color: '#555', lineHeight: 1.4 }}>Submit requests & manage loans</div>
@@ -230,7 +188,6 @@ export default function App() {
         </div>
       )}
 
-      {/* Activation token context */}
       {ACTIVATION_TOKEN && (
         <div style={{ marginBottom: 24, textAlign: 'center' }}>
           <div style={{ fontSize: 12, color: '#4a90b8', letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: 6 }}>Borrower Activation</div>
@@ -238,7 +195,6 @@ export default function App() {
         </div>
       )}
 
-      {/* Step indicator for lender signup */}
       {!ACTIVATION_TOKEN && portalType === 'lender' && authMode === 'signup' && (
         <div style={{ marginBottom: 20, textAlign: 'center' }}>
           <div style={{ fontSize: 12, color: '#4a90b8', letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: 6 }}>Step 1 of 2</div>
@@ -246,7 +202,6 @@ export default function App() {
         </div>
       )}
 
-      {/* Clerk form — only shown once portal type is selected */}
       {(portalType || ACTIVATION_TOKEN) ? (
         authMode === 'signin'
           ? <SignIn appearance={clerkAppearance} routing="virtual" />
@@ -283,14 +238,8 @@ export default function App() {
       {nav}
       {page === 'home' && (
         <HomePage
-          onLenderLogin={() => {
-            if (isSignedIn) { checkLenderOnboarding(); }
-            else { goToAuth('signup', 'lender'); }
-          }}
-          onBorrowerLogin={() => {
-            if (isSignedIn) { setPage('borrower-no-access'); }
-            else { goToAuth('signin', 'borrower'); }
-          }}
+          onLenderLogin={() => { if (isSignedIn) { checkLenderOnboarding(); } else { goToAuth('signup', 'lender'); } }}
+          onBorrowerLogin={() => { if (isSignedIn) { setPage('borrower-no-access'); } else { goToAuth('signin', 'borrower'); } }}
           onTerms={() => setPage('terms')}
           onPrivacy={() => setPage('privacy')}
         />
