@@ -12,43 +12,36 @@ import PrivacyPage from './components/PrivacyPage';
 const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY;
 
+// Read token once at module level so it's always available before any state runs
+const ACTIVATION_TOKEN = new URLSearchParams(window.location.search).get('activate');
+
 export default function App() {
-  const [page, setPage] = useState('home');
+  const [page, setPage] = useState(() => {
+    if (ACTIVATION_TOKEN) return 'auth';
+    return 'home';
+  });
   const [authMode, setAuthMode] = useState('signup');
-  const [portalType, setPortalType] = useState('lender');
+  const [portalType, setPortalType] = useState(() => {
+    if (ACTIVATION_TOKEN) return 'borrower';
+    return 'lender';
+  });
   const [borrowerOnboardingId, setBorrowerOnboardingId] = useState(null);
-  const [pendingToken, setPendingToken] = useState(null);
   const { isSignedIn, user } = useUser();
   const { signOut } = useClerk();
-
-  // On load, check for activation token in URL
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get('activate');
-    if (token) {
-      setPendingToken(token);
-      setPortalType('borrower');
-      if (!isSignedIn) {
-        setAuthMode('signup');
-        setPage('auth');
-      }
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // When signed-in state changes, route correctly
   useEffect(() => {
     if (!isSignedIn) return;
 
+    // Activation token always takes priority
+    if (ACTIVATION_TOKEN) {
+      checkBorrowerOnboarding(ACTIVATION_TOKEN);
+      return;
+    }
+
     if (portalType === 'borrower') {
-      const urlParams = new URLSearchParams(window.location.search);
-      const token = pendingToken || urlParams.get('activate');
-      if (token) {
-        checkBorrowerOnboarding(token);
-      } else {
-        setPage('borrower-no-access');
-      }
+      setPage('borrower-no-access');
     } else {
-      // lender — only redirect if on auth or home page
       if (page === 'auth' || page === 'home') {
         checkLenderOnboarding();
       }
@@ -117,7 +110,6 @@ export default function App() {
     signOut();
     setPage('home');
     setPortalType('lender');
-    setPendingToken(null);
   };
 
   const toggleBtn = (mode) => ({
@@ -197,17 +189,27 @@ export default function App() {
         ) : (
           <>
             <button
-              onClick={() => { setAuthMode('signin'); setPage('auth'); }}
+              onClick={() => { setPortalType('lender'); setAuthMode('signin'); setPage('auth'); }}
               style={{
                 background: 'transparent', color: '#fff', fontSize: 14,
                 padding: '8px 18px', borderRadius: 6, border: '0.5px solid #2a2a2a',
                 cursor: 'pointer', outline: 'none'
               }}
             >
-              Log in
+              Lender login
             </button>
             <button
-              onClick={() => { setAuthMode('signup'); setPage('auth'); }}
+              onClick={() => { setPortalType('borrower'); setAuthMode('signin'); setPage('auth'); }}
+              style={{
+                background: 'transparent', color: '#fff', fontSize: 14,
+                padding: '8px 18px', borderRadius: 6, border: '0.5px solid #2a2a2a',
+                cursor: 'pointer', outline: 'none'
+              }}
+            >
+              Borrower login
+            </button>
+            <button
+              onClick={() => { setPortalType('lender'); setAuthMode('signup'); setPage('auth'); }}
               style={{
                 background: '#FFD700', color: '#0f0f0f', fontSize: 14,
                 fontWeight: 500, padding: '8px 18px', borderRadius: 6,
@@ -337,6 +339,12 @@ export default function App() {
             <div style={{ marginBottom: 24, textAlign: 'center' }}>
               <div style={{ fontSize: 12, color: '#4a90b8', letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: 6 }}>Step 1 of 2</div>
               <div style={{ fontSize: 15, color: '#555' }}>Create your account — then we'll set up your lender profile.</div>
+            </div>
+          )}
+          {portalType === 'borrower' && ACTIVATION_TOKEN && (
+            <div style={{ marginBottom: 24, textAlign: 'center' }}>
+              <div style={{ fontSize: 12, color: '#4a90b8', letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: 6 }}>Borrower Activation</div>
+              <div style={{ fontSize: 15, color: '#555' }}>Create your account to access your loan portal.</div>
             </div>
           )}
           <div style={{
