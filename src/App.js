@@ -15,27 +15,29 @@ const ACTIVATION_TOKEN = new URLSearchParams(window.location.search).get('activa
 
 export default function App() {
   const [page, setPage] = useState(() => ACTIVATION_TOKEN ? 'auth' : 'home');
-  const [authMode, setAuthMode] = useState('signin');
+  const [authMode, setAuthMode] = useState(() => ACTIVATION_TOKEN ? 'signup' : 'signin');
   const [portalType, setPortalType] = useState(() => ACTIVATION_TOKEN ? 'borrower' : null);
   const [borrowerOnboardingId, setBorrowerOnboardingId] = useState(null);
   const { isSignedIn, user } = useUser();
   const { signOut } = useClerk();
 
-  // Fire whenever isSignedIn OR user changes — catches both fresh login and already-signed-in cases
   useEffect(() => {
     if (!isSignedIn || !user) return;
 
+    // Activation token always wins — route to borrower onboarding
     if (ACTIVATION_TOKEN) {
       checkBorrowerOnboarding(ACTIVATION_TOKEN);
       return;
     }
 
+    // Borrower without activation token — no access
     if (portalType === 'borrower') {
       setPage('borrower-no-access');
-    } else {
-      // lender or unset — always route to choice (via onboarding check)
-      checkLenderOnboarding();
+      return;
     }
+
+    // Lender — check onboarding
+    checkLenderOnboarding();
   }, [isSignedIn, user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function checkBorrowerOnboarding(token) {
@@ -51,12 +53,15 @@ export default function App() {
           setBorrowerOnboardingId(borrower.id);
           setPage('borrower-onboarding');
         } else {
+          setPortalType('borrower');
           setPage('borrower-portal');
         }
       } else {
+        setPortalType('borrower');
         setPage('borrower-portal');
       }
     } catch {
+      setPortalType('borrower');
       setPage('borrower-portal');
     }
   }
@@ -71,11 +76,14 @@ export default function App() {
       );
       const data = await res.json();
       if (Array.isArray(data) && data.length > 0) {
+        setPortalType('lender');
         setPage('choice');
       } else {
+        setPortalType('lender');
         setPage('onboarding');
       }
     } catch {
+      setPortalType('lender');
       setPage('choice');
     }
   }
@@ -158,51 +166,55 @@ export default function App() {
     </div>
   );
 
-  const authPage = (
+  // Activation flow — clean, no cards, no toggle
+  const activationAuthPage = (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 52, paddingBottom: 80 }}>
+      <div style={{ marginBottom: 28, textAlign: 'center' }}>
+        <div style={{ fontSize: 12, color: '#4a90b8', letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: 8 }}>Borrower Activation</div>
+        <div style={{ fontSize: 20, fontWeight: 500, color: '#fff', marginBottom: 8 }}>You've been invited</div>
+        <div style={{ fontSize: 14, color: '#555', lineHeight: 1.7 }}>Create your account to access your loan portal.</div>
+      </div>
+      <SignUp appearance={clerkAppearance} routing="virtual" />
+    </div>
+  );
+
+  // Standard auth page — toggle + lender/borrower selector
+  const standardAuthPage = (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 52, paddingBottom: 80 }}>
       <div style={{ display: 'flex', gap: 0, marginBottom: 32, background: '#1a1a1a', borderRadius: 8, padding: 4, border: '0.5px solid #2a2a2a' }}>
         <button onClick={() => setAuthMode('signin')} style={{ background: authMode === 'signin' ? '#FFD700' : 'transparent', color: authMode === 'signin' ? '#0f0f0f' : '#fff', fontSize: 15, fontWeight: 600, padding: '10px 32px', borderRadius: 6, border: 'none', cursor: 'pointer', fontFamily: 'system-ui, sans-serif' }}>Log in</button>
         <button onClick={() => { setAuthMode('signup'); if (portalType === 'borrower') setPortalType(null); }} style={{ background: authMode === 'signup' ? '#FFD700' : 'transparent', color: authMode === 'signup' ? '#0f0f0f' : '#fff', fontSize: 15, fontWeight: 600, padding: '10px 32px', borderRadius: 6, border: 'none', cursor: 'pointer', fontFamily: 'system-ui, sans-serif' }}>Sign up</button>
       </div>
 
-      {!ACTIVATION_TOKEN && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 28, width: '100%', maxWidth: 420 }}>
-          {authMode === 'signin' ? (
-            <div onClick={() => setPortalType('borrower')} style={{ background: portalType === 'borrower' ? '#171400' : '#141414', border: portalType === 'borrower' ? '1.5px solid #FFD700' : '0.5px solid #2a2a2a', borderRadius: 10, padding: '20px 16px', cursor: 'pointer', textAlign: 'center' }}>
-              <div style={{ fontSize: 22, marginBottom: 10 }}>🏠</div>
-              <div style={{ fontSize: 15, fontWeight: 500, color: '#fff', marginBottom: 4 }}>Borrower</div>
-              <div style={{ fontSize: 12, color: '#555', lineHeight: 1.4 }}>View your loan & statements</div>
-            </div>
-          ) : (
-            <div style={{ background: '#0d0d0d', border: '0.5px solid #2a2a2a', borderRadius: 10, padding: '20px 16px', textAlign: 'center' }}>
-              <div style={{ fontSize: 22, marginBottom: 10 }}>🏠</div>
-              <div style={{ fontSize: 15, fontWeight: 500, color: '#666', marginBottom: 8 }}>Borrower</div>
-              <div style={{ fontSize: 12, color: '#FFD700', lineHeight: 1.5 }}>⚠️ <em>Activation email required — contact your lender</em></div>
-            </div>
-          )}
-          <div onClick={() => setPortalType('lender')} style={{ background: portalType === 'lender' ? '#171400' : '#141414', border: portalType === 'lender' ? '1.5px solid #FFD700' : '0.5px solid #2a2a2a', borderRadius: 10, padding: '20px 16px', cursor: 'pointer', textAlign: 'center' }}>
-            <div style={{ fontSize: 22, marginBottom: 10 }}>🏦</div>
-            <div style={{ fontSize: 15, fontWeight: 500, color: '#fff', marginBottom: 4 }}>Lender</div>
-            <div style={{ fontSize: 12, color: '#555', lineHeight: 1.4 }}>Submit requests & manage loans</div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 28, width: '100%', maxWidth: 420 }}>
+        {authMode === 'signin' ? (
+          <div onClick={() => setPortalType('borrower')} style={{ background: portalType === 'borrower' ? '#171400' : '#141414', border: portalType === 'borrower' ? '1.5px solid #FFD700' : '0.5px solid #2a2a2a', borderRadius: 10, padding: '20px 16px', cursor: 'pointer', textAlign: 'center' }}>
+            <div style={{ fontSize: 22, marginBottom: 10 }}>🏠</div>
+            <div style={{ fontSize: 15, fontWeight: 500, color: '#fff', marginBottom: 4 }}>Borrower</div>
+            <div style={{ fontSize: 12, color: '#555', lineHeight: 1.4 }}>View your loan & statements</div>
           </div>
+        ) : (
+          <div style={{ background: '#0d0d0d', border: '0.5px solid #2a2a2a', borderRadius: 10, padding: '20px 16px', textAlign: 'center' }}>
+            <div style={{ fontSize: 22, marginBottom: 10 }}>🏠</div>
+            <div style={{ fontSize: 15, fontWeight: 500, color: '#666', marginBottom: 8 }}>Borrower</div>
+            <div style={{ fontSize: 12, color: '#FFD700', lineHeight: 1.5 }}>⚠️ <em>Activation email required — contact your lender</em></div>
+          </div>
+        )}
+        <div onClick={() => setPortalType('lender')} style={{ background: portalType === 'lender' ? '#171400' : '#141414', border: portalType === 'lender' ? '1.5px solid #FFD700' : '0.5px solid #2a2a2a', borderRadius: 10, padding: '20px 16px', cursor: 'pointer', textAlign: 'center' }}>
+          <div style={{ fontSize: 22, marginBottom: 10 }}>🏦</div>
+          <div style={{ fontSize: 15, fontWeight: 500, color: '#fff', marginBottom: 4 }}>Lender</div>
+          <div style={{ fontSize: 12, color: '#555', lineHeight: 1.4 }}>Submit requests & manage loans</div>
         </div>
-      )}
+      </div>
 
-      {ACTIVATION_TOKEN && (
-        <div style={{ marginBottom: 24, textAlign: 'center' }}>
-          <div style={{ fontSize: 12, color: '#4a90b8', letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: 6 }}>Borrower Activation</div>
-          <div style={{ fontSize: 15, color: '#555' }}>Create your account to access your loan portal.</div>
-        </div>
-      )}
-
-      {!ACTIVATION_TOKEN && portalType === 'lender' && authMode === 'signup' && (
+      {portalType === 'lender' && authMode === 'signup' && (
         <div style={{ marginBottom: 20, textAlign: 'center' }}>
           <div style={{ fontSize: 12, color: '#4a90b8', letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: 6 }}>Step 1 of 2</div>
           <div style={{ fontSize: 14, color: '#555' }}>Create your account — then we'll set up your lender profile.</div>
         </div>
       )}
 
-      {(portalType || ACTIVATION_TOKEN) ? (
+      {portalType ? (
         authMode === 'signin'
           ? <SignIn appearance={clerkAppearance} routing="virtual" />
           : <SignUp appearance={clerkAppearance} routing="virtual" />
@@ -244,11 +256,19 @@ export default function App() {
           onPrivacy={() => setPage('privacy')}
         />
       )}
-      {page === 'auth' && authPage}
+      {page === 'auth' && (ACTIVATION_TOKEN ? activationAuthPage : standardAuthPage)}
       {page === 'request' && <RequestForm />}
       {page === 'portal' && <Portal onSubmitRequest={() => setPage('request')} />}
       {page === 'borrower-portal' && <BorrowerPortal onHome={() => setPage('home')} />}
-      {page === 'borrower-onboarding' && <BorrowerOnboarding borrowerId={borrowerOnboardingId} onComplete={() => setPage('borrower-portal')} />}
+      {page === 'borrower-onboarding' && (
+        <BorrowerOnboarding
+          borrowerId={borrowerOnboardingId}
+          onComplete={() => {
+            setPortalType('borrower');
+            setPage('borrower-portal');
+          }}
+        />
+      )}
       {page === 'borrower-no-access' && (
         <div style={{ minHeight: 'calc(100vh - 65px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40 }}>
           <div style={{ textAlign: 'center', maxWidth: 440 }}>
