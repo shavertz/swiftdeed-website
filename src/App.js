@@ -207,10 +207,10 @@ export default function App() {
             </div>
           ) : (
             // Sign up mode — borrower card is disabled
-            <div style={{ background: '#0d0d0d', border: '0.5px solid #1a1a1a', borderRadius: 10, padding: '20px 16px', textAlign: 'center', opacity: 0.5 }}>
+            <div style={{ background: '#0d0d0d', border: '0.5px solid #2a2a2a', borderRadius: 10, padding: '20px 16px', textAlign: 'center' }}>
               <div style={{ fontSize: 22, marginBottom: 10 }}>🏠</div>
-              <div style={{ fontSize: 15, fontWeight: 500, color: '#555', marginBottom: 4 }}>Borrower</div>
-              <div style={{ fontSize: 11, color: '#444', lineHeight: 1.4 }}>Access via activation email from your lender</div>
+              <div style={{ fontSize: 15, fontWeight: 500, color: '#666', marginBottom: 8 }}>Borrower</div>
+              <div style={{ fontSize: 12, color: '#FFD700', lineHeight: 1.5 }}>⚠️ <em>Activation email required — contact your lender</em></div>
             </div>
           )}
 
