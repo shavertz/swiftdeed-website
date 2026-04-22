@@ -182,7 +182,7 @@ export default function App() {
           <>
             <span style={{ fontSize: 13, color: '#aaa' }}>{user.primaryEmailAddress?.emailAddress}</span>
             {portalType === 'borrower' ? (
-              <button onClick={() => setPage('borrower-portal')} style={{ background: '#FFD700', color: '#0f0f0f', fontSize: 14, fontWeight: 500, padding: '8px 18px', borderRadius: 6, border: 'none', cursor: 'pointer' }}>My loan</button>
+              <button onClick={() => routeByEmail(user.primaryEmailAddress?.emailAddress)} style={{ background: '#FFD700', color: '#0f0f0f', fontSize: 14, fontWeight: 500, padding: '8px 18px', borderRadius: 6, border: 'none', cursor: 'pointer' }}>My loan</button>
             ) : (
               <button onClick={() => setPage('portal')} style={{ background: '#FFD700', color: '#0f0f0f', fontSize: 14, fontWeight: 500, padding: '8px 18px', borderRadius: 6, border: 'none', cursor: 'pointer' }}>My requests</button>
             )}
