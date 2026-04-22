@@ -11,7 +11,7 @@ import PrivacyPage from './components/PrivacyPage';
 
 const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY;
-const ACTIVATION_TOKEN = new URLSearchParams(window.location.search).get('activate');
+const ACTIVATION_TOKEN = window.location.hash.startsWith('#activate=') ? window.location.hash.slice('#activate='.length) : null;
 
 export default function App() {
   const [page, setPage] = useState(() => ACTIVATION_TOKEN ? 'auth' : 'home');
