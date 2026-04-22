@@ -22,38 +22,92 @@ export default function App() {
   const { signOut } = useClerk();
 
   useEffect(() => {
-    if (!isSignedIn || !user) return;
+    if (!isSignedIn) return;
 
-    // Activation token always wins — route to borrower onboarding
+    // Activation token always takes priority
     if (ACTIVATION_TOKEN) {
       checkBorrowerOnboarding(ACTIVATION_TOKEN);
       return;
     }
 
-    // Borrower without activation token — no access
-    if (portalType === 'borrower') {
-      setPage('borrower-no-access');
-      return;
-    }
+    // Need user email to route correctly
+    if (!user) return;
 
-    // Lender — check onboarding
-    checkLenderOnboarding();
+    const email = user.primaryEmailAddress?.emailAddress;
+    if (!email) return;
+
+    // Determine user type by checking Supabase — don't rely on portalType state
+    routeByEmail(email);
   }, [isSignedIn, user]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function checkBorrowerOnboarding(token) {
+  async function routeByEmail(email) {
     try {
-      const res = await fetch(
-        `${SUPABASE_URL}/rest/v1/borrowers?verification_token=eq.${token}&select=id,phone,mailing_address&limit=1`,
+      // Check if this email is a borrower
+      const borrowerRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/borrowers?borrower_email=eq.${encodeURIComponent(email)}&select=id,phone,mailing_address&limit=1`,
         { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
       );
-      const data = await res.json();
-      if (data && data.length > 0) {
-        const borrower = data[0];
+      const borrowerData = await borrowerRes.json();
+
+      if (Array.isArray(borrowerData) && borrowerData.length > 0) {
+        // This is a borrower
+        setPortalType('borrower');
+        const borrower = borrowerData[0];
         if (!borrower.phone || !borrower.mailing_address) {
           setBorrowerOnboardingId(borrower.id);
           setPage('borrower-onboarding');
         } else {
+          setPage('borrower-portal');
+        }
+        return;
+      }
+
+      // Not a borrower — treat as lender
+      setPortalType('lender');
+      const lenderRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/lenders?email=eq.${encodeURIComponent(email)}&select=id&limit=1`,
+        { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
+      );
+      const lenderData = await lenderRes.json();
+
+      if (Array.isArray(lenderData) && lenderData.length > 0) {
+        setPage('choice');
+      } else {
+        setPage('onboarding');
+      }
+    } catch {
+      setPortalType('lender');
+      setPage('choice');
+    }
+  }
+
+  async function checkBorrowerOnboarding(token) {
+    try {
+      // Get the borrower email from the token
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/borrowers?verification_token=eq.${token}&select=id,phone,mailing_address,borrower_email&limit=1`,
+        { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
+      );
+      const data = await res.json();
+
+      if (data && data.length > 0) {
+        const borrower = data[0];
+
+        // Verify the signed-in email matches the borrower email on the token
+        const signedInEmail = user?.primaryEmailAddress?.emailAddress;
+        if (signedInEmail && borrower.borrower_email && 
+            signedInEmail.toLowerCase() !== borrower.borrower_email.toLowerCase()) {
+          // Wrong account — show error
           setPortalType('borrower');
+          setPage('borrower-wrong-account');
+          return;
+        }
+
+        setPortalType('borrower');
+        if (!borrower.phone || !borrower.mailing_address) {
+          setBorrowerOnboardingId(borrower.id);
+          setPage('borrower-onboarding');
+        } else {
           setPage('borrower-portal');
         }
       } else {
@@ -63,28 +117,6 @@ export default function App() {
     } catch {
       setPortalType('borrower');
       setPage('borrower-portal');
-    }
-  }
-
-  async function checkLenderOnboarding() {
-    const email = user?.primaryEmailAddress?.emailAddress;
-    if (!email) { setPage('choice'); return; }
-    try {
-      const res = await fetch(
-        `${SUPABASE_URL}/rest/v1/lenders?email=eq.${encodeURIComponent(email)}&select=id&limit=1`,
-        { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
-      );
-      const data = await res.json();
-      if (Array.isArray(data) && data.length > 0) {
-        setPortalType('lender');
-        setPage('choice');
-      } else {
-        setPortalType('lender');
-        setPage('onboarding');
-      }
-    } catch {
-      setPortalType('lender');
-      setPage('choice');
     }
   }
 
@@ -166,7 +198,6 @@ export default function App() {
     </div>
   );
 
-  // Activation flow — clean, no cards, no toggle
   const activationAuthPage = (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 52, paddingBottom: 80 }}>
       <div style={{ marginBottom: 28, textAlign: 'center' }}>
@@ -178,7 +209,6 @@ export default function App() {
     </div>
   );
 
-  // Standard auth page — toggle + lender/borrower selector
   const standardAuthPage = (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 52, paddingBottom: 80 }}>
       <div style={{ display: 'flex', gap: 0, marginBottom: 32, background: '#1a1a1a', borderRadius: 8, padding: 4, border: '0.5px solid #2a2a2a' }}>
@@ -250,8 +280,8 @@ export default function App() {
       {nav}
       {page === 'home' && (
         <HomePage
-          onLenderLogin={() => { if (isSignedIn) { checkLenderOnboarding(); } else { goToAuth('signup', 'lender'); } }}
-          onBorrowerLogin={() => { if (isSignedIn) { setPage('borrower-no-access'); } else { goToAuth('signin', 'borrower'); } }}
+          onLenderLogin={() => { if (isSignedIn) { routeByEmail(user.primaryEmailAddress?.emailAddress); } else { goToAuth('signup', 'lender'); } }}
+          onBorrowerLogin={() => { if (isSignedIn) { routeByEmail(user.primaryEmailAddress?.emailAddress); } else { goToAuth('signin', 'borrower'); } }}
           onTerms={() => setPage('terms')}
           onPrivacy={() => setPage('privacy')}
         />
@@ -263,10 +293,7 @@ export default function App() {
       {page === 'borrower-onboarding' && (
         <BorrowerOnboarding
           borrowerId={borrowerOnboardingId}
-          onComplete={() => {
-            setPortalType('borrower');
-            setPage('borrower-portal');
-          }}
+          onComplete={() => { setPortalType('borrower'); setPage('borrower-portal'); }}
         />
       )}
       {page === 'borrower-no-access' && (
@@ -277,8 +304,17 @@ export default function App() {
           </div>
         </div>
       )}
+      {page === 'borrower-wrong-account' && (
+        <div style={{ minHeight: 'calc(100vh - 65px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40 }}>
+          <div style={{ textAlign: 'center', maxWidth: 440 }}>
+            <div style={{ fontSize: 20, fontWeight: 500, color: '#fff', marginBottom: 12 }}>Wrong account</div>
+            <div style={{ fontSize: 14, color: '#555', lineHeight: 1.7 }}>This activation link was sent to a different email address. Please log out and sign up with the email address that received the activation link.</div>
+            <button onClick={handleLogout} style={{ marginTop: 24, background: '#FFD700', color: '#0f0f0f', fontSize: 14, fontWeight: 500, padding: '10px 24px', borderRadius: 7, border: 'none', cursor: 'pointer' }}>Log out</button>
+          </div>
+        </div>
+      )}
       {page === 'choice' && choicePage}
-      {page === 'onboarding' && <LenderOnboarding onComplete={() => setPage('choice')} />}
+      {page === 'onboarding' && <LenderOnboarding onComplete={() => { setPortalType('lender'); setPage('choice'); }} />}
       {page === 'terms' && <TermsPage onHome={() => setPage('home')} />}
       {page === 'privacy' && <PrivacyPage onHome={() => setPage('home')} />}
     </div>
