@@ -17,26 +17,45 @@ export default function App() {
   const [authMode, setAuthMode] = useState('signup');
   const [portalType, setPortalType] = useState('lender');
   const [borrowerOnboardingId, setBorrowerOnboardingId] = useState(null);
+  const [pendingToken, setPendingToken] = useState(null);
   const { isSignedIn, user } = useUser();
   const { signOut } = useClerk();
 
+  // On load, check for activation token in URL
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('activate');
     if (token) {
+      setPendingToken(token);
       setPortalType('borrower');
-      if (isSignedIn) {
-        checkBorrowerOnboarding(token);
-      } else {
+      if (!isSignedIn) {
         setAuthMode('signup');
         setPage('auth');
       }
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // When signed-in state changes, route correctly
+  useEffect(() => {
+    if (!isSignedIn) return;
+
+    if (portalType === 'borrower') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const token = pendingToken || urlParams.get('activate');
+      if (token) {
+        checkBorrowerOnboarding(token);
+      } else {
+        setPage('borrower-no-access');
+      }
+    } else {
+      // lender — only redirect if on auth or home page
+      if (page === 'auth' || page === 'home') {
+        checkLenderOnboarding();
+      }
+    }
+  }, [isSignedIn]); // eslint-disable-line react-hooks/exhaustive-deps
+
   async function checkBorrowerOnboarding(token) {
-    const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
-    const SUPABASE_ANON_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY;
     try {
       const res = await fetch(
         `${SUPABASE_URL}/rest/v1/borrowers?verification_token=eq.${token}&select=id,phone,mailing_address&limit=1`,
@@ -58,36 +77,6 @@ export default function App() {
       setPage('borrower-portal');
     }
   }
-
-  useEffect(() => {
-    if (isSignedIn && page === 'home') {
-      if (portalType === 'borrower') {
-        const urlParams = new URLSearchParams(window.location.search);
-        const token = urlParams.get('activate');
-        if (token) {
-          checkBorrowerOnboarding(token);
-        } else {
-          setPage('borrower-no-access');
-        }
-      } else if (portalType === 'lender') {
-        checkLenderOnboarding();
-      }
-    }
-  }, [isSignedIn]); // eslint-disable-line react-hooks/exhaustive-deps
-        const urlParams = new URLSearchParams(window.location.search);
-        const token = urlParams.get('activate');
-        if (token) {
-          checkBorrowerOnboarding(token);
-        } else {
-          setPage('borrower-no-access');
-        }
-      } else {
-        checkLenderOnboarding();
-      }
-    }
-  }, [isSignedIn, page, portalType]); // eslint-disable-line react-hooks/exhaustive-deps
-
-
 
   async function checkLenderOnboarding() {
     const email = user?.primaryEmailAddress?.emailAddress;
@@ -128,6 +117,7 @@ export default function App() {
     signOut();
     setPage('home');
     setPortalType('lender');
+    setPendingToken(null);
   };
 
   const toggleBtn = (mode) => ({
@@ -301,8 +291,24 @@ export default function App() {
       {nav}
       {page === 'home' && (
         <HomePage
-          onLenderLogin={() => { setPortalType('lender'); if (isSignedIn) { checkLenderOnboarding(); } else { setAuthMode('signup'); setPage('auth'); } }}
-          onBorrowerLogin={() => { if (isSignedIn) { setPage('borrower-no-access'); } else { setPortalType('borrower'); setAuthMode('signin'); setPage('auth'); } }}
+          onLenderLogin={() => {
+            setPortalType('lender');
+            if (isSignedIn) {
+              checkLenderOnboarding();
+            } else {
+              setAuthMode('signup');
+              setPage('auth');
+            }
+          }}
+          onBorrowerLogin={() => {
+            if (isSignedIn) {
+              setPage('borrower-no-access');
+            } else {
+              setPortalType('borrower');
+              setAuthMode('signin');
+              setPage('auth');
+            }
+          }}
           onTerms={() => setPage('terms')}
           onPrivacy={() => setPage('privacy')}
         />
