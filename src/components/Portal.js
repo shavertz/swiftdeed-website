@@ -151,6 +151,7 @@ export default function Portal({ onSubmitRequest }) {
     const q = search.toLowerCase();
     const matchSearch = !q ||
       r.loan_id_internal?.toLowerCase().includes(q) ||
+      r.loan_id?.toLowerCase().includes(q) ||
       r.borrower_name?.toLowerCase().includes(q) ||
       r.property_address?.toLowerCase().includes(q);
     const matchStatus =
