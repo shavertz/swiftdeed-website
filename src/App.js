@@ -195,7 +195,7 @@ export default function App() {
 
   const nav = (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 60px', borderBottom: '0.5px solid #2a2a2a', background: '#0f0f0f', position: 'sticky', top: 0, zIndex: 100 }}>
-      <div onClick={() => { setPage('home'); setPortalType(null); }} style={{ cursor: 'pointer' }}>
+      <div onClick={() => setPage('home')} style={{ cursor: 'pointer' }}>
         <span style={{ fontSize: 20, fontWeight: 500, letterSpacing: -0.3 }}>
           <span style={{ color: '#fff' }}>Swift</span><span style={{ color: '#FFD700' }}>Deed</span>
         </span>
@@ -232,7 +232,7 @@ export default function App() {
                 onClick={() => setPage('portal')}
                 style={{ background: '#FFD700', color: '#0f0f0f', fontSize: 14, fontWeight: 500, padding: '8px 18px', borderRadius: 6, border: 'none', cursor: 'pointer', transition: 'background 0.15s' }}
                 {...hov.solid}
-              >My Loans</button>
+              >My loans</button>
             )}
             <button
               onClick={handleLogout}
