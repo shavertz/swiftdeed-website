@@ -18,6 +18,15 @@ function formatCurrency(val) {
 const PAGE_SIZE = 15;
 const COLS = '110px 130px 120px 220px 110px 110px 130px 160px';
 
+const hovSolid = {
+  onMouseEnter: e => { e.currentTarget.style.boxShadow = '0 0 16px rgba(255, 215, 0, 0.45)'; },
+  onMouseLeave: e => { e.currentTarget.style.boxShadow = 'none'; },
+};
+const hovOutline = {
+  onMouseEnter: e => { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.color = '#FFD700'; e.currentTarget.style.boxShadow = '0 0 16px rgba(255, 215, 0, 0.3)'; e.currentTarget.style.borderColor = '#FFD700'; },
+  onMouseLeave: e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#fff'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = '#FFD700'; },
+};
+
 const s = {
   page: { padding: '40px 60px', maxWidth: 1400, margin: '0 auto' },
   topRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
@@ -40,7 +49,7 @@ const s = {
   serviceBtn: {
     background: '#FFD700', color: '#0f0f0f', fontSize: 13, fontWeight: 500,
     padding: '8px 18px', borderRadius: 7, border: 'none', cursor: 'pointer',
-    whiteSpace: 'nowrap', marginLeft: 'auto',
+    whiteSpace: 'nowrap', marginLeft: 'auto', transition: 'box-shadow 0.15s',
   },
   card: { background: '#141414', border: '0.5px solid #222', borderRadius: 10, overflow: 'hidden' },
   thead: {
@@ -72,14 +81,14 @@ const s = {
     padding: '5px 10px', borderRadius: 5,
     background: 'transparent', color: '#888',
     border: '0.5px solid #FFD700', cursor: 'pointer',
-    textDecoration: 'none', whiteSpace: 'nowrap',
+    textDecoration: 'none', whiteSpace: 'nowrap', transition: 'all 0.15s',
   },
   empty: { padding: '60px 20px', textAlign: 'center', color: '#444', fontSize: 14 },
   pagination: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', borderTop: '0.5px solid #1a1a1a' },
   pageBtn: (disabled) => ({
-    background: 'transparent', border: '0.5px solid #2a2a2a', borderRadius: 5,
+    background: 'transparent', border: `0.5px solid ${disabled ? '#2a2a2a' : '#FFD700'}`, borderRadius: 5,
     color: disabled ? '#333' : '#fff', fontSize: 12, padding: '6px 14px',
-    cursor: disabled ? 'not-allowed' : 'pointer',
+    cursor: disabled ? 'not-allowed' : 'pointer', transition: 'all 0.15s',
   }),
   pageInfo: { fontSize: 12, color: '#555' },
 };
@@ -194,7 +203,7 @@ export default function Portal({ onSubmitRequest }) {
         {(search || sort !== 'newest') && (
           <span style={{ fontSize: 12, color: '#555' }}>{sorted.length} result{sorted.length !== 1 ? 's' : ''}</span>
         )}
-        <button style={s.serviceBtn} onClick={onSubmitRequest}>+ Service a loan</button>
+        <button style={s.serviceBtn} onClick={onSubmitRequest} {...hovSolid}>+ Service a loan</button>
       </div>
 
       <div style={s.card}>
@@ -230,7 +239,10 @@ export default function Portal({ onSubmitRequest }) {
               </span>
               <span>
                 {r.payoff_statement_url
-                  ? <a href={r.payoff_statement_url} target="_blank" rel="noreferrer" style={s.dlBtn}>Download</a>
+                  ? <a href={r.payoff_statement_url} target="_blank" rel="noreferrer" style={s.dlBtn}
+                      onMouseEnter={e => { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.color = '#FFD700'; e.currentTarget.style.boxShadow = '0 0 16px rgba(255, 215, 0, 0.3)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#888'; e.currentTarget.style.boxShadow = 'none'; }}
+                    >Download</a>
                   : <span style={s.grey}>—</span>
                 }
               </span>
@@ -242,9 +254,11 @@ export default function Portal({ onSubmitRequest }) {
 
         {!loading && sorted.length > PAGE_SIZE && (
           <div style={s.pagination}>
-            <button style={s.pageBtn(page === 1)} disabled={page === 1} onClick={() => setPage(p => p - 1)}>← Prev</button>
+            <button style={s.pageBtn(page === 1)} disabled={page === 1} onClick={() => setPage(p => p - 1)}
+              {...(page !== 1 ? hovOutline : {})}>← Prev</button>
             <span style={s.pageInfo}>Page {page} of {totalPages} · {sorted.length} total</span>
-            <button style={s.pageBtn(page === totalPages)} disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>Next →</button>
+            <button style={s.pageBtn(page === totalPages)} disabled={page === totalPages} onClick={() => setPage(p => p + 1)}
+              {...(page !== totalPages ? hovOutline : {})}>Next →</button>
           </div>
         )}
       </div>
