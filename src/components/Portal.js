@@ -34,10 +34,10 @@ function turnaroundLabel(r) {
 }
 
 const PAGE_SIZE = 15;
-const COLS = '110px 130px 110px 180px 130px 150px 90px 100px 100px';
+const COLS = '110px 130px 120px 1fr 80px 100px 100px 130px 160px';
 
 const s = {
-  page: { padding: '40px 60px', maxWidth: 1300, margin: '0 auto' },
+  page: { padding: '40px 60px', maxWidth: 1400, margin: '0 auto' },
   topRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
   heading: { fontSize: 24, fontWeight: 400, color: '#fff' },
   statRow: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 20 },
@@ -76,6 +76,7 @@ const s = {
     alignItems: 'center',
     fontSize: 12,
   },
+  grey: { color: '#555' },
   badge: (color) => ({
     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
     fontSize: 11, fontWeight: 500, padding: '4px 10px', borderRadius: 4,
@@ -87,7 +88,7 @@ const s = {
   dlBtn: {
     display: 'inline-block', fontSize: 11, fontWeight: 500,
     padding: '5px 10px', borderRadius: 5,
-    background: 'transparent', color: '#FFD700',
+    background: 'transparent', color: '#888',
     border: '0.5px solid #FFD700', cursor: 'pointer',
     textDecoration: 'none', whiteSpace: 'nowrap',
   },
@@ -163,7 +164,7 @@ export default function Portal({ onSubmitRequest }) {
     if (sort === 'oldest') return new Date(a.created_at) - new Date(b.created_at);
     if (sort === 'amount_asc') return (parseFloat(a.total_due) || 0) - (parseFloat(b.total_due) || 0);
     if (sort === 'amount_desc') return (parseFloat(b.total_due) || 0) - (parseFloat(a.total_due) || 0);
-    return new Date(b.created_at) - new Date(a.created_at); // newest default
+    return new Date(b.created_at) - new Date(a.created_at);
   });
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
@@ -223,11 +224,11 @@ export default function Portal({ onSubmitRequest }) {
           <span>Loan ID</span>
           <span>Amount</span>
           <span>Property</span>
-          <span>Borrower</span>
-          <span>Borrower Email</span>
           <span>Turnaround</span>
           <span>Status</span>
           <span>Statement</span>
+          <span>Borrower</span>
+          <span>Borrower Email</span>
         </div>
 
         {loading && <div style={s.empty}>Loading your loans...</div>}
@@ -240,13 +241,11 @@ export default function Portal({ onSubmitRequest }) {
           const borrowerEmail = borrowerEmails[r.loan_id_internal] || '—';
           return (
             <div key={r.id} style={s.trow}>
-              <span style={{ color: '#555' }}>{formatDate(r.created_at)}</span>
-              <span style={{ color: '#FFD700', fontFamily: 'monospace', fontSize: 11 }}>{r.loan_id_internal || r.loan_id || '—'}</span>
+              <span style={s.grey}>{formatDate(r.created_at)}</span>
+              <span style={s.grey}>{r.loan_id_internal || r.loan_id || '—'}</span>
               <span style={{ fontWeight: 600, color: '#fff' }}>{formatCurrency(r.total_due)}</span>
-              <span style={{ color: '#aaa', fontSize: 11 }}>{r.property_address || '—'}</span>
-              <span style={{ color: '#ccc' }}>{r.borrower_name || '—'}</span>
-              <span style={{ color: '#555', fontSize: 11 }}>{borrowerEmail}</span>
-              <span style={{ color: '#555' }}>{turnaroundLabel(r)}</span>
+              <span style={s.grey}>{r.property_address || '—'}</span>
+              <span style={s.grey}>{turnaroundLabel(r)}</span>
               <span>
                 <span style={s.badge(isCompleted ? 'green' : 'yellow')}>
                   {isCompleted ? 'Completed' : 'Pending'}
@@ -255,9 +254,11 @@ export default function Portal({ onSubmitRequest }) {
               <span>
                 {r.payoff_statement_url
                   ? <a href={r.payoff_statement_url} target="_blank" rel="noreferrer" style={s.dlBtn}>Download</a>
-                  : <span style={{ color: '#333' }}>—</span>
+                  : <span style={s.grey}>—</span>
                 }
               </span>
+              <span style={s.grey}>{r.borrower_name || '—'}</span>
+              <span style={{ ...s.grey, fontSize: 11 }}>{borrowerEmail}</span>
             </div>
           );
         })}
