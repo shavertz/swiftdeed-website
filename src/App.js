@@ -42,11 +42,12 @@ export default function App() {
   const [portalType, setPortalType] = useState(() => ACTIVATION_TOKEN ? 'borrower' : null);
   const [borrowerOnboardingId, setBorrowerOnboardingId] = useState(null);
   const [loading, setLoading] = useState(true);
-  const { isSignedIn, user } = useUser();
+  const { isSignedIn, isLoaded, user } = useUser();
   const { signOut } = useClerk();
 
   useEffect(() => {
-    if (!isSignedIn) { setLoading(false); return; }
+    if (!isLoaded) return;
+if (!isSignedIn) { setLoading(false); return; }
 
     setLoading(true);
 
