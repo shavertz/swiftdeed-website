@@ -263,13 +263,13 @@ export default function App() {
       <div style={{ display: 'flex', gap: 20, marginTop: 40 }}>
         <div onClick={() => setPage('request')} style={{ background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: 12, padding: '40px 48px', cursor: 'pointer', textAlign: 'center', width: 220 }} onMouseEnter={e => e.currentTarget.style.borderColor = '#FFD700'} onMouseLeave={e => e.currentTarget.style.borderColor = '#2a2a2a'}>
           <div style={{ fontSize: 32, marginBottom: 16 }}>📄</div>
-          <div style={{ fontSize: 16, fontWeight: 400, color: '#fff', marginBottom: 8 }}>Submit a request</div>
-          <div style={{ fontSize: 13, color: '#555', lineHeight: 1.5 }}>Upload your loan docs and get a payoff statement</div>
+          <div style={{ fontSize: 16, fontWeight: 400, color: '#fff', marginBottom: 8 }}>Service a loan</div>
+          <div style={{ fontSize: 13, color: '#555', lineHeight: 1.5 }}>Upload loan docs and get a payoff statement</div>
         </div>
         <div onClick={() => setPage('portal')} style={{ background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: 12, padding: '40px 48px', cursor: 'pointer', textAlign: 'center', width: 220 }} onMouseEnter={e => e.currentTarget.style.borderColor = '#FFD700'} onMouseLeave={e => e.currentTarget.style.borderColor = '#2a2a2a'}>
           <div style={{ fontSize: 32, marginBottom: 16 }}>📋</div>
-          <div style={{ fontSize: 16, fontWeight: 400, color: '#fff', marginBottom: 8 }}>View my requests</div>
-          <div style={{ fontSize: 13, color: '#555', lineHeight: 1.5 }}>Check the status of your existing requests</div>
+          <div style={{ fontSize: 16, fontWeight: 400, color: '#fff', marginBottom: 8 }}>View my loans</div>
+          <div style={{ fontSize: 13, color: '#555', lineHeight: 1.5 }}>Check the status of your serviced loans</div>
         </div>
       </div>
     </div>

@@ -34,7 +34,7 @@ function turnaroundLabel(r) {
 }
 
 const PAGE_SIZE = 15;
-const COLS = '110px 130px 120px 1fr 80px 100px 100px 130px 160px';
+const COLS = '110px 130px 120px 1fr 90px 110px 110px 130px 160px';
 
 const s = {
   page: { padding: '40px 60px', maxWidth: 1400, margin: '0 auto' },
