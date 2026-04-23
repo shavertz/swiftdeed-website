@@ -15,32 +15,14 @@ function formatCurrency(val) {
   return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function avgTurnaround(requests) {
-  const completed = requests.filter(r => r.status?.toLowerCase() === 'completed' && r.created_at && r.completed_at);
-  if (!completed.length) return '—';
-  const avg = completed.reduce((sum, r) => {
-    const diff = (new Date(r.completed_at) - new Date(r.created_at)) / 60000;
-    return sum + diff;
-  }, 0) / completed.length;
-  if (avg < 60) return `${Math.round(avg)}m`;
-  return `${Math.round(avg / 60)}hr`;
-}
-
-function turnaroundLabel(r) {
-  if (!r.created_at || !r.completed_at) return '—';
-  const mins = Math.round((new Date(r.completed_at) - new Date(r.created_at)) / 60000);
-  if (mins < 60) return `${mins}m`;
-  return `${Math.round(mins / 60)}hr`;
-}
-
 const PAGE_SIZE = 15;
-const COLS = '110px 130px 120px 1fr 90px 110px 110px 130px 160px';
+const COLS = '110px 130px 120px 1fr 110px 110px 130px 160px';
 
 const s = {
   page: { padding: '40px 60px', maxWidth: 1400, margin: '0 auto' },
   topRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
   heading: { fontSize: 24, fontWeight: 400, color: '#fff' },
-  statRow: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 20 },
+  statRow: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 },
   statCard: { background: '#141414', border: '0.5px solid #222', borderRadius: 10, padding: '20px 26px' },
   statLabel: { fontSize: 11, color: '#555', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 },
   statValue: { fontSize: 26, fontWeight: 600, color: '#fff' },
@@ -185,10 +167,6 @@ export default function Portal({ onSubmitRequest }) {
           <div style={s.statValue}>{processed}</div>
         </div>
         <div style={s.statCard}>
-          <div style={s.statLabel}>Avg. Turnaround</div>
-          <div style={s.statValue}>{avgTurnaround(requests)}</div>
-        </div>
-        <div style={s.statCard}>
           <div style={s.statLabel}>Total Amount Processed</div>
           <div style={s.statValue}>{formatCurrency(totalAmount)}</div>
         </div>
@@ -225,7 +203,6 @@ export default function Portal({ onSubmitRequest }) {
           <span>Loan ID</span>
           <span>Amount</span>
           <span>Property</span>
-          <span>Turnaround</span>
           <span>Status</span>
           <span>Statement</span>
           <span>Borrower</span>
@@ -246,7 +223,6 @@ export default function Portal({ onSubmitRequest }) {
               <span style={s.grey}>{r.loan_id_internal || r.loan_id || '—'}</span>
               <span style={{ fontWeight: 600, color: '#fff' }}>{formatCurrency(r.total_due)}</span>
               <span style={s.grey}>{r.property_address || '—'}</span>
-              <span style={s.grey}>{turnaroundLabel(r)}</span>
               <span>
                 <span style={s.badge(isCompleted ? 'green' : 'yellow')}>
                   {isCompleted ? 'Completed' : 'Pending'}
