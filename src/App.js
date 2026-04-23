@@ -38,12 +38,12 @@ const loadingScreen = (
 
 const hov = {
   solid: {
-    onMouseEnter: e => e.currentTarget.style.background = '#e6c200',
-    onMouseLeave: e => e.currentTarget.style.background = '#FFD700',
+    onMouseEnter: e => { e.currentTarget.style.background = '#FFD700'; e.currentTarget.style.boxShadow = '0 0 16px rgba(255, 215, 0, 0.45)'; },
+    onMouseLeave: e => { e.currentTarget.style.background = '#FFD700'; e.currentTarget.style.boxShadow = 'none'; },
   },
   outline: {
-    onMouseEnter: e => { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.color = '#FFD700'; },
-    onMouseLeave: e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#fff'; },
+    onMouseEnter: e => { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.color = '#FFD700'; e.currentTarget.style.boxShadow = '0 0 16px rgba(255, 215, 0, 0.3)'; },
+    onMouseLeave: e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#fff'; e.currentTarget.style.boxShadow = 'none'; },
   },
 };
 
