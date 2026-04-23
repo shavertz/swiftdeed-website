@@ -32,8 +32,8 @@ const s = {
   payTitle: { fontSize: 12, color: '#555', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 },
   payBig: { fontSize: 32, fontWeight: 500, color: '#fff', marginBottom: 4 },
   payDue: { fontSize: 13, color: '#888', marginBottom: 16 },
-  btnPay: { width: '100%', background: '#D4A017', color: '#0f0f0f', border: 'none', borderRadius: 7, padding: 12, fontSize: 14, fontWeight: 500, cursor: 'pointer', marginBottom: 8 },
-  btnAutopay: { width: '100%', background: 'transparent', color: '#fff', border: '0.5px solid #FFD700', borderRadius: 7, padding: 10, fontSize: 13, cursor: 'pointer' },
+  btnPay: { width: '100%', background: '#D4A017', color: '#0f0f0f', border: 'none', borderRadius: 7, padding: 12, fontSize: 14, fontWeight: 500, cursor: 'pointer', marginBottom: 8, transition: 'box-shadow 0.15s' },
+  btnAutopay: { width: '100%', background: 'transparent', color: '#fff', border: '0.5px solid #FFD700', borderRadius: 7, padding: 10, fontSize: 13, cursor: 'pointer', transition: 'all 0.15s' },
   divider: { border: 'none', borderTop: '0.5px solid #1e1e1e', margin: '14px 0' },
   accrualBar: { background: '#1a1800', border: '0.5px solid #3a3000', borderRadius: 8, padding: '14px 16px', marginTop: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   accLabel: { fontSize: 12, color: '#888' },
@@ -47,7 +47,7 @@ const s = {
   stmtInfo: { display: 'flex', flexDirection: 'column', gap: 2 },
   stmtName: { fontSize: 13, color: '#ccc' },
   stmtDate: { fontSize: 11, color: '#555' },
-  stmtBtn: { background: '#1a1a1a', border: '0.5px solid #2a2a2a', color: '#4a90b8', fontSize: 12, padding: '5px 12px', borderRadius: 5, cursor: 'pointer' },
+  stmtBtn: { background: 'transparent', border: '0.5px solid #FFD700', color: '#888', fontSize: 12, padding: '5px 12px', borderRadius: 5, cursor: 'pointer', transition: 'all 0.15s' },
   emptyWrap: { textAlign: 'center', padding: '80px 40px' },
   emptyTitle: { fontSize: 18, fontWeight: 500, color: '#fff', marginBottom: 12 },
   emptyText: { fontSize: 14, color: '#555', lineHeight: 1.7, maxWidth: 400, margin: '0 auto' },
@@ -122,7 +122,6 @@ export default function BorrowerPortal({ onHome }) {
     setLoading(true);
     const userEmail = user?.primaryEmailAddress?.emailAddress;
 
-    // Read token from hash fragment
     const hash = window.location.hash;
     const token = hash.startsWith('#activate=') ? hash.slice('#activate='.length) : null;
 
@@ -238,8 +237,16 @@ export default function BorrowerPortal({ onHome }) {
                   <div style={s.payTitle}>Amount due</div>
                   <div style={s.payBig}>{fmt$(borrower.last_payment_amount)}</div>
                   <div style={s.payDue}>Due {borrower.next_payment_date || '—'} · Monthly payment</div>
-                  <button style={s.btnPay}>Make a one-time payment</button>
-                  <button style={s.btnAutopay}>Set up autopay</button>
+                  <button
+                    style={s.btnPay}
+                    onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 0 16px rgba(255, 215, 0, 0.45)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; }}
+                  >Make a one-time payment</button>
+                  <button
+                    style={s.btnAutopay}
+                    onMouseEnter={e => { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.color = '#FFD700'; e.currentTarget.style.boxShadow = '0 0 16px rgba(255, 215, 0, 0.3)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#fff'; e.currentTarget.style.boxShadow = 'none'; }}
+                  >Set up autopay</button>
                   <div style={s.divider}></div>
                   <div style={s.statGrid}>
                     <div style={s.statBox}>
@@ -333,7 +340,12 @@ export default function BorrowerPortal({ onHome }) {
                             <div style={s.stmtName}>{name}</div>
                             <div style={s.stmtDate}>Loan document</div>
                           </div>
-                          <button style={s.stmtBtn} onClick={() => window.open(url, '_blank')}>Download PDF</button>
+                          <button
+                            style={s.stmtBtn}
+                            onClick={() => window.open(url, '_blank')}
+                            onMouseEnter={e => { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.color = '#FFD700'; e.currentTarget.style.boxShadow = '0 0 16px rgba(255, 215, 0, 0.3)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#888'; e.currentTarget.style.boxShadow = 'none'; }}
+                          >Download PDF</button>
                         </div>
                       );
                     })}
