@@ -41,12 +41,12 @@ export default function App() {
   const [authMode, setAuthMode] = useState(() => ACTIVATION_TOKEN ? 'signup' : 'signin');
   const [portalType, setPortalType] = useState(() => ACTIVATION_TOKEN ? 'borrower' : null);
   const [borrowerOnboardingId, setBorrowerOnboardingId] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const { isSignedIn, user } = useUser();
   const { signOut } = useClerk();
 
   useEffect(() => {
-    if (!isSignedIn) return;
+    if (!isSignedIn) { setLoading(false); return; }
 
     setLoading(true);
 
