@@ -34,42 +34,44 @@ function turnaroundLabel(r) {
 }
 
 const PAGE_SIZE = 15;
+const COLS = '110px 130px 110px 180px 130px 150px 90px 100px 100px';
 
 const s = {
-  page: { padding: '48px 60px', maxWidth: 1200, margin: '0 auto' },
-  topRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 36 },
-  heading: { fontSize: 24, fontWeight: 400, color: '#fff', marginBottom: 4 },
-  sub: { fontSize: 13, color: '#555' },
-  submitBtn: {
-    background: '#FFD700', color: '#0f0f0f', fontSize: 14, fontWeight: 500,
-    padding: '10px 22px', borderRadius: 7, border: 'none', cursor: 'pointer',
-  },
-  statRow: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 24 },
-  statCard: { background: '#141414', border: '0.5px solid #222', borderRadius: 10, padding: '22px 26px' },
+  page: { padding: '40px 60px', maxWidth: 1300, margin: '0 auto' },
+  topRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
+  heading: { fontSize: 24, fontWeight: 400, color: '#fff' },
+  statRow: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 20 },
+  statCard: { background: '#141414', border: '0.5px solid #222', borderRadius: 10, padding: '20px 26px' },
   statLabel: { fontSize: 11, color: '#555', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 },
   statValue: { fontSize: 26, fontWeight: 600, color: '#fff' },
-  searchRow: { display: 'flex', gap: 12, marginBottom: 16, alignItems: 'center' },
+  controlRow: { display: 'flex', gap: 10, marginBottom: 16, alignItems: 'center' },
   searchInput: {
     background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: 7,
-    padding: '9px 14px', fontSize: 13, color: '#fff', fontFamily: 'inherit',
-    outline: 'none', flex: 1, maxWidth: 360,
+    padding: '8px 14px', fontSize: 13, color: '#fff', fontFamily: 'inherit',
+    outline: 'none', flex: 1, maxWidth: 340,
   },
-  filterSelect: {
+  select: {
     background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: 7,
-    padding: '9px 14px', fontSize: 13, color: '#fff', fontFamily: 'inherit',
+    padding: '8px 14px', fontSize: 13, color: '#fff', fontFamily: 'inherit',
     outline: 'none', cursor: 'pointer',
   },
+  serviceBtn: {
+    background: '#FFD700', color: '#0f0f0f', fontSize: 13, fontWeight: 500,
+    padding: '8px 18px', borderRadius: 7, border: 'none', cursor: 'pointer',
+    whiteSpace: 'nowrap', marginLeft: 'auto',
+  },
   card: { background: '#141414', border: '0.5px solid #222', borderRadius: 10, overflow: 'hidden' },
-  cols: '100px 130px 120px 160px 180px 100px 90px 90px 90px',
   thead: {
     display: 'grid',
+    gridTemplateColumns: COLS,
     padding: '10px 20px',
     borderBottom: '0.5px solid #222',
-    fontSize: 10, color: '#444', textTransform: 'uppercase', letterSpacing: 0.8,
+    fontSize: 10, color: '#FFD700', textTransform: 'uppercase', letterSpacing: 0.8,
   },
   trow: {
     display: 'grid',
-    padding: '14px 20px',
+    gridTemplateColumns: COLS,
+    padding: '13px 20px',
     borderBottom: '0.5px solid #1a1a1a',
     alignItems: 'center',
     fontSize: 12,
@@ -99,15 +101,13 @@ const s = {
   pageInfo: { fontSize: 12, color: '#555' },
 };
 
-const COLS = '100px 130px 130px 150px 200px 90px 90px 90px 90px';
-
 export default function Portal({ onSubmitRequest }) {
   const { user } = useUser();
   const [requests, setRequests] = useState([]);
   const [borrowerEmails, setBorrowerEmails] = useState({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [sort, setSort] = useState('newest');
   const [page, setPage] = useState(1);
 
   const email = user?.primaryEmailAddress?.emailAddress;
@@ -124,7 +124,6 @@ export default function Portal({ onSubmitRequest }) {
         const rows = Array.isArray(data) ? data : [];
         setRequests(rows);
 
-        // Fetch borrower emails live from borrowers table
         const ids = rows.map(r => r.loan_id_internal).filter(Boolean);
         if (ids.length > 0) {
           const bRes = await fetch(
@@ -153,24 +152,29 @@ export default function Portal({ onSubmitRequest }) {
       r.loan_id_internal?.toLowerCase().includes(q) ||
       r.borrower_name?.toLowerCase().includes(q) ||
       r.property_address?.toLowerCase().includes(q);
-    const matchStatus = statusFilter === 'all' || r.status?.toLowerCase() === statusFilter;
+    const matchStatus =
+      sort === 'completed' ? r.status?.toLowerCase() === 'completed' :
+      sort === 'pending' ? r.status?.toLowerCase() !== 'completed' :
+      true;
     return matchSearch && matchStatus;
   });
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const sorted = [...filtered].sort((a, b) => {
+    if (sort === 'oldest') return new Date(a.created_at) - new Date(b.created_at);
+    if (sort === 'amount_asc') return (parseFloat(a.total_due) || 0) - (parseFloat(b.total_due) || 0);
+    if (sort === 'amount_desc') return (parseFloat(b.total_due) || 0) - (parseFloat(a.total_due) || 0);
+    return new Date(b.created_at) - new Date(a.created_at); // newest default
+  });
 
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+  const paginated = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const processed = requests.filter(r => r.status?.toLowerCase() === 'completed').length;
   const totalAmount = requests.reduce((sum, r) => sum + (parseFloat(r.total_due) || 0), 0);
 
   return (
     <div style={s.page}>
       <div style={s.topRow}>
-        <div>
-          <div style={s.heading}>My Loans</div>
-          <div style={s.sub}>{email}</div>
-        </div>
-        <button style={s.submitBtn} onClick={onSubmitRequest}>+ Service a loan</button>
+        <div style={s.heading}>My Loans</div>
       </div>
 
       <div style={s.statRow}>
@@ -188,43 +192,46 @@ export default function Portal({ onSubmitRequest }) {
         </div>
       </div>
 
-      <div style={s.searchRow}>
+      <div style={s.controlRow}>
         <input
           style={s.searchInput}
-          placeholder="Search by loan ID, borrower name, or property..."
+          placeholder="Search by loan ID, borrower, or property..."
           value={search}
           onChange={e => { setSearch(e.target.value); setPage(1); }}
         />
         <select
-          style={s.filterSelect}
-          value={statusFilter}
-          onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
+          style={s.select}
+          value={sort}
+          onChange={e => { setSort(e.target.value); setPage(1); }}
         >
-          <option value="all">All statuses</option>
-          <option value="completed">Completed</option>
-          <option value="pending">Pending</option>
+          <option value="newest">Sort: Newest first</option>
+          <option value="oldest">Sort: Oldest first</option>
+          <option value="amount_desc">Sort: Amount ↓</option>
+          <option value="amount_asc">Sort: Amount ↑</option>
+          <option value="completed">Filter: Completed</option>
+          <option value="pending">Filter: Pending</option>
         </select>
-        {search || statusFilter !== 'all' ? (
-          <span style={{ fontSize: 12, color: '#555' }}>{filtered.length} result{filtered.length !== 1 ? 's' : ''}</span>
-        ) : null}
+        {(search || sort !== 'newest') && (
+          <span style={{ fontSize: 12, color: '#555' }}>{sorted.length} result{sorted.length !== 1 ? 's' : ''}</span>
+        )}
+        <button style={s.serviceBtn} onClick={onSubmitRequest}>+ Service a loan</button>
       </div>
 
       <div style={s.card}>
-        <div style={{ ...s.thead, gridTemplateColumns: COLS }}>
+        <div style={s.thead}>
           <span>Date Serviced</span>
-          <span>SD Loan ID</span>
+          <span>Loan ID</span>
+          <span>Amount</span>
+          <span>Property</span>
           <span>Borrower</span>
           <span>Borrower Email</span>
-          <span>Property</span>
-          <span>Amount</span>
           <span>Turnaround</span>
           <span>Status</span>
           <span>Statement</span>
-          <span>Invoice</span>
         </div>
 
         {loading && <div style={s.empty}>Loading your loans...</div>}
-        {!loading && filtered.length === 0 && (
+        {!loading && sorted.length === 0 && (
           <div style={s.empty}>{search ? 'No results found.' : 'No loans yet — service your first loan above.'}</div>
         )}
 
@@ -232,13 +239,13 @@ export default function Portal({ onSubmitRequest }) {
           const isCompleted = r.status?.toLowerCase() === 'completed';
           const borrowerEmail = borrowerEmails[r.loan_id_internal] || '—';
           return (
-            <div key={r.id} style={{ ...s.trow, gridTemplateColumns: COLS }}>
+            <div key={r.id} style={s.trow}>
               <span style={{ color: '#555' }}>{formatDate(r.created_at)}</span>
               <span style={{ color: '#FFD700', fontFamily: 'monospace', fontSize: 11 }}>{r.loan_id_internal || r.loan_id || '—'}</span>
+              <span style={{ fontWeight: 600, color: '#fff' }}>{formatCurrency(r.total_due)}</span>
+              <span style={{ color: '#aaa', fontSize: 11 }}>{r.property_address || '—'}</span>
               <span style={{ color: '#ccc' }}>{r.borrower_name || '—'}</span>
               <span style={{ color: '#555', fontSize: 11 }}>{borrowerEmail}</span>
-              <span style={{ color: '#aaa', fontSize: 11 }}>{r.property_address || '—'}</span>
-              <span style={{ fontWeight: 600, color: '#fff' }}>{formatCurrency(r.total_due)}</span>
               <span style={{ color: '#555' }}>{turnaroundLabel(r)}</span>
               <span>
                 <span style={s.badge(isCompleted ? 'green' : 'yellow')}>
@@ -251,20 +258,14 @@ export default function Portal({ onSubmitRequest }) {
                   : <span style={{ color: '#333' }}>—</span>
                 }
               </span>
-              <span>
-                {r.invoice_url
-                  ? <a href={r.invoice_url} target="_blank" rel="noreferrer" style={s.dlBtn}>Download</a>
-                  : <span style={{ color: '#333' }}>—</span>
-                }
-              </span>
             </div>
           );
         })}
 
-        {!loading && filtered.length > PAGE_SIZE && (
+        {!loading && sorted.length > PAGE_SIZE && (
           <div style={s.pagination}>
             <button style={s.pageBtn(page === 1)} disabled={page === 1} onClick={() => setPage(p => p - 1)}>← Prev</button>
-            <span style={s.pageInfo}>Page {page} of {totalPages} · {filtered.length} total</span>
+            <span style={s.pageInfo}>Page {page} of {totalPages} · {sorted.length} total</span>
             <button style={s.pageBtn(page === totalPages)} disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>Next →</button>
           </div>
         )}

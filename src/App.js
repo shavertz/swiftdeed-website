@@ -184,7 +184,7 @@ export default function App() {
             {portalType === 'borrower' ? (
               <button onClick={() => routeByEmail(user.primaryEmailAddress?.emailAddress)} style={{ background: '#FFD700', color: '#0f0f0f', fontSize: 14, fontWeight: 500, padding: '8px 18px', borderRadius: 6, border: 'none', cursor: 'pointer' }}>My loan</button>
             ) : (
-              <button onClick={() => setPage('portal')} style={{ background: '#FFD700', color: '#0f0f0f', fontSize: 14, fontWeight: 500, padding: '8px 18px', borderRadius: 6, border: 'none', cursor: 'pointer' }}>My requests</button>
+              <button onClick={() => setPage('portal')} style={{ background: '#FFD700', color: '#0f0f0f', fontSize: 14, fontWeight: 500, padding: '8px 18px', borderRadius: 6, border: 'none', cursor: 'pointer' }}>My Loans</button>
             )}
             <button onClick={handleLogout} style={{ background: 'transparent', color: '#fff', fontSize: 14, padding: '8px 18px', borderRadius: 6, border: '0.5px solid #FFD700', cursor: 'pointer' }}>Log out</button>
           </>
