@@ -6,8 +6,8 @@ export default function HomePage({ onLenderLogin, onBorrowerLogin, onTerms, onPr
     yellow: { color: '#FFD700' },
     heroP: { fontSize: 18, color: '#888', lineHeight: 1.7, marginBottom: 36, maxWidth: 560, margin: '0 auto 36px' },
     ctas: { display: 'flex', gap: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
-    btnPrimary: { background: '#FFD700', color: '#0f0f0f', fontSize: 15, fontWeight: 500, padding: '13px 28px', borderRadius: 7, border: 'none', cursor: 'pointer' },
-    btnSecondary: { background: 'transparent', color: '#fff', fontSize: 15, padding: '13px 28px', borderRadius: 7, border: '1px solid #FFD700', cursor: 'pointer' },
+    btnPrimary: { background: '#FFD700', color: '#0f0f0f', fontSize: 15, fontWeight: 500, padding: '13px 28px', borderRadius: 7, border: 'none', cursor: 'pointer', transition: 'background 0.15s' },
+    btnSecondary: { background: 'transparent', color: '#fff', fontSize: 15, padding: '13px 28px', borderRadius: 7, border: '1px solid #FFD700', cursor: 'pointer', transition: 'all 0.15s' },
     portalNote: { fontSize: 12, color: '#444', marginBottom: 40 },
     statsRow: { display: 'flex', gap: 48, justifyContent: 'center', marginBottom: 0 },
     statNum: { fontSize: 28, fontWeight: 500, color: '#FFD700' },
@@ -50,8 +50,8 @@ export default function HomePage({ onLenderLogin, onBorrowerLogin, onTerms, onPr
     payVal: { fontSize: 15, fontWeight: 500, color: '#fff' },
     paySub: { fontSize: 11, color: '#444', marginTop: 2 },
     portalBtns: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 48 },
-    pbBorrower: { background: '#FFD700', color: '#0f0f0f', border: 'none', borderRadius: 7, padding: 13, fontSize: 14, fontWeight: 500, cursor: 'pointer' },
-    pbLender: { background: 'transparent', color: '#fff', border: '1px solid #FFD700', borderRadius: 7, padding: 13, fontSize: 14, fontWeight: 500, cursor: 'pointer' },
+    pbBorrower: { background: '#FFD700', color: '#0f0f0f', border: 'none', borderRadius: 7, padding: 13, fontSize: 14, fontWeight: 500, cursor: 'pointer', transition: 'background 0.15s' },
+    pbLender: { background: 'transparent', color: '#fff', border: '1px solid #FFD700', borderRadius: 7, padding: 13, fontSize: 14, fontWeight: 500, cursor: 'pointer', transition: 'all 0.15s' },
     pricingSection: { borderTop: '0.5px solid #1e1e1e', padding: '80px 60px', maxWidth: 1000, margin: '0 auto' },
     pricingCards: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 48 },
     pricingCard: (featured) => ({ background: '#111', border: `0.5px solid ${featured ? '#FFD700' : '#2a2a2a'}`, borderRadius: 12, padding: 32, position: 'relative' }),
@@ -76,6 +76,15 @@ export default function HomePage({ onLenderLogin, onBorrowerLogin, onTerms, onPr
     footerLink: { fontSize: 13, color: '#555', textDecoration: 'none', cursor: 'pointer' },
   };
 
+  const hovSolid = {
+    onMouseEnter: e => e.currentTarget.style.background = '#e6c200',
+    onMouseLeave: e => e.currentTarget.style.background = '#FFD700',
+  };
+  const hovOutline = {
+    onMouseEnter: e => { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.color = '#FFD700'; },
+    onMouseLeave: e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#fff'; },
+  };
+
   return (
     <div style={s.page}>
 
@@ -84,8 +93,8 @@ export default function HomePage({ onLenderLogin, onBorrowerLogin, onTerms, onPr
         <h1 style={s.h1}>Swift. Serviced. <span style={s.yellow}>Secure.</span></h1>
         <p style={s.heroP}>We handle the servicing so you can focus on lending. Your borrowers stay informed, your statements are always on time.</p>
         <div style={s.ctas}>
-          <button style={s.btnPrimary} onClick={onBorrowerLogin}>I'm a borrower</button>
-          <button style={s.btnSecondary} onClick={onLenderLogin}>I'm a lender</button>
+          <button style={s.btnPrimary} onClick={onBorrowerLogin} {...hovSolid}>I'm a borrower</button>
+          <button style={s.btnSecondary} onClick={onLenderLogin} {...hovOutline}>I'm a lender</button>
         </div>
         <div style={s.portalNote}>New here? Create an account in seconds.</div>
         <div style={s.statsRow}>
@@ -131,8 +140,6 @@ export default function HomePage({ onLenderLogin, onBorrowerLogin, onTerms, onPr
         <div style={{ ...s.sectionSub, marginBottom: 48 }}>Lenders manage their loan portfolio. Borrowers stay informed and in control. Everyone gets what they need.</div>
 
         <div style={s.portalGrid}>
-
-          {/* BORROWER CARD */}
           <div style={s.portalCard(true)}>
             <div style={s.cardHeader}>
               <div style={s.cardTitle}>Borrower portal</div>
@@ -173,7 +180,6 @@ export default function HomePage({ onLenderLogin, onBorrowerLogin, onTerms, onPr
             </div>
           </div>
 
-          {/* LENDER CARD */}
           <div style={s.portalCard(false)}>
             <div style={s.cardHeader}>
               <div style={s.cardTitle}>Lender portal</div>
@@ -207,12 +213,11 @@ export default function HomePage({ onLenderLogin, onBorrowerLogin, onTerms, onPr
               </div>
             </div>
           </div>
-
         </div>
 
         <div style={s.portalBtns}>
-          <button style={s.pbBorrower} onClick={onBorrowerLogin}>I'm a borrower</button>
-          <button style={s.pbLender} onClick={onLenderLogin}>I'm a lender</button>
+          <button style={s.pbBorrower} onClick={onBorrowerLogin} {...hovSolid}>I'm a borrower</button>
+          <button style={s.pbLender} onClick={onLenderLogin} {...hovOutline}>I'm a lender</button>
         </div>
       </div>
 

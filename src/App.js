@@ -36,6 +36,17 @@ const loadingScreen = (
   </div>
 );
 
+const hov = {
+  solid: {
+    onMouseEnter: e => e.currentTarget.style.background = '#e6c200',
+    onMouseLeave: e => e.currentTarget.style.background = '#FFD700',
+  },
+  outline: {
+    onMouseEnter: e => { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.color = '#FFD700'; },
+    onMouseLeave: e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#fff'; },
+  },
+};
+
 export default function App() {
   const [page, setPage] = useState(() => ACTIVATION_TOKEN ? 'auth' : 'home');
   const [authMode, setAuthMode] = useState(() => ACTIVATION_TOKEN ? 'signup' : 'signin');
@@ -47,7 +58,7 @@ export default function App() {
 
   useEffect(() => {
     if (!isLoaded) return;
-if (!isSignedIn) { setLoading(false); return; }
+    if (!isSignedIn) { setLoading(false); return; }
 
     setLoading(true);
 
@@ -62,7 +73,7 @@ if (!isSignedIn) { setLoading(false); return; }
     if (!email) return;
 
     routeByEmail(email);
-  }, [isSignedIn, user]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isSignedIn, isLoaded, user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function routeByEmail(email) {
     try {
@@ -192,9 +203,17 @@ if (!isSignedIn) { setLoading(false); return; }
 
       {page === 'home' && (
         <div style={{ display: 'flex', gap: 32, alignItems: 'center', position: 'absolute', left: '50%', transform: 'translateX(-50%)' }}>
-          <span onClick={() => scrollTo('how')} style={{ fontSize: 16, color: '#FFD700', cursor: 'pointer' }}>How it works</span>
-          <span onClick={() => scrollTo('pricing')} style={{ fontSize: 16, color: '#FFD700', cursor: 'pointer' }}>Pricing</span>
-          <span onClick={() => scrollTo('why')} style={{ fontSize: 16, color: '#FFD700', cursor: 'pointer' }}>Why SwiftDeed</span>
+          {['how', 'pricing', 'why'].map((id, i) => (
+            <span
+              key={id}
+              onClick={() => scrollTo(id)}
+              style={{ fontSize: 16, color: '#FFD700', cursor: 'pointer', transition: 'opacity 0.15s' }}
+              onMouseEnter={e => e.currentTarget.style.opacity = '0.7'}
+              onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+            >
+              {['How it works', 'Pricing', 'Why SwiftDeed'][i]}
+            </span>
+          ))}
         </div>
       )}
 
@@ -203,16 +222,36 @@ if (!isSignedIn) { setLoading(false); return; }
           <>
             <span style={{ fontSize: 13, color: '#aaa' }}>{user.primaryEmailAddress?.emailAddress}</span>
             {portalType === 'borrower' ? (
-              <button onClick={() => routeByEmail(user.primaryEmailAddress?.emailAddress)} style={{ background: '#FFD700', color: '#0f0f0f', fontSize: 14, fontWeight: 500, padding: '8px 18px', borderRadius: 6, border: 'none', cursor: 'pointer' }}>My loan</button>
+              <button
+                onClick={() => routeByEmail(user.primaryEmailAddress?.emailAddress)}
+                style={{ background: '#FFD700', color: '#0f0f0f', fontSize: 14, fontWeight: 500, padding: '8px 18px', borderRadius: 6, border: 'none', cursor: 'pointer', transition: 'background 0.15s' }}
+                {...hov.solid}
+              >My loan</button>
             ) : (
-              <button onClick={() => setPage('portal')} style={{ background: '#FFD700', color: '#0f0f0f', fontSize: 14, fontWeight: 500, padding: '8px 18px', borderRadius: 6, border: 'none', cursor: 'pointer' }}>My Loans</button>
+              <button
+                onClick={() => setPage('portal')}
+                style={{ background: '#FFD700', color: '#0f0f0f', fontSize: 14, fontWeight: 500, padding: '8px 18px', borderRadius: 6, border: 'none', cursor: 'pointer', transition: 'background 0.15s' }}
+                {...hov.solid}
+              >My Loans</button>
             )}
-            <button onClick={handleLogout} style={{ background: 'transparent', color: '#fff', fontSize: 14, padding: '8px 18px', borderRadius: 6, border: '0.5px solid #FFD700', cursor: 'pointer' }}>Log out</button>
+            <button
+              onClick={handleLogout}
+              style={{ background: 'transparent', color: '#fff', fontSize: 14, padding: '8px 18px', borderRadius: 6, border: '0.5px solid #FFD700', cursor: 'pointer', transition: 'all 0.15s' }}
+              {...hov.outline}
+            >Log out</button>
           </>
         ) : (
           <>
-            <button onClick={() => goToAuth('signin')} style={{ background: 'transparent', color: '#fff', fontSize: 14, padding: '8px 18px', borderRadius: 6, border: '0.5px solid #FFD700', cursor: 'pointer' }}>Log in</button>
-            <button onClick={() => goToAuth('signup')} style={{ background: '#FFD700', color: '#0f0f0f', fontSize: 14, fontWeight: 500, padding: '8px 18px', borderRadius: 6, border: 'none', cursor: 'pointer' }}>Sign up</button>
+            <button
+              onClick={() => goToAuth('signin')}
+              style={{ background: 'transparent', color: '#fff', fontSize: 14, padding: '8px 18px', borderRadius: 6, border: '0.5px solid #FFD700', cursor: 'pointer', transition: 'all 0.15s' }}
+              {...hov.outline}
+            >Log in</button>
+            <button
+              onClick={() => goToAuth('signup')}
+              style={{ background: '#FFD700', color: '#0f0f0f', fontSize: 14, fontWeight: 500, padding: '8px 18px', borderRadius: 6, border: 'none', cursor: 'pointer', transition: 'background 0.15s' }}
+              {...hov.solid}
+            >Sign up</button>
           </>
         )}
       </div>
@@ -239,7 +278,12 @@ if (!isSignedIn) { setLoading(false); return; }
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 28, width: '100%', maxWidth: 420 }}>
         {authMode === 'signin' ? (
-          <div onClick={() => setPortalType('borrower')} style={{ background: portalType === 'borrower' ? '#171400' : '#141414', border: portalType === 'borrower' ? '1.5px solid #FFD700' : '0.5px solid #2a2a2a', borderRadius: 10, padding: '20px 16px', cursor: 'pointer', textAlign: 'center' }}>
+          <div
+            onClick={() => setPortalType('borrower')}
+            style={{ background: portalType === 'borrower' ? '#171400' : '#141414', border: portalType === 'borrower' ? '1.5px solid #FFD700' : '0.5px solid #2a2a2a', borderRadius: 10, padding: '20px 16px', cursor: 'pointer', textAlign: 'center', transition: 'all 0.15s' }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.borderColor = '#FFD700'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = portalType === 'borrower' ? '#171400' : '#141414'; e.currentTarget.style.borderColor = portalType === 'borrower' ? '#FFD700' : '#2a2a2a'; }}
+          >
             <div style={{ fontSize: 22, marginBottom: 10 }}>🏠</div>
             <div style={{ fontSize: 15, fontWeight: 500, color: '#fff', marginBottom: 4 }}>Borrower</div>
             <div style={{ fontSize: 12, color: '#555', lineHeight: 1.4 }}>View your loan & statements</div>
@@ -251,7 +295,12 @@ if (!isSignedIn) { setLoading(false); return; }
             <div style={{ fontSize: 12, color: '#FFD700', lineHeight: 1.5 }}>⚠️ <em>Activation email required — contact your lender</em></div>
           </div>
         )}
-        <div onClick={() => setPortalType('lender')} style={{ background: portalType === 'lender' ? '#171400' : '#141414', border: portalType === 'lender' ? '1.5px solid #FFD700' : '0.5px solid #2a2a2a', borderRadius: 10, padding: '20px 16px', cursor: 'pointer', textAlign: 'center' }}>
+        <div
+          onClick={() => setPortalType('lender')}
+          style={{ background: portalType === 'lender' ? '#171400' : '#141414', border: portalType === 'lender' ? '1.5px solid #FFD700' : '0.5px solid #2a2a2a', borderRadius: 10, padding: '20px 16px', cursor: 'pointer', textAlign: 'center', transition: 'all 0.15s' }}
+          onMouseEnter={e => { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.borderColor = '#FFD700'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = portalType === 'lender' ? '#171400' : '#141414'; e.currentTarget.style.borderColor = portalType === 'lender' ? '#FFD700' : '#2a2a2a'; }}
+        >
           <div style={{ fontSize: 22, marginBottom: 10 }}>🏦</div>
           <div style={{ fontSize: 15, fontWeight: 500, color: '#fff', marginBottom: 4 }}>Lender</div>
           <div style={{ fontSize: 12, color: '#555', lineHeight: 1.4 }}>Submit requests & manage loans</div>
@@ -282,13 +331,37 @@ if (!isSignedIn) { setLoading(false); return; }
         <div style={{ fontSize: 14, color: '#555' }}>What would you like to do?</div>
       </div>
       <div style={{ display: 'flex', gap: 20, marginTop: 40 }}>
-        <div onClick={() => setPage('request')} style={{ background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: 12, padding: '40px 48px', cursor: 'pointer', textAlign: 'center', width: 220 }} onMouseEnter={e => e.currentTarget.style.borderColor = '#FFD700'} onMouseLeave={e => e.currentTarget.style.borderColor = '#2a2a2a'}>
-          <div style={{ fontSize: 32, marginBottom: 16 }}>📄</div>
+        <div
+          onClick={() => setPage('request')}
+          style={{ background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: 12, padding: '40px 48px', cursor: 'pointer', textAlign: 'center', width: 220, transition: 'all 0.15s' }}
+          onMouseEnter={e => { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.borderColor = '#FFD700'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = '#141414'; e.currentTarget.style.borderColor = '#2a2a2a'; }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
+            <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+              <rect width="44" height="44" rx="10" fill="#1e1a00"/>
+              <path d="M22 28V16M22 16L18 20M22 16L26 20" stroke="#FFD700" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M15 29H29" stroke="#FFD700" strokeWidth="1.8" strokeLinecap="round"/>
+              <path d="M17 22H14C13.4 22 13 22.4 13 23V30C13 30.6 13.4 31 14 31H30C30.6 31 31 30.6 31 30V23C31 22.4 30.6 22 30 22H27" stroke="#FFD700" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
           <div style={{ fontSize: 16, fontWeight: 400, color: '#fff', marginBottom: 8 }}>Service a loan</div>
           <div style={{ fontSize: 13, color: '#555', lineHeight: 1.5 }}>Upload loan docs and get a payoff statement</div>
         </div>
-        <div onClick={() => setPage('portal')} style={{ background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: 12, padding: '40px 48px', cursor: 'pointer', textAlign: 'center', width: 220 }} onMouseEnter={e => e.currentTarget.style.borderColor = '#FFD700'} onMouseLeave={e => e.currentTarget.style.borderColor = '#2a2a2a'}>
-          <div style={{ fontSize: 32, marginBottom: 16 }}>📋</div>
+        <div
+          onClick={() => setPage('portal')}
+          style={{ background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: 12, padding: '40px 48px', cursor: 'pointer', textAlign: 'center', width: 220, transition: 'all 0.15s' }}
+          onMouseEnter={e => { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.borderColor = '#FFD700'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = '#141414'; e.currentTarget.style.borderColor = '#2a2a2a'; }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
+            <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+              <rect width="44" height="44" rx="10" fill="#1e1a00"/>
+              <rect x="13" y="14" width="18" height="3" rx="1.5" fill="#FFD700"/>
+              <rect x="13" y="20" width="18" height="3" rx="1.5" fill="#FFD700" opacity="0.6"/>
+              <rect x="13" y="26" width="12" height="3" rx="1.5" fill="#FFD700" opacity="0.3"/>
+            </svg>
+          </div>
           <div style={{ fontSize: 16, fontWeight: 400, color: '#fff', marginBottom: 8 }}>View my loans</div>
           <div style={{ fontSize: 13, color: '#555', lineHeight: 1.5 }}>Check the status of your serviced loans</div>
         </div>
@@ -332,7 +405,11 @@ if (!isSignedIn) { setLoading(false); return; }
           <div style={{ textAlign: 'center', maxWidth: 440 }}>
             <div style={{ fontSize: 20, fontWeight: 500, color: '#fff', marginBottom: 12 }}>Wrong account</div>
             <div style={{ fontSize: 14, color: '#555', lineHeight: 1.7 }}>This activation link was sent to a different email address. Please log out and sign up with the email address that received the activation link.</div>
-            <button onClick={handleLogout} style={{ marginTop: 24, background: '#FFD700', color: '#0f0f0f', fontSize: 14, fontWeight: 500, padding: '10px 24px', borderRadius: 7, border: 'none', cursor: 'pointer' }}>Log out</button>
+            <button
+              onClick={handleLogout}
+              style={{ marginTop: 24, background: '#FFD700', color: '#0f0f0f', fontSize: 14, fontWeight: 500, padding: '10px 24px', borderRadius: 7, border: 'none', cursor: 'pointer', transition: 'background 0.15s' }}
+              {...hov.solid}
+            >Log out</button>
           </div>
         </div>
       )}
