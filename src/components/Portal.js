@@ -16,7 +16,7 @@ function formatCurrency(val) {
 }
 
 const PAGE_SIZE = 15;
-const COLS = '110px 130px 120px 1fr 110px 110px 130px 160px';
+const COLS = '110px 130px 120px 220px 110px 110px 130px 160px';
 
 const s = {
   page: { padding: '40px 60px', maxWidth: 1400, margin: '0 auto' },
