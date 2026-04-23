@@ -190,7 +190,7 @@ export default function App() {
           </>
         ) : (
           <>
-            <button onClick={() => goToAuth('signin')} style={{ background: 'transparent', color: '#fff', fontSize: 14, padding: '8px 18px', borderRadius: 6, border: '0.5px solid #2a2a2a', cursor: 'pointer' }}>Log in</button>
+            <button onClick={() => goToAuth('signin')} style={{ background: 'transparent', color: '#fff', fontSize: 14, padding: '8px 18px', borderRadius: 6, border: '0.5px solid #FFD700', cursor: 'pointer' }}>Log in</button>
             <button onClick={() => goToAuth('signup')} style={{ background: '#FFD700', color: '#0f0f0f', fontSize: 14, fontWeight: 500, padding: '8px 18px', borderRadius: 6, border: 'none', cursor: 'pointer' }}>Sign up</button>
           </>
         )}
