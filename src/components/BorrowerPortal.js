@@ -33,7 +33,7 @@ const s = {
   payBig: { fontSize: 32, fontWeight: 500, color: '#fff', marginBottom: 4 },
   payDue: { fontSize: 13, color: '#888', marginBottom: 16 },
   btnPay: { width: '100%', background: '#D4A017', color: '#0f0f0f', border: 'none', borderRadius: 7, padding: 12, fontSize: 14, fontWeight: 500, cursor: 'pointer', marginBottom: 8 },
-  btnAutopay: { width: '100%', background: 'transparent', color: '#fff', border: '0.5px solid #333', borderRadius: 7, padding: 10, fontSize: 13, cursor: 'pointer' },
+  btnAutopay: { width: '100%', background: 'transparent', color: '#fff', border: '0.5px solid #FFD700', borderRadius: 7, padding: 10, fontSize: 13, cursor: 'pointer' },
   divider: { border: 'none', borderTop: '0.5px solid #1e1e1e', margin: '14px 0' },
   accrualBar: { background: '#1a1800', border: '0.5px solid #3a3000', borderRadius: 8, padding: '14px 16px', marginTop: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   accLabel: { fontSize: 12, color: '#888' },
@@ -122,8 +122,9 @@ export default function BorrowerPortal({ onHome }) {
     setLoading(true);
     const userEmail = user?.primaryEmailAddress?.emailAddress;
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get('activate');
+    // Read token from hash fragment
+    const hash = window.location.hash;
+    const token = hash.startsWith('#activate=') ? hash.slice('#activate='.length) : null;
 
     if (token) {
       const res = await fetch(
