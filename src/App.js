@@ -13,36 +13,58 @@ const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY;
 const ACTIVATION_TOKEN = window.location.hash.startsWith('#activate=') ? window.location.hash.slice('#activate='.length) : null;
 
+const loadingScreen = (
+  <div style={{ background: '#0f0f0f', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 28 }}>
+    <div style={{ fontSize: 32, fontWeight: 600, letterSpacing: -0.5 }}>
+      <span style={{ color: '#fff' }}>Swift</span><span style={{ color: '#D4A017' }}>Deed</span>
+    </div>
+    <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+      {[0, 1, 2].map(i => (
+        <div key={i} style={{
+          width: 10, height: 10, borderRadius: '50%', background: '#D4A017',
+          animation: 'dotPulse 1.4s ease-in-out infinite',
+          animationDelay: `${i * 0.2}s`
+        }} />
+      ))}
+    </div>
+    <style>{`
+      @keyframes dotPulse {
+        0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+        40% { opacity: 1; transform: scale(1); }
+      }
+    `}</style>
+  </div>
+);
+
 export default function App() {
   const [page, setPage] = useState(() => ACTIVATION_TOKEN ? 'auth' : 'home');
   const [authMode, setAuthMode] = useState(() => ACTIVATION_TOKEN ? 'signup' : 'signin');
   const [portalType, setPortalType] = useState(() => ACTIVATION_TOKEN ? 'borrower' : null);
   const [borrowerOnboardingId, setBorrowerOnboardingId] = useState(null);
+  const [loading, setLoading] = useState(false);
   const { isSignedIn, user } = useUser();
   const { signOut } = useClerk();
 
   useEffect(() => {
     if (!isSignedIn) return;
 
-    // Activation token always takes priority
+    setLoading(true);
+
     if (ACTIVATION_TOKEN) {
       checkBorrowerOnboarding(ACTIVATION_TOKEN);
       return;
     }
 
-    // Need user email to route correctly
     if (!user) return;
 
     const email = user.primaryEmailAddress?.emailAddress;
     if (!email) return;
 
-    // Determine user type by checking Supabase — don't rely on portalType state
     routeByEmail(email);
   }, [isSignedIn, user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function routeByEmail(email) {
     try {
-      // Check if this email is a borrower
       const borrowerRes = await fetch(
         `${SUPABASE_URL}/rest/v1/borrowers?borrower_email=eq.${encodeURIComponent(email)}&select=id,phone,mailing_address&limit=1`,
         { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
@@ -50,7 +72,6 @@ export default function App() {
       const borrowerData = await borrowerRes.json();
 
       if (Array.isArray(borrowerData) && borrowerData.length > 0) {
-        // This is a borrower
         setPortalType('borrower');
         const borrower = borrowerData[0];
         if (!borrower.phone || !borrower.mailing_address) {
@@ -59,10 +80,10 @@ export default function App() {
         } else {
           setPage('borrower-portal');
         }
+        setLoading(false);
         return;
       }
 
-      // Not a borrower — treat as lender
       setPortalType('lender');
       const lenderRes = await fetch(
         `${SUPABASE_URL}/rest/v1/lenders?email=eq.${encodeURIComponent(email)}&select=id&limit=1`,
@@ -79,11 +100,11 @@ export default function App() {
       setPortalType('lender');
       setPage('choice');
     }
+    setLoading(false);
   }
 
   async function checkBorrowerOnboarding(token) {
     try {
-      // Get the borrower email from the token
       const res = await fetch(
         `${SUPABASE_URL}/rest/v1/borrowers?verification_token=eq.${token}&select=id,phone,mailing_address,borrower_email&limit=1`,
         { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
@@ -92,14 +113,12 @@ export default function App() {
 
       if (data && data.length > 0) {
         const borrower = data[0];
-
-        // Verify the signed-in email matches the borrower email on the token
         const signedInEmail = user?.primaryEmailAddress?.emailAddress;
-        if (signedInEmail && borrower.borrower_email && 
+        if (signedInEmail && borrower.borrower_email &&
             signedInEmail.toLowerCase() !== borrower.borrower_email.toLowerCase()) {
-          // Wrong account — show error
           setPortalType('borrower');
           setPage('borrower-wrong-account');
+          setLoading(false);
           return;
         }
 
@@ -118,6 +137,7 @@ export default function App() {
       setPortalType('borrower');
       setPage('borrower-portal');
     }
+    setLoading(false);
   }
 
   const scrollTo = (id) => {
@@ -274,6 +294,8 @@ export default function App() {
       </div>
     </div>
   );
+
+  if (loading) return loadingScreen;
 
   return (
     <div style={{ background: '#0f0f0f', minHeight: '100vh', fontFamily: 'system-ui, sans-serif' }}>
