@@ -104,8 +104,8 @@ const s = {
   headerVal: { fontSize: 13, color: '#fff', fontWeight: 500, marginBottom: 10 },
   headerValSub: { fontSize: 12, color: '#888', marginBottom: 10 },
   dlBtn: {
-    display: 'block', width: '100%', fontSize: 13, fontWeight: 600,
-    padding: '10px', borderRadius: 6, textAlign: 'center',
+    display: 'block', width: '100%', fontSize: 12, fontWeight: 500,
+    padding: '7px', borderRadius: 6, textAlign: 'center',
     background: 'transparent', color: '#fff',
     border: '0.5px solid #FFD700', cursor: 'pointer',
     textDecoration: 'none', transition: 'all 0.15s', marginTop: 4,
