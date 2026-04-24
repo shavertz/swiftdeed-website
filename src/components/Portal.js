@@ -71,7 +71,8 @@ const s = {
     padding: '14px 20px', borderBottom: '0.5px solid #1a1a1a',
     alignItems: 'center', fontSize: 12, cursor: 'pointer',
     background: selected ? '#1e1a00' : '#141414',
-    borderLeft: selected ? '3px solid #FFD700' : '3px solid transparent',
+    border: selected ? '1px solid #FFD700' : '1px solid transparent',
+    borderBottom: selected ? '1px solid #FFD700' : '0.5px solid #1a1a1a',
     transition: 'all 0.1s',
   }),
   grey: { color: '#555' },
@@ -93,19 +94,20 @@ const s = {
   pageInfo: { fontSize: 12, color: '#555' },
   rightPane: { background: '#111', display: 'flex', flexDirection: 'column' },
   panelHeader: { padding: '20px 20px 16px', borderBottom: '0.5px solid #1e1e1e' },
-  panelName: { fontSize: 15, fontWeight: 500, color: '#fff', marginBottom: 4 },
-  panelEmail: { fontSize: 12, color: '#555' },
-  panelSection: { padding: '16px 20px', borderBottom: '0.5px solid #1e1e1e' },
-  panelSectionLabel: { fontSize: 9, color: '#FFD700', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 },
   panelRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   panelKey: { fontSize: 12, color: '#555' },
   panelVal: { fontSize: 12, color: '#ccc', textAlign: 'right' },
   panelValGreen: { fontSize: 12, color: '#34d399', textAlign: 'right' },
   panelValRed: { fontSize: 12, color: '#f87171', textAlign: 'right' },
+  panelSection: { padding: '16px 20px', borderBottom: '0.5px solid #1e1e1e' },
+  panelSectionLabel: { fontSize: 9, color: '#FFD700', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 },
+  headerLabel: { fontSize: 10, color: '#444', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 2 },
+  headerVal: { fontSize: 13, color: '#fff', fontWeight: 500, marginBottom: 10 },
+  headerValSub: { fontSize: 12, color: '#888', marginBottom: 10 },
   dlBtn: {
-    display: 'block', width: '100%', fontSize: 12, fontWeight: 500,
-    padding: '9px', borderRadius: 6, textAlign: 'center',
-    background: 'transparent', color: '#888',
+    display: 'block', width: '100%', fontSize: 13, fontWeight: 600,
+    padding: '10px', borderRadius: 6, textAlign: 'center',
+    background: 'transparent', color: '#fff',
     border: '0.5px solid #FFD700', cursor: 'pointer',
     textDecoration: 'none', transition: 'all 0.15s', marginTop: 4,
   },
@@ -264,8 +266,19 @@ export default function Portal({ onSubmitRequest }) {
                 key={r.id}
                 style={s.trow(isSelected)}
                 onClick={() => setSelected(r)}
-                onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = '#191500'; }}
-                onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = '#141414'; }}
+                onMouseEnter={e => {
+                  if (!isSelected) {
+                    e.currentTarget.style.background = '#191500';
+                    e.currentTarget.style.border = '1px solid #3a3000';
+                  }
+                }}
+                onMouseLeave={e => {
+                  if (!isSelected) {
+                    e.currentTarget.style.background = '#141414';
+                    e.currentTarget.style.border = '1px solid transparent';
+                    e.currentTarget.style.borderBottom = '0.5px solid #1a1a1a';
+                  }
+                }}
               >
                 <span style={s.grey}>{formatDate(r.created_at)}</span>
                 <span style={s.grey}>{r.loan_id_internal || r.loan_id || '—'}</span>
@@ -297,8 +310,16 @@ export default function Portal({ onSubmitRequest }) {
           ) : (
             <>
               <div style={s.panelHeader}>
-                <div style={s.panelName}>{selected.borrower_name || '—'}</div>
-                <div style={s.panelEmail}>{panelBorrowerEmail}</div>
+                <div style={s.headerLabel}>Borrower</div>
+                <div style={s.headerVal}>{selected.borrower_name || '—'}</div>
+                {selected.guarantor_name && (
+                  <>
+                    <div style={s.headerLabel}>Guarantor</div>
+                    <div style={s.headerValSub}>{selected.guarantor_name}</div>
+                  </>
+                )}
+                <div style={s.headerLabel}>Email</div>
+                <div style={{ ...s.headerValSub, marginBottom: 0 }}>{panelBorrowerEmail}</div>
               </div>
 
               <div style={s.panelSection}>
@@ -354,7 +375,7 @@ export default function Portal({ onSubmitRequest }) {
                 {selected.payoff_statement_url
                   ? <a href={selected.payoff_statement_url} target="_blank" rel="noreferrer" style={s.dlBtn}
                       onMouseEnter={e => { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.color = '#FFD700'; e.currentTarget.style.boxShadow = '0 0 16px rgba(255, 215, 0, 0.3)'; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#888'; e.currentTarget.style.boxShadow = 'none'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#fff'; e.currentTarget.style.boxShadow = 'none'; }}
                     >Download Statement</a>
                   : <div style={{ fontSize: 12, color: '#333' }}>No statement available</div>
                 }
