@@ -20,7 +20,7 @@ export default function HomePage({ onLenderLogin, onBorrowerLogin, onTerms, onPr
     stepsGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 0, marginTop: 56, borderTop: '0.5px solid #1e1e1e' },
     step: (last) => ({ padding: 32, borderRight: last ? 'none' : '0.5px solid #1e1e1e' }),
     stepNum: { fontSize: 12, color: '#444', marginBottom: 16, fontWeight: 500 },
-    stepIcon: { width: 40, height: 40, borderRadius: 8, background: '#1a1a1a', border: '0.5px solid #2a2a2a', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16, fontSize: 18 },
+    stepIcon: { width: 40, height: 40, borderRadius: 8, background: '#1a1a1a', border: '0.5px solid #2a2a2a', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
     stepH: { fontSize: 16, fontWeight: 500, marginBottom: 8 },
     stepP: { fontSize: 14, color: '#666', lineHeight: 1.6 },
     portalSection: { padding: '80px 60px', maxWidth: 1000, margin: '0 auto' },
@@ -66,7 +66,7 @@ export default function HomePage({ onLenderLogin, onBorrowerLogin, onTerms, onPr
     whySection: { borderTop: '0.5px solid #1e1e1e', padding: '80px 60px', maxWidth: 1000, margin: '0 auto' },
     whyGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, background: '#1e1e1e', border: '0.5px solid #1e1e1e', borderRadius: 12, overflow: 'hidden', marginTop: 48 },
     whyItem: { background: '#111', padding: '28px 32px' },
-    whyIcon: { fontSize: 20, marginBottom: 14 },
+    whyIcon: { width: 36, height: 36, borderRadius: 7, background: '#1a1a1a', border: '0.5px solid #2a2a2a', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
     whyH: { fontSize: 15, fontWeight: 500, marginBottom: 8 },
     whyP: { fontSize: 14, color: '#666', lineHeight: 1.6 },
     footer: { borderTop: '0.5px solid #1e1e1e', padding: '40px 60px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
@@ -113,19 +113,40 @@ export default function HomePage({ onLenderLogin, onBorrowerLogin, onTerms, onPr
           <div style={s.stepsGrid}>
             <div style={s.step(false)}>
               <div style={s.stepNum}>01</div>
-              <div style={s.stepIcon}>🏠</div>
+              <div style={s.stepIcon}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFD700" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="17 8 12 3 7 8"/>
+                  <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+              </div>
               <div style={s.stepH}>Onboard your loan</div>
-              <p style={s.stepP}>Send us the loan details once through your lender portal. Setup takes under two minutes.</p>
+              <p style={s.stepP}>Log in to your lender portal and add your loan. We take it from there.</p>
             </div>
             <div style={s.step(false)}>
               <div style={s.stepNum}>02</div>
-              <div style={s.stepIcon}>⚙️</div>
+              <div style={s.stepIcon}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFD700" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                  <line x1="16" y1="13" x2="8" y2="13"/>
+                  <line x1="16" y1="17" x2="8" y2="17"/>
+                  <polyline points="10 9 9 9 8 9"/>
+                </svg>
+              </div>
               <div style={s.stepH}>We manage the servicing</div>
               <p style={s.stepP}>Statements, borrower communications, and payment tracking — handled automatically on your behalf.</p>
             </div>
             <div style={s.step(true)}>
               <div style={s.stepNum}>03</div>
-              <div style={s.stepIcon}>📊</div>
+              <div style={s.stepIcon}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFD700" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="7" height="7"/>
+                  <rect x="14" y="3" width="7" height="7"/>
+                  <rect x="14" y="14" width="7" height="7"/>
+                  <rect x="3" y="14" width="7" height="7"/>
+                </svg>
+              </div>
               <div style={s.stepH}>You stay in control</div>
               <p style={s.stepP}>Monitor every loan in your portal. Your borrowers get what they need, when they need it.</p>
             </div>
@@ -256,22 +277,41 @@ export default function HomePage({ onLenderLogin, onBorrowerLogin, onTerms, onPr
         <div style={s.sectionSub}>Private lenders come to us when servicing starts getting in the way of lending.</div>
         <div style={s.whyGrid}>
           <div style={s.whyItem}>
-            <div style={s.whyIcon}>📋</div>
+            <div style={s.whyIcon}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFD700" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                <polyline points="22 4 12 14.01 9 11.01"/>
+              </svg>
+            </div>
             <div style={s.whyH}>Focus on lending, not paperwork</div>
             <p style={s.whyP}>Most private lenders manage servicing in-house until it becomes a second job. Statements, borrower calls, payment tracking — we take all of it off your plate so you can focus on closing deals.</p>
           </div>
           <div style={s.whyItem}>
-            <div style={s.whyIcon}>⚡</div>
+            <div style={s.whyIcon}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFD700" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+            </div>
             <div style={s.whyH}>Same-day turnaround, every time</div>
             <p style={s.whyP}>Most servicers take 3–5 days. We deliver payoff statements same-day, rush requests in 15 minutes. Your deals don't wait on us.</p>
           </div>
           <div style={s.whyItem}>
-            <div style={s.whyIcon}>🎯</div>
+            <div style={s.whyIcon}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFD700" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+              </svg>
+            </div>
             <div style={s.whyH}>Deep expertise, zero fluff</div>
             <p style={s.whyP}>We know private lending inside and out. Every feature we've built exists because private lenders asked for it. Nothing more, nothing less.</p>
           </div>
           <div style={s.whyItem}>
-            <div style={s.whyIcon}>💰</div>
+            <div style={s.whyIcon}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFD700" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="1" x2="12" y2="23"/>
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+              </svg>
+            </div>
             <div style={s.whyH}>Predictable flat pricing</div>
             <p style={s.whyP}>No monthly fees, no setup costs, no surprises. You pay per statement. At $40–$50 per payoff, you're getting enterprise-level servicing at a fraction of the cost of in-house staff.</p>
           </div>
