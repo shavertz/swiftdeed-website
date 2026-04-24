@@ -68,10 +68,10 @@ const s = {
   },
   trow: (selected) => ({
     display: 'grid', gridTemplateColumns: LEFT_COLS,
-    padding: '13px 20px', borderBottom: '0.5px solid #1a1a1a',
+    padding: '14px 20px', borderBottom: '0.5px solid #1a1a1a',
     alignItems: 'center', fontSize: 12, cursor: 'pointer',
-    background: selected ? '#1a1700' : '#141414',
-    borderLeft: selected ? '2px solid #FFD700' : '2px solid transparent',
+    background: selected ? '#1e1a00' : '#141414',
+    borderLeft: selected ? '3px solid #FFD700' : '3px solid transparent',
     transition: 'all 0.1s',
   }),
   grey: { color: '#555' },
@@ -96,11 +96,10 @@ const s = {
   panelName: { fontSize: 15, fontWeight: 500, color: '#fff', marginBottom: 4 },
   panelEmail: { fontSize: 12, color: '#555' },
   panelSection: { padding: '16px 20px', borderBottom: '0.5px solid #1e1e1e' },
-  panelSectionLabel: { fontSize: 9, color: '#444', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 },
+  panelSectionLabel: { fontSize: 9, color: '#FFD700', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 },
   panelRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   panelKey: { fontSize: 12, color: '#555' },
   panelVal: { fontSize: 12, color: '#ccc', textAlign: 'right' },
-  panelValYellow: { fontSize: 12, color: '#FFD700', fontWeight: 500, textAlign: 'right' },
   panelValGreen: { fontSize: 12, color: '#34d399', textAlign: 'right' },
   panelValRed: { fontSize: 12, color: '#f87171', textAlign: 'right' },
   dlBtn: {
@@ -186,7 +185,7 @@ export default function Portal({ onSubmitRequest }) {
   const avgLoanSize = requests.length > 0 ? totalAmount / requests.length : 0;
   const activeBorrowers = new Set(requests.map(r => borrowerEmails[r.loan_id_internal]).filter(Boolean)).size;
 
-  const paymentStatusColor = (status) => {
+  const paymentStatusStyle = (status) => {
     if (!status) return s.panelVal;
     const st = status.toLowerCase();
     if (st === 'current') return s.panelValGreen;
@@ -194,7 +193,9 @@ export default function Portal({ onSubmitRequest }) {
     return s.panelVal;
   };
 
-  const panelBorrowerEmail = selected ? (borrowerEmails[selected.loan_id_internal] || selected.borrower_email || '—') : '—';
+  const panelBorrowerEmail = selected
+    ? (borrowerEmails[selected.loan_id_internal] || selected.borrower_email || '—')
+    : '—';
 
   return (
     <div style={s.page}>
@@ -207,7 +208,7 @@ export default function Portal({ onSubmitRequest }) {
         </div>
         <div style={s.statCard}>
           <div style={s.statLabel}>Total Amount Processed</div>
-          <div style={{ ...s.statValue, fontSize: requests.length > 0 ? 22 : 26 }}>{formatCurrency(totalAmount)}</div>
+          <div style={{ ...s.statValue, fontSize: 22 }}>{formatCurrency(totalAmount)}</div>
         </div>
         <div style={s.statCard}>
           <div style={s.statLabel}>Avg. Loan Size</div>
@@ -259,7 +260,13 @@ export default function Portal({ onSubmitRequest }) {
             const isCompleted = r.status?.toLowerCase() === 'completed';
             const isSelected = selected?.id === r.id;
             return (
-              <div key={r.id} style={s.trow(isSelected)} onClick={() => setSelected(r)}>
+              <div
+                key={r.id}
+                style={s.trow(isSelected)}
+                onClick={() => setSelected(r)}
+                onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = '#191500'; }}
+                onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = '#141414'; }}
+              >
                 <span style={s.grey}>{formatDate(r.created_at)}</span>
                 <span style={s.grey}>{r.loan_id_internal || r.loan_id || '—'}</span>
                 <span style={{ fontWeight: 600, color: '#fff' }}>{formatCurrency(r.total_due)}</span>
@@ -298,7 +305,7 @@ export default function Portal({ onSubmitRequest }) {
                 <div style={s.panelSectionLabel}>Loan Details</div>
                 <div style={s.panelRow}>
                   <span style={s.panelKey}>Balance</span>
-                  <span style={s.panelValYellow}>{formatCurrency(selected.total_due)}</span>
+                  <span style={s.panelVal}>{formatCurrency(selected.total_due)}</span>
                 </div>
                 <div style={s.panelRow}>
                   <span style={s.panelKey}>Rate</span>
@@ -322,7 +329,7 @@ export default function Portal({ onSubmitRequest }) {
                 <div style={s.panelSectionLabel}>Payment Info</div>
                 <div style={s.panelRow}>
                   <span style={s.panelKey}>Payment status</span>
-                  <span style={paymentStatusColor(selected.payment_status)}>{selected.payment_status || '—'}</span>
+                  <span style={paymentStatusStyle(selected.payment_status)}>{selected.payment_status || '—'}</span>
                 </div>
                 <div style={s.panelRow}>
                   <span style={s.panelKey}>Last payment</span>
