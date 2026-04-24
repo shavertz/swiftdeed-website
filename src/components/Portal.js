@@ -15,8 +15,16 @@ function formatCurrency(val) {
   return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function daysUntil(dateStr) {
+  if (!dateStr) return '—';
+  const diff = Math.ceil((new Date(dateStr) - new Date()) / (1000 * 60 * 60 * 24));
+  if (diff < 0) return 'Overdue';
+  if (diff === 0) return 'Today';
+  return diff + ' days';
+}
+
 const PAGE_SIZE = 15;
-const COLS = '110px 130px 120px 220px 110px 110px 130px 160px';
+const LEFT_COLS = '110px 130px 120px 1fr 100px';
 
 const hovSolid = {
   onMouseEnter: e => { e.currentTarget.style.boxShadow = '0 0 16px rgba(255, 215, 0, 0.45)'; },
@@ -28,10 +36,9 @@ const hovOutline = {
 };
 
 const s = {
-  page: { padding: '40px 60px', maxWidth: 1400, margin: '0 auto' },
-  topRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
-  heading: { fontSize: 24, fontWeight: 400, color: '#fff' },
-  statRow: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 },
+  page: { padding: '40px 60px', maxWidth: 1600, margin: '0 auto' },
+  heading: { fontSize: 24, fontWeight: 400, color: '#fff', marginBottom: 24 },
+  statRow: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 20 },
   statCard: { background: '#141414', border: '0.5px solid #222', borderRadius: 10, padding: '20px 26px' },
   statLabel: { fontSize: 11, color: '#555', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 },
   statValue: { fontSize: 26, fontWeight: 600, color: '#fff' },
@@ -51,22 +58,22 @@ const s = {
     padding: '8px 18px', borderRadius: 7, border: 'none', cursor: 'pointer',
     whiteSpace: 'nowrap', marginLeft: 'auto', transition: 'box-shadow 0.15s',
   },
-  card: { background: '#141414', border: '0.5px solid #222', borderRadius: 10, overflow: 'hidden' },
+  splitWrap: { display: 'grid', gridTemplateColumns: '70% 30%', gap: 0, border: '0.5px solid #222', borderRadius: 10, overflow: 'hidden' },
+  leftPane: { borderRight: '0.5px solid #222', overflow: 'hidden' },
   thead: {
-    display: 'grid',
-    gridTemplateColumns: COLS,
-    padding: '10px 20px',
-    borderBottom: '0.5px solid #222',
+    display: 'grid', gridTemplateColumns: LEFT_COLS,
+    padding: '10px 20px', borderBottom: '0.5px solid #222',
     fontSize: 10, color: '#FFD700', textTransform: 'uppercase', letterSpacing: 0.8,
+    background: '#141414',
   },
-  trow: {
-    display: 'grid',
-    gridTemplateColumns: COLS,
-    padding: '13px 20px',
-    borderBottom: '0.5px solid #1a1a1a',
-    alignItems: 'center',
-    fontSize: 12,
-  },
+  trow: (selected) => ({
+    display: 'grid', gridTemplateColumns: LEFT_COLS,
+    padding: '13px 20px', borderBottom: '0.5px solid #1a1a1a',
+    alignItems: 'center', fontSize: 12, cursor: 'pointer',
+    background: selected ? '#1a1700' : '#141414',
+    borderLeft: selected ? '2px solid #FFD700' : '2px solid transparent',
+    transition: 'all 0.1s',
+  }),
   grey: { color: '#555' },
   badge: (color) => ({
     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -76,21 +83,34 @@ const s = {
     border: `0.5px solid ${color === 'green' ? '#065f46' : '#78350f'}`,
     whiteSpace: 'nowrap',
   }),
-  dlBtn: {
-    display: 'inline-block', fontSize: 11, fontWeight: 500,
-    padding: '5px 10px', borderRadius: 5,
-    background: 'transparent', color: '#888',
-    border: '0.5px solid #FFD700', cursor: 'pointer',
-    textDecoration: 'none', whiteSpace: 'nowrap', transition: 'all 0.15s',
-  },
-  empty: { padding: '60px 20px', textAlign: 'center', color: '#444', fontSize: 14 },
-  pagination: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', borderTop: '0.5px solid #1a1a1a' },
+  empty: { padding: '60px 20px', textAlign: 'center', color: '#444', fontSize: 14, background: '#141414' },
+  pagination: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', borderTop: '0.5px solid #1a1a1a', background: '#141414' },
   pageBtn: (disabled) => ({
     background: 'transparent', border: `0.5px solid ${disabled ? '#2a2a2a' : '#FFD700'}`, borderRadius: 5,
     color: disabled ? '#333' : '#fff', fontSize: 12, padding: '6px 14px',
     cursor: disabled ? 'not-allowed' : 'pointer', transition: 'all 0.15s',
   }),
   pageInfo: { fontSize: 12, color: '#555' },
+  rightPane: { background: '#111', display: 'flex', flexDirection: 'column' },
+  panelHeader: { padding: '20px 20px 16px', borderBottom: '0.5px solid #1e1e1e' },
+  panelName: { fontSize: 15, fontWeight: 500, color: '#fff', marginBottom: 4 },
+  panelEmail: { fontSize: 12, color: '#555' },
+  panelSection: { padding: '16px 20px', borderBottom: '0.5px solid #1e1e1e' },
+  panelSectionLabel: { fontSize: 9, color: '#444', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 },
+  panelRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  panelKey: { fontSize: 12, color: '#555' },
+  panelVal: { fontSize: 12, color: '#ccc', textAlign: 'right' },
+  panelValYellow: { fontSize: 12, color: '#FFD700', fontWeight: 500, textAlign: 'right' },
+  panelValGreen: { fontSize: 12, color: '#34d399', textAlign: 'right' },
+  panelValRed: { fontSize: 12, color: '#f87171', textAlign: 'right' },
+  dlBtn: {
+    display: 'block', width: '100%', fontSize: 12, fontWeight: 500,
+    padding: '9px', borderRadius: 6, textAlign: 'center',
+    background: 'transparent', color: '#888',
+    border: '0.5px solid #FFD700', cursor: 'pointer',
+    textDecoration: 'none', transition: 'all 0.15s', marginTop: 4,
+  },
+  noPanel: { display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#333', fontSize: 13 },
 };
 
 export default function Portal({ onSubmitRequest }) {
@@ -101,6 +121,7 @@ export default function Portal({ onSubmitRequest }) {
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState('newest');
   const [page, setPage] = useState(1);
+  const [selected, setSelected] = useState(null);
 
   const email = user?.primaryEmailAddress?.emailAddress;
 
@@ -115,6 +136,7 @@ export default function Portal({ onSubmitRequest }) {
         const data = await res.json();
         const rows = Array.isArray(data) ? data : [];
         setRequests(rows);
+        if (rows.length > 0) setSelected(rows[0]);
 
         const ids = rows.map(r => r.loan_id_internal).filter(Boolean);
         if (ids.length > 0) {
@@ -147,8 +169,7 @@ export default function Portal({ onSubmitRequest }) {
       r.property_address?.toLowerCase().includes(q);
     const matchStatus =
       sort === 'completed' ? r.status?.toLowerCase() === 'completed' :
-      sort === 'pending' ? r.status?.toLowerCase() !== 'completed' :
-      true;
+      sort === 'pending' ? r.status?.toLowerCase() !== 'completed' : true;
     return matchSearch && matchStatus;
   });
 
@@ -161,23 +182,40 @@ export default function Portal({ onSubmitRequest }) {
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const paginated = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  const processed = requests.filter(r => r.status?.toLowerCase() === 'completed').length;
   const totalAmount = requests.reduce((sum, r) => sum + (parseFloat(r.total_due) || 0), 0);
+  const avgLoanSize = requests.length > 0 ? totalAmount / requests.length : 0;
+  const activeBorrowers = new Set(requests.map(r => borrowerEmails[r.loan_id_internal]).filter(Boolean)).size;
+
+  const paymentStatusColor = (status) => {
+    if (!status) return s.panelVal;
+    const st = status.toLowerCase();
+    if (st === 'current') return s.panelValGreen;
+    if (st === 'late' || st === 'missed') return s.panelValRed;
+    return s.panelVal;
+  };
+
+  const panelBorrowerEmail = selected ? (borrowerEmails[selected.loan_id_internal] || selected.borrower_email || '—') : '—';
 
   return (
     <div style={s.page}>
-      <div style={s.topRow}>
-        <div style={s.heading}>My Loans</div>
-      </div>
+      <div style={s.heading}>My Loans</div>
 
       <div style={s.statRow}>
         <div style={s.statCard}>
-          <div style={s.statLabel}>Processed Statements</div>
-          <div style={s.statValue}>{processed}</div>
+          <div style={s.statLabel}>Total Loans</div>
+          <div style={s.statValue}>{requests.length}</div>
         </div>
         <div style={s.statCard}>
           <div style={s.statLabel}>Total Amount Processed</div>
-          <div style={s.statValue}>{formatCurrency(totalAmount)}</div>
+          <div style={{ ...s.statValue, fontSize: requests.length > 0 ? 22 : 26 }}>{formatCurrency(totalAmount)}</div>
+        </div>
+        <div style={s.statCard}>
+          <div style={s.statLabel}>Avg. Loan Size</div>
+          <div style={{ ...s.statValue, fontSize: 22 }}>{requests.length > 0 ? formatCurrency(avgLoanSize) : '—'}</div>
+        </div>
+        <div style={s.statCard}>
+          <div style={s.statLabel}>Active Borrowers</div>
+          <div style={s.statValue}>{activeBorrowers}</div>
         </div>
       </div>
 
@@ -188,11 +226,7 @@ export default function Portal({ onSubmitRequest }) {
           value={search}
           onChange={e => { setSearch(e.target.value); setPage(1); }}
         />
-        <select
-          style={s.select}
-          value={sort}
-          onChange={e => { setSort(e.target.value); setPage(1); }}
-        >
+        <select style={s.select} value={sort} onChange={e => { setSort(e.target.value); setPage(1); }}>
           <option value="newest">Sort: Newest first</option>
           <option value="oldest">Sort: Oldest first</option>
           <option value="amount_desc">Sort: Amount ↓</option>
@@ -206,61 +240,121 @@ export default function Portal({ onSubmitRequest }) {
         <button style={s.serviceBtn} onClick={onSubmitRequest} {...hovSolid}>+ Service a loan</button>
       </div>
 
-      <div style={s.card}>
-        <div style={s.thead}>
-          <span>Date Serviced</span>
-          <span>Loan ID</span>
-          <span>Amount</span>
-          <span>Property</span>
-          <span>Status</span>
-          <span>Statement</span>
-          <span>Borrower</span>
-          <span>Borrower Email</span>
+      <div style={s.splitWrap}>
+        <div style={s.leftPane}>
+          <div style={s.thead}>
+            <span>Date Serviced</span>
+            <span>Loan ID</span>
+            <span>Amount</span>
+            <span>Property</span>
+            <span>Status</span>
+          </div>
+
+          {loading && <div style={s.empty}>Loading your loans...</div>}
+          {!loading && sorted.length === 0 && (
+            <div style={s.empty}>{search ? 'No results found.' : 'No loans yet — service your first loan above.'}</div>
+          )}
+
+          {!loading && paginated.map(r => {
+            const isCompleted = r.status?.toLowerCase() === 'completed';
+            const isSelected = selected?.id === r.id;
+            return (
+              <div key={r.id} style={s.trow(isSelected)} onClick={() => setSelected(r)}>
+                <span style={s.grey}>{formatDate(r.created_at)}</span>
+                <span style={s.grey}>{r.loan_id_internal || r.loan_id || '—'}</span>
+                <span style={{ fontWeight: 600, color: '#fff' }}>{formatCurrency(r.total_due)}</span>
+                <span style={s.grey}>{r.property_address || '—'}</span>
+                <span>
+                  <span style={s.badge(isCompleted ? 'green' : 'yellow')}>
+                    {isCompleted ? 'Completed' : 'Pending'}
+                  </span>
+                </span>
+              </div>
+            );
+          })}
+
+          {!loading && sorted.length > PAGE_SIZE && (
+            <div style={s.pagination}>
+              <button style={s.pageBtn(page === 1)} disabled={page === 1} onClick={() => setPage(p => p - 1)}
+                {...(page !== 1 ? hovOutline : {})}>← Prev</button>
+              <span style={s.pageInfo}>Page {page} of {totalPages} · {sorted.length} total</span>
+              <button style={s.pageBtn(page === totalPages)} disabled={page === totalPages} onClick={() => setPage(p => p + 1)}
+                {...(page !== totalPages ? hovOutline : {})}>Next →</button>
+            </div>
+          )}
         </div>
 
-        {loading && <div style={s.empty}>Loading your loans...</div>}
-        {!loading && sorted.length === 0 && (
-          <div style={s.empty}>{search ? 'No results found.' : 'No loans yet — service your first loan above.'}</div>
-        )}
+        <div style={s.rightPane}>
+          {!selected ? (
+            <div style={s.noPanel}>Select a loan to view details</div>
+          ) : (
+            <>
+              <div style={s.panelHeader}>
+                <div style={s.panelName}>{selected.borrower_name || '—'}</div>
+                <div style={s.panelEmail}>{panelBorrowerEmail}</div>
+              </div>
 
-        {!loading && paginated.map(r => {
-          const isCompleted = r.status?.toLowerCase() === 'completed';
-          const borrowerEmail = borrowerEmails[r.loan_id_internal] || '—';
-          return (
-            <div key={r.id} style={s.trow}>
-              <span style={s.grey}>{formatDate(r.created_at)}</span>
-              <span style={s.grey}>{r.loan_id_internal || r.loan_id || '—'}</span>
-              <span style={{ fontWeight: 600, color: '#fff' }}>{formatCurrency(r.total_due)}</span>
-              <span style={s.grey}>{r.property_address || '—'}</span>
-              <span>
-                <span style={s.badge(isCompleted ? 'green' : 'yellow')}>
-                  {isCompleted ? 'Completed' : 'Pending'}
-                </span>
-              </span>
-              <span>
-                {r.payoff_statement_url
-                  ? <a href={r.payoff_statement_url} target="_blank" rel="noreferrer" style={s.dlBtn}
+              <div style={s.panelSection}>
+                <div style={s.panelSectionLabel}>Loan Details</div>
+                <div style={s.panelRow}>
+                  <span style={s.panelKey}>Balance</span>
+                  <span style={s.panelValYellow}>{formatCurrency(selected.total_due)}</span>
+                </div>
+                <div style={s.panelRow}>
+                  <span style={s.panelKey}>Rate</span>
+                  <span style={s.panelVal}>{selected.interest_rate ? selected.interest_rate + '%' : '—'}</span>
+                </div>
+                <div style={s.panelRow}>
+                  <span style={s.panelKey}>Per diem</span>
+                  <span style={s.panelVal}>{selected.per_diem ? formatCurrency(selected.per_diem) : '—'}</span>
+                </div>
+                <div style={s.panelRow}>
+                  <span style={s.panelKey}>Loan start date</span>
+                  <span style={s.panelVal}>{formatDate(selected.loan_start_date)}</span>
+                </div>
+                <div style={s.panelRow}>
+                  <span style={s.panelKey}>Maturity date</span>
+                  <span style={s.panelVal}>{formatDate(selected.maturity_date)}</span>
+                </div>
+              </div>
+
+              <div style={s.panelSection}>
+                <div style={s.panelSectionLabel}>Payment Info</div>
+                <div style={s.panelRow}>
+                  <span style={s.panelKey}>Payment status</span>
+                  <span style={paymentStatusColor(selected.payment_status)}>{selected.payment_status || '—'}</span>
+                </div>
+                <div style={s.panelRow}>
+                  <span style={s.panelKey}>Last payment</span>
+                  <span style={s.panelVal}>{formatDate(selected.last_payment_date)}</span>
+                </div>
+                <div style={s.panelRow}>
+                  <span style={s.panelKey}>Next payment</span>
+                  <span style={s.panelVal}>{formatDate(selected.next_payment_date)}</span>
+                </div>
+                <div style={s.panelRow}>
+                  <span style={s.panelKey}>Days until next</span>
+                  <span style={s.panelVal}>{daysUntil(selected.next_payment_date)}</span>
+                </div>
+                <div style={s.panelRow}>
+                  <span style={s.panelKey}>Total payments made</span>
+                  <span style={s.panelVal}>{selected.total_payments_made ?? '—'}</span>
+                </div>
+              </div>
+
+              <div style={s.panelSection}>
+                <div style={s.panelSectionLabel}>Statement</div>
+                {selected.payoff_statement_url
+                  ? <a href={selected.payoff_statement_url} target="_blank" rel="noreferrer" style={s.dlBtn}
                       onMouseEnter={e => { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.color = '#FFD700'; e.currentTarget.style.boxShadow = '0 0 16px rgba(255, 215, 0, 0.3)'; }}
                       onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#888'; e.currentTarget.style.boxShadow = 'none'; }}
-                    >Download</a>
-                  : <span style={s.grey}>—</span>
+                    >Download Statement</a>
+                  : <div style={{ fontSize: 12, color: '#333' }}>No statement available</div>
                 }
-              </span>
-              <span style={s.grey}>{r.borrower_name || '—'}</span>
-              <span style={{ ...s.grey, fontSize: 11 }}>{borrowerEmail}</span>
-            </div>
-          );
-        })}
-
-        {!loading && sorted.length > PAGE_SIZE && (
-          <div style={s.pagination}>
-            <button style={s.pageBtn(page === 1)} disabled={page === 1} onClick={() => setPage(p => p - 1)}
-              {...(page !== 1 ? hovOutline : {})}>← Prev</button>
-            <span style={s.pageInfo}>Page {page} of {totalPages} · {sorted.length} total</span>
-            <button style={s.pageBtn(page === totalPages)} disabled={page === totalPages} onClick={() => setPage(p => p + 1)}
-              {...(page !== totalPages ? hovOutline : {})}>Next →</button>
-          </div>
-        )}
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
