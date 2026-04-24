@@ -47,6 +47,20 @@ const hov = {
   },
 };
 
+const BorrowerIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFD700" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+    <circle cx="12" cy="7" r="4"/>
+  </svg>
+);
+
+const LenderIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFD700" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+    <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+  </svg>
+);
+
 export default function App() {
   const [page, setPage] = useState(() => ACTIVATION_TOKEN ? 'auth' : 'home');
   const [authMode, setAuthMode] = useState(() => ACTIVATION_TOKEN ? 'signup' : 'signin');
@@ -284,13 +298,21 @@ export default function App() {
             onMouseEnter={e => { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.borderColor = '#FFD700'; }}
             onMouseLeave={e => { e.currentTarget.style.background = portalType === 'borrower' ? '#171400' : '#141414'; e.currentTarget.style.borderColor = portalType === 'borrower' ? '#FFD700' : '#2a2a2a'; }}
           >
-            <div style={{ fontSize: 22, marginBottom: 10 }}>🏠</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 8, background: '#1a1a1a', border: '0.5px solid #2a2a2a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <BorrowerIcon />
+              </div>
+            </div>
             <div style={{ fontSize: 15, fontWeight: 500, color: '#fff', marginBottom: 4 }}>Borrower</div>
             <div style={{ fontSize: 12, color: '#555', lineHeight: 1.4 }}>View your loan & statements</div>
           </div>
         ) : (
           <div style={{ background: '#0d0d0d', border: '0.5px solid #2a2a2a', borderRadius: 10, padding: '20px 16px', textAlign: 'center' }}>
-            <div style={{ fontSize: 22, marginBottom: 10 }}>🏠</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 8, background: '#1a1a1a', border: '0.5px solid #2a2a2a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <BorrowerIcon />
+              </div>
+            </div>
             <div style={{ fontSize: 15, fontWeight: 500, color: '#666', marginBottom: 8 }}>Borrower</div>
             <div style={{ fontSize: 12, color: '#FFD700', lineHeight: 1.5 }}>⚠️ <em>Activation email required — contact your lender</em></div>
           </div>
@@ -301,7 +323,11 @@ export default function App() {
           onMouseEnter={e => { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.borderColor = '#FFD700'; }}
           onMouseLeave={e => { e.currentTarget.style.background = portalType === 'lender' ? '#171400' : '#141414'; e.currentTarget.style.borderColor = portalType === 'lender' ? '#FFD700' : '#2a2a2a'; }}
         >
-          <div style={{ fontSize: 22, marginBottom: 10 }}>🏦</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 8, background: '#1a1a1a', border: '0.5px solid #2a2a2a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <LenderIcon />
+            </div>
+          </div>
           <div style={{ fontSize: 15, fontWeight: 500, color: '#fff', marginBottom: 4 }}>Lender</div>
           <div style={{ fontSize: 12, color: '#555', lineHeight: 1.4 }}>Submit requests & manage loans</div>
         </div>
