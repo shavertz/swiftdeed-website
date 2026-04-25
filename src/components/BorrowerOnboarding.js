@@ -14,10 +14,12 @@ const s = {
   fieldLabel: { fontSize: 12, color: '#888', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 7, display: 'block' },
   input: { width: '100%', background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 7, padding: '11px 14px', fontSize: 14, color: '#fff', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box', marginBottom: 18 },
   inputFocus: { border: '0.5px solid #D4A017' },
+  inputError: { border: '0.5px solid #c0392b' },
   optionalTag: { fontSize: 11, color: '#444', marginLeft: 6 },
   btn: { width: '100%', background: '#FFD700', color: '#0f0f0f', border: 'none', borderRadius: 7, padding: 13, fontSize: 15, fontWeight: 500, cursor: 'pointer', marginTop: 8 },
   btnDisabled: { width: '100%', background: '#3a3000', color: '#888', border: 'none', borderRadius: 7, padding: 13, fontSize: 15, fontWeight: 500, cursor: 'not-allowed', marginTop: 8 },
   errorMsg: { fontSize: 13, color: '#c0392b', background: '#1a0a0a', border: '0.5px solid #3a1010', borderRadius: 7, padding: '10px 14px', marginBottom: 16 },
+  loanIdHint: { fontSize: 12, color: '#555', marginTop: -12, marginBottom: 18, lineHeight: 1.5 },
 };
 
 function formatPhone(val) {
@@ -30,7 +32,8 @@ function formatPhone(val) {
 export default function BorrowerOnboarding({ borrowerId, onComplete }) {
   const { user } = useUser();
   const [fullName, setFullName] = useState('');
-  const [emailConfirm, setEmailConfirm] = useState('');
+  const [loanId, setLoanId] = useState('');
+  const [loanIdError, setLoanIdError] = useState('');
   const [phone, setPhone] = useState('');
   const [mailingAddress, setMailingAddress] = useState('');
   const [guarantorName, setGuarantorName] = useState('');
@@ -45,7 +48,7 @@ export default function BorrowerOnboarding({ borrowerId, onComplete }) {
 
   const isValid =
     fullName.trim() &&
-    emailConfirm.trim().toLowerCase() === userEmail.toLowerCase() &&
+    loanId.trim() &&
     phone.trim() &&
     mailingAddress.trim() &&
     (!hasGuarantor || (guarantorName.trim() && guarantorPhone.trim() && guarantorEmail.trim()));
@@ -54,8 +57,35 @@ export default function BorrowerOnboarding({ borrowerId, onComplete }) {
     if (!isValid) return;
     setLoading(true);
     setError('');
+    setLoanIdError('');
 
     try {
+      // Verify Loan ID matches what's stored for this borrower
+      const verifyRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/borrowers?id=eq.${borrowerId}&select=loan_id_internal`,
+        {
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          },
+        }
+      );
+      const verifyData = await verifyRes.json();
+
+      if (!Array.isArray(verifyData) || verifyData.length === 0) {
+        setError('Something went wrong. Please try again.');
+        setLoading(false);
+        return;
+      }
+
+      const storedLoanId = verifyData[0].loan_id_internal;
+      if (loanId.trim().toUpperCase() !== (storedLoanId || '').toUpperCase()) {
+        setLoanIdError('Loan ID doesn\'t match our records. Check your activation email and try again.');
+        setLoading(false);
+        return;
+      }
+
+      // Loan ID verified — save borrower info
       const res = await fetch(`${SUPABASE_URL}/rest/v1/borrowers?id=eq.${borrowerId}`, {
         method: 'PATCH',
         headers: {
@@ -87,7 +117,11 @@ export default function BorrowerOnboarding({ borrowerId, onComplete }) {
     }
   }
 
-  const inputStyle = (field) => ({ ...s.input, ...(focused === field ? s.inputFocus : {}) });
+  const inputStyle = (field) => ({
+    ...s.input,
+    ...(focused === field ? s.inputFocus : {}),
+    ...(field === 'loanId' && loanIdError ? s.inputError : {}),
+  });
 
   return (
     <div style={s.wrap}>
@@ -110,18 +144,19 @@ export default function BorrowerOnboarding({ borrowerId, onComplete }) {
           onBlur={() => setFocused(null)}
         />
 
-        <label style={s.fieldLabel}>Confirm email address</label>
+        <label style={s.fieldLabel}>Loan ID</label>
         <input
-          style={inputStyle('email')}
-          placeholder={userEmail}
-          value={emailConfirm}
-          onChange={e => setEmailConfirm(e.target.value)}
-          onFocus={() => setFocused('email')}
+          style={inputStyle('loanId')}
+          placeholder="e.g. SD-2026-123456"
+          value={loanId}
+          onChange={e => { setLoanId(e.target.value); setLoanIdError(''); }}
+          onFocus={() => setFocused('loanId')}
           onBlur={() => setFocused(null)}
         />
-        {emailConfirm && emailConfirm.toLowerCase() !== userEmail.toLowerCase() && (
-          <div style={{ fontSize: 12, color: '#c0392b', marginTop: -12, marginBottom: 16 }}>Email doesn't match your account email.</div>
-        )}
+        {loanIdError
+          ? <div style={{ fontSize: 12, color: '#c0392b', marginTop: -12, marginBottom: 18 }}>{loanIdError}</div>
+          : <div style={s.loanIdHint}>Your Loan ID was included in your activation email from SwiftDeed.</div>
+        }
 
         <label style={s.fieldLabel}>Phone number</label>
         <input
@@ -184,7 +219,7 @@ export default function BorrowerOnboarding({ borrowerId, onComplete }) {
           onClick={handleSubmit}
           disabled={!isValid || loading}
         >
-          {loading ? 'Saving your information...' : 'Access my loan portal →'}
+          {loading ? 'Verifying...' : 'Access my loan portal →'}
         </button>
       </div>
     </div>
