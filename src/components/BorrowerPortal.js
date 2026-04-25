@@ -67,7 +67,13 @@ function fmtPct(v) {
 function fmtDate(str) {
   if (!str) return '—';
   const d = new Date(str + 'T00:00:00');
+  if (isNaN(d.getTime())) return '—';
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function fmtStatus(str) {
+  if (!str) return 'Active';
+  return str.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
 function formatPhone(val) {
@@ -80,19 +86,15 @@ function formatPhone(val) {
 function getAlertConfig(daysUntil) {
   if (daysUntil < 0) return {
     bg: '#1a0000', border: '#3a0000', dot: '#ef4444', text: '#ef4444',
-    label: 'Overdue'
   };
   if (daysUntil === 0) return {
     bg: '#1a0000', border: '#3a0000', dot: '#ef4444', text: '#ef4444',
-    label: '— due today.'
   };
   if (daysUntil <= 7) return {
     bg: '#1a0d00', border: '#3a1a00', dot: '#f97316', text: '#f97316',
-    label: `— ${daysUntil} day${daysUntil !== 1 ? 's' : ''} away.`
   };
   return {
     bg: '#1a1800', border: '#3a3000', dot: '#D4A017', text: '#D4A017',
-    label: `— ${daysUntil} day${daysUntil !== 1 ? 's' : ''} away.`
   };
 }
 
@@ -103,35 +105,26 @@ function DonutChart({ principal, interestPaid, original }) {
   const remainingPct = Math.min(100, Math.max(0, (principal / original) * 100));
   const principalPaidPct = Math.min(100, Math.max(0, (principalPaid / original) * 100));
   const interestPct = Math.min(100, Math.max(0, (interestPaid / original) * 100));
-
-  const circumference = 2 * Math.PI * 75; // r=75
-
-  // Segments: remaining (dark), principal paid (blue), interest paid (gold)
+  const circumference = 2 * Math.PI * 75;
   const remainingDash = (remainingPct / 100) * circumference;
   const principalDash = (principalPaidPct / 100) * circumference;
   const interestDash = (interestPct / 100) * circumference;
-
-  const remainingOffset = 0;
   const principalOffset = -(remainingDash);
   const interestOffset = -(remainingDash + principalDash);
 
   return (
     <svg width="200" height="200" viewBox="0 0 200 200">
-      {/* Track */}
       <circle cx="100" cy="100" r="75" fill="none" stroke="#1a1a1a" strokeWidth="22"/>
-      {/* Remaining balance */}
       <circle cx="100" cy="100" r="75" fill="none" stroke="#2a2a2a" strokeWidth="22"
         strokeDasharray={`${remainingDash} ${circumference - remainingDash}`}
-        strokeDashoffset={remainingOffset}
+        strokeDashoffset={0}
         transform="rotate(-90 100 100)"/>
-      {/* Principal paid */}
       {principalDash > 0 && (
         <circle cx="100" cy="100" r="75" fill="none" stroke="#4a90b8" strokeWidth="22"
           strokeDasharray={`${principalDash} ${circumference - principalDash}`}
           strokeDashoffset={principalOffset}
           transform="rotate(-90 100 100)"/>
       )}
-      {/* Interest paid */}
       {interestDash > 0 && (
         <circle cx="100" cy="100" r="75" fill="none" stroke="#D4A017" strokeWidth="22"
           strokeDasharray={`${interestDash} ${circumference - interestDash}`}
@@ -193,7 +186,6 @@ export default function BorrowerPortal({ onHome }) {
   async function fetchBorrower() {
     setLoading(true);
     const userEmail = user?.primaryEmailAddress?.emailAddress;
-
     const hash = window.location.hash;
     const token = hash.startsWith('#activate=') ? hash.slice('#activate='.length) : null;
 
@@ -237,13 +229,14 @@ export default function BorrowerPortal({ onHome }) {
   }
 
   const email = user?.primaryEmailAddress?.emailAddress || '';
-  const perDiem = borrower?.per_diem || 0;
+  const isPaidOff = parseFloat(borrower?.principal_balance) === 0 || borrower?.status === 'paid_off';
+  const perDiem = isPaidOff ? 0 : (borrower?.per_diem || 0);
   const today = new Date();
   const nextPayment = borrower?.next_payment_date ? new Date(borrower.next_payment_date + 'T00:00:00') : null;
-  const daysUntil = nextPayment ? Math.ceil((nextPayment - today) / (1000 * 60 * 60 * 24)) : null;
-  const docUrls = borrower?.loan_document_urls ? borrower.loan_document_urls.split(',').map(u => u.trim()).filter(Boolean) : [];
-  const showAlert = borrower && daysUntil !== null && daysUntil <= 14;
+  const daysUntil = nextPayment && !isNaN(nextPayment.getTime()) ? Math.ceil((nextPayment - today) / (1000 * 60 * 60 * 24)) : null;
+  const showAlert = borrower && !isPaidOff && daysUntil !== null && daysUntil <= 14;
   const alertConfig = daysUntil !== null ? getAlertConfig(daysUntil) : null;
+  const docUrls = borrower?.loan_document_urls ? borrower.loan_document_urls.split(',').map(u => u.trim()).filter(Boolean) : [];
 
   return (
     <div style={s.page}>
@@ -253,7 +246,9 @@ export default function BorrowerPortal({ onHome }) {
           <div style={{ fontSize: 13, color: alertConfig.text }}>
             {daysUntil < 0
               ? <>Your payment of <strong>{fmt$(borrower.last_payment_amount)}</strong> was due on <strong>{fmtDate(borrower.next_payment_date)}</strong> — <strong>overdue.</strong></>
-              : <>Your next payment of <strong>{fmt$(borrower.last_payment_amount)}</strong> is due on <strong>{fmtDate(borrower.next_payment_date)}</strong> {alertConfig.label}</>
+              : daysUntil === 0
+              ? <>Your payment of <strong>{fmt$(borrower.last_payment_amount)}</strong> is due <strong>today.</strong></>
+              : <>Your next payment of <strong>{fmt$(borrower.last_payment_amount)}</strong> is due on <strong>{fmtDate(borrower.next_payment_date)}</strong> — {daysUntil} day{daysUntil !== 1 ? 's' : ''} away.</>
             }
           </div>
         </div>
@@ -283,7 +278,7 @@ export default function BorrowerPortal({ onHome }) {
             <div style={s.loanBar}>
               <div style={s.loanStat(false)}>
                 <div style={s.lsLabel}>Principal balance</div>
-                <div style={{ ...s.lsVal, color: '#D4A017' }}>{fmt$(borrower.principal_balance)}</div>
+                <div style={{ ...s.lsVal, color: isPaidOff ? '#4a9a4a' : '#D4A017' }}>{isPaidOff ? '$0.00' : fmt$(borrower.principal_balance)}</div>
               </div>
               <div style={s.loanStat(false)}>
                 <div style={s.lsLabel}>Interest rate</div>
@@ -291,60 +286,85 @@ export default function BorrowerPortal({ onHome }) {
               </div>
               <div style={s.loanStat(false)}>
                 <div style={s.lsLabel}>Per diem</div>
-                <div style={s.lsVal}>{fmt$(perDiem)} / day</div>
+                <div style={s.lsVal}>{isPaidOff ? '$0.00' : `${fmt$(perDiem)} / day`}</div>
               </div>
               <div style={s.loanStat(false)}>
                 <div style={s.lsLabel}>Next payment</div>
-                <div style={s.lsVal}>{fmtDate(borrower.next_payment_date)}</div>
+                <div style={s.lsVal}>{isPaidOff ? '—' : fmtDate(borrower.next_payment_date)}</div>
               </div>
               <div style={s.loanStat(true)}>
                 <div style={s.lsLabel}>Loan status</div>
-                <div style={{ ...s.lsVal, color: '#4a9a4a' }}>{borrower.status || 'Active'}</div>
+                <div style={{ ...s.lsVal, color: isPaidOff ? '#4a9a4a' : '#4a9a4a' }}>{fmtStatus(borrower.status)}</div>
               </div>
             </div>
 
             <div style={s.grid2}>
+              {/* Payment card — replaced with paid off message when balance is zero */}
               <div style={s.card}>
                 <div style={s.cardHead}>
-                  <div style={s.cardTitle}>Make a payment</div>
-                  <span style={{ fontSize: 11, color: '#4a9a4a' }}>ACH / Wire</span>
+                  <div style={s.cardTitle}>{isPaidOff ? 'Loan summary' : 'Make a payment'}</div>
+                  {!isPaidOff && <span style={{ fontSize: 11, color: '#4a9a4a' }}>ACH / Wire</span>}
                 </div>
                 <div style={s.cardBody}>
-                  <div style={s.payTitle}>Amount due</div>
-                  <div style={s.payBig}>{fmt$(borrower.last_payment_amount)}</div>
-                  <div style={s.payDue}>Due {fmtDate(borrower.next_payment_date)} · Monthly payment</div>
-                  <button
-                    style={s.btnPay}
-                    onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 0 16px rgba(255, 215, 0, 0.45)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; }}
-                  >Make a one-time payment</button>
-                  <button
-                    style={s.btnAutopay}
-                    onMouseEnter={e => { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.color = '#FFD700'; e.currentTarget.style.boxShadow = '0 0 16px rgba(255, 215, 0, 0.3)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#fff'; e.currentTarget.style.boxShadow = 'none'; }}
-                  >Set up autopay</button>
-                  <div style={s.divider}></div>
-                  <div style={s.statGrid}>
-                    <div style={s.statBox}>
-                      <div style={s.sbLabel}>Last payment</div>
-                      <div style={s.sbVal}>{fmt$(borrower.last_payment_amount)}</div>
-                      <div style={s.sbSub}>{fmtDate(borrower.last_payment_date)}</div>
-                    </div>
-                    <div style={s.statBox}>
-                      <div style={s.sbLabel}>Loan start</div>
-                      <div style={{ ...s.sbVal, fontSize: 13 }}>{fmtDate(borrower.loan_start_date)}</div>
-                    </div>
-                  </div>
-                  <div style={s.accrualBar}>
-                    <div>
-                      <div style={s.accLabel}>Interest accruing today</div>
-                      <div style={s.accSub}>Updates daily at midnight</div>
-                    </div>
-                    <div>
-                      <div style={s.accVal}>+{fmt$(perDiem)}</div>
-                      <div style={s.accValSub}>{fmt$(perDiem * today.getDate())} this period</div>
-                    </div>
-                  </div>
+                  {isPaidOff ? (
+                    <>
+                      <div style={{ textAlign: 'center', padding: '20px 0 24px' }}>
+                        <div style={{ fontSize: 32, marginBottom: 8 }}>✓</div>
+                        <div style={{ fontSize: 16, fontWeight: 500, color: '#4a9a4a', marginBottom: 6 }}>Loan paid in full</div>
+                        <div style={{ fontSize: 13, color: '#555' }}>All payments have been received. Thank you.</div>
+                      </div>
+                      <div style={s.divider}></div>
+                      <div style={s.statGrid}>
+                        <div style={s.statBox}>
+                          <div style={s.sbLabel}>Final payment</div>
+                          <div style={s.sbVal}>{fmt$(borrower.last_payment_amount)}</div>
+                          <div style={s.sbSub}>{fmtDate(borrower.last_payment_date)}</div>
+                        </div>
+                        <div style={s.statBox}>
+                          <div style={s.sbLabel}>Total payments</div>
+                          <div style={s.sbVal}>{borrower.total_payments_made ?? '—'}</div>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div style={s.payTitle}>Amount due</div>
+                      <div style={s.payBig}>{fmt$(borrower.last_payment_amount)}</div>
+                      <div style={s.payDue}>Due {fmtDate(borrower.next_payment_date)} · Monthly payment</div>
+                      <button
+                        style={s.btnPay}
+                        onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 0 16px rgba(255, 215, 0, 0.45)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; }}
+                      >Make a one-time payment</button>
+                      <button
+                        style={s.btnAutopay}
+                        onMouseEnter={e => { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.color = '#FFD700'; e.currentTarget.style.boxShadow = '0 0 16px rgba(255, 215, 0, 0.3)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#fff'; e.currentTarget.style.boxShadow = 'none'; }}
+                      >Set up autopay</button>
+                      <div style={s.divider}></div>
+                      <div style={s.statGrid}>
+                        <div style={s.statBox}>
+                          <div style={s.sbLabel}>Last payment</div>
+                          <div style={s.sbVal}>{fmt$(borrower.last_payment_amount)}</div>
+                          <div style={s.sbSub}>{fmtDate(borrower.last_payment_date)}</div>
+                        </div>
+                        <div style={s.statBox}>
+                          <div style={s.sbLabel}>Loan start</div>
+                          <div style={{ ...s.sbVal, fontSize: 13 }}>{fmtDate(borrower.loan_start_date)}</div>
+                        </div>
+                      </div>
+                      <div style={s.accrualBar}>
+                        <div>
+                          <div style={s.accLabel}>Interest accruing today</div>
+                          <div style={s.accSub}>Updates daily at midnight</div>
+                        </div>
+                        <div>
+                          <div style={s.accVal}>+{fmt$(perDiem)}</div>
+                          <div style={s.accValSub}>{fmt$(perDiem * today.getDate())} this period</div>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -401,7 +421,7 @@ export default function BorrowerPortal({ onHome }) {
                     </div>
                     <div style={s.infoRow}>
                       <span style={s.irLabel}>Per diem</span>
-                      <span style={s.irVal}>{fmt$(perDiem)} / day</span>
+                      <span style={s.irVal}>{isPaidOff ? '$0.00' : `${fmt$(perDiem)} / day`}</span>
                     </div>
                     <div style={{ ...s.infoRow, borderBottom: 'none' }}>
                       <span style={s.irLabel}>Servicer</span>
@@ -459,7 +479,6 @@ export default function BorrowerPortal({ onHome }) {
                 <EditableRow label="Phone" value={borrower.phone} field="phone" onSave={handleSaveField} />
                 <EditableRow label="Email" value={borrower.borrower_email} field="borrower_email" onSave={handleSaveField} />
                 <EditableRow label="Mailing address" value={borrower.mailing_address} field="mailing_address" onSave={handleSaveField} />
-
                 <div style={{ fontSize: 12, color: '#555', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: 20, marginBottom: 10 }}>Guarantor</div>
                 <EditableRow label="Guarantor name" value={borrower.guarantor_name} field="guarantor_name" onSave={handleSaveField} />
                 <EditableRow label="Guarantor phone" value={borrower.guarantor_phone} field="guarantor_phone" onSave={handleSaveField} />
