@@ -30,7 +30,7 @@ function formatPhone(val) {
 }
 
 export default function BorrowerOnboarding({ borrowerId, onComplete }) {
-  const { user } = useUser();
+  useUser();
   const [fullName, setFullName] = useState('');
   const [loanId, setLoanId] = useState('');
   const [loanIdError, setLoanIdError] = useState('');
