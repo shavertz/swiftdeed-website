@@ -43,7 +43,7 @@ export default function BorrowerOnboarding({ borrowerId, onComplete }) {
   const [error, setError] = useState('');
   const [focused, setFocused] = useState(null);
 
-  const userEmail = user?.primaryEmailAddress?.emailAddress || '';
+  
   const hasGuarantor = guarantorName.trim() || guarantorPhone.trim() || guarantorEmail.trim();
 
   const isValid =
