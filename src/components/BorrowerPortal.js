@@ -6,9 +6,6 @@ const SUPABASE_ANON_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY;
 
 const s = {
   page: { background: '#0f0f0f', minHeight: '100vh', color: '#f0f0f0', fontFamily: 'inherit' },
-  alertBar: { background: '#1a1800', borderBottom: '0.5px solid #3a3000', padding: '10px 32px', display: 'flex', alignItems: 'center', gap: 10 },
-  alertDot: { width: 7, height: 7, borderRadius: '50%', background: '#D4A017', flexShrink: 0 },
-  alertText: { fontSize: 13, color: '#D4A017' },
   main: { padding: '28px 32px' },
   loanHeader: { marginBottom: 20 },
   loanLabel: { fontSize: 11, color: '#555', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 },
@@ -67,11 +64,86 @@ function fmtPct(v) {
   return parseFloat(v).toFixed(3) + '%';
 }
 
+function fmtDate(str) {
+  if (!str) return '—';
+  const d = new Date(str + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
 function formatPhone(val) {
   const digits = val.replace(/\D/g, '').slice(0, 10);
   if (digits.length <= 3) return digits;
   if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
   return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
+
+function getAlertConfig(daysUntil) {
+  if (daysUntil < 0) return {
+    bg: '#1a0000', border: '#3a0000', dot: '#ef4444', text: '#ef4444',
+    label: 'Overdue'
+  };
+  if (daysUntil === 0) return {
+    bg: '#1a0000', border: '#3a0000', dot: '#ef4444', text: '#ef4444',
+    label: '— due today.'
+  };
+  if (daysUntil <= 7) return {
+    bg: '#1a0d00', border: '#3a1a00', dot: '#f97316', text: '#f97316',
+    label: `— ${daysUntil} day${daysUntil !== 1 ? 's' : ''} away.`
+  };
+  return {
+    bg: '#1a1800', border: '#3a3000', dot: '#D4A017', text: '#D4A017',
+    label: `— ${daysUntil} day${daysUntil !== 1 ? 's' : ''} away.`
+  };
+}
+
+function DonutChart({ principal, interestPaid, original }) {
+  if (!original || original === 0) return null;
+
+  const principalPaid = Math.max(0, original - principal);
+  const remainingPct = Math.min(100, Math.max(0, (principal / original) * 100));
+  const principalPaidPct = Math.min(100, Math.max(0, (principalPaid / original) * 100));
+  const interestPct = Math.min(100, Math.max(0, (interestPaid / original) * 100));
+
+  const circumference = 2 * Math.PI * 75; // r=75
+
+  // Segments: remaining (dark), principal paid (blue), interest paid (gold)
+  const remainingDash = (remainingPct / 100) * circumference;
+  const principalDash = (principalPaidPct / 100) * circumference;
+  const interestDash = (interestPct / 100) * circumference;
+
+  const remainingOffset = 0;
+  const principalOffset = -(remainingDash);
+  const interestOffset = -(remainingDash + principalDash);
+
+  return (
+    <svg width="200" height="200" viewBox="0 0 200 200">
+      {/* Track */}
+      <circle cx="100" cy="100" r="75" fill="none" stroke="#1a1a1a" strokeWidth="22"/>
+      {/* Remaining balance */}
+      <circle cx="100" cy="100" r="75" fill="none" stroke="#2a2a2a" strokeWidth="22"
+        strokeDasharray={`${remainingDash} ${circumference - remainingDash}`}
+        strokeDashoffset={remainingOffset}
+        transform="rotate(-90 100 100)"/>
+      {/* Principal paid */}
+      {principalDash > 0 && (
+        <circle cx="100" cy="100" r="75" fill="none" stroke="#4a90b8" strokeWidth="22"
+          strokeDasharray={`${principalDash} ${circumference - principalDash}`}
+          strokeDashoffset={principalOffset}
+          transform="rotate(-90 100 100)"/>
+      )}
+      {/* Interest paid */}
+      {interestDash > 0 && (
+        <circle cx="100" cy="100" r="75" fill="none" stroke="#D4A017" strokeWidth="22"
+          strokeDasharray={`${interestDash} ${circumference - interestDash}`}
+          strokeDashoffset={interestOffset}
+          transform="rotate(-90 100 100)"/>
+      )}
+      <text x="100" y="94" textAnchor="middle" fontSize="13" fill="#555">Remaining</text>
+      <text x="100" y="114" textAnchor="middle" fontSize="18" fontWeight="500" fill="#fff">
+        {remainingPct.toFixed(1)}%
+      </text>
+    </svg>
+  );
 }
 
 function EditableRow({ label, value, field, onSave }) {
@@ -127,7 +199,7 @@ export default function BorrowerPortal({ onHome }) {
 
     if (token) {
       const res = await fetch(
-        `${SUPABASE_URL}/rest/v1/borrowers?verification_token=eq.${token}&limit=1`,
+        `${SUPABASE_URL}/rest/v1/borrowers?verification_token=eq.${token}&limit=1&select=*`,
         { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
       );
       const data = await res.json();
@@ -144,7 +216,7 @@ export default function BorrowerPortal({ onHome }) {
     }
 
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/borrowers?borrower_email=ilike.${encodeURIComponent(userEmail)}&limit=1`,
+      `${SUPABASE_URL}/rest/v1/borrowers?borrower_email=ilike.${encodeURIComponent(userEmail)}&limit=1&select=*`,
       { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
     );
     const data = await res.json();
@@ -167,18 +239,22 @@ export default function BorrowerPortal({ onHome }) {
   const email = user?.primaryEmailAddress?.emailAddress || '';
   const perDiem = borrower?.per_diem || 0;
   const today = new Date();
-  const nextPayment = borrower?.next_payment_date ? new Date(borrower.next_payment_date) : null;
+  const nextPayment = borrower?.next_payment_date ? new Date(borrower.next_payment_date + 'T00:00:00') : null;
   const daysUntil = nextPayment ? Math.ceil((nextPayment - today) / (1000 * 60 * 60 * 24)) : null;
   const docUrls = borrower?.loan_document_urls ? borrower.loan_document_urls.split(',').map(u => u.trim()).filter(Boolean) : [];
+  const showAlert = borrower && daysUntil !== null && daysUntil <= 14;
+  const alertConfig = daysUntil !== null ? getAlertConfig(daysUntil) : null;
 
   return (
     <div style={s.page}>
-      {borrower && daysUntil !== null && daysUntil <= 14 && (
-        <div style={s.alertBar}>
-          <div style={s.alertDot}></div>
-          <div style={s.alertText}>
-            Your next payment of <strong>{fmt$(borrower.last_payment_amount)}</strong> is due on <strong>{borrower.next_payment_date}</strong>
-            {daysUntil > 0 ? ` — ${daysUntil} day${daysUntil !== 1 ? 's' : ''} away.` : ' — due today.'}
+      {showAlert && alertConfig && (
+        <div style={{ background: alertConfig.bg, borderBottom: `0.5px solid ${alertConfig.border}`, padding: '10px 32px', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 7, height: 7, borderRadius: '50%', background: alertConfig.dot, flexShrink: 0 }}></div>
+          <div style={{ fontSize: 13, color: alertConfig.text }}>
+            {daysUntil < 0
+              ? <>Your payment of <strong>{fmt$(borrower.last_payment_amount)}</strong> was due on <strong>{fmtDate(borrower.next_payment_date)}</strong> — <strong>overdue.</strong></>
+              : <>Your next payment of <strong>{fmt$(borrower.last_payment_amount)}</strong> is due on <strong>{fmtDate(borrower.next_payment_date)}</strong> {alertConfig.label}</>
+            }
           </div>
         </div>
       )}
@@ -219,7 +295,7 @@ export default function BorrowerPortal({ onHome }) {
               </div>
               <div style={s.loanStat(false)}>
                 <div style={s.lsLabel}>Next payment</div>
-                <div style={s.lsVal}>{borrower.next_payment_date || '—'}</div>
+                <div style={s.lsVal}>{fmtDate(borrower.next_payment_date)}</div>
               </div>
               <div style={s.loanStat(true)}>
                 <div style={s.lsLabel}>Loan status</div>
@@ -236,7 +312,7 @@ export default function BorrowerPortal({ onHome }) {
                 <div style={s.cardBody}>
                   <div style={s.payTitle}>Amount due</div>
                   <div style={s.payBig}>{fmt$(borrower.last_payment_amount)}</div>
-                  <div style={s.payDue}>Due {borrower.next_payment_date || '—'} · Monthly payment</div>
+                  <div style={s.payDue}>Due {fmtDate(borrower.next_payment_date)} · Monthly payment</div>
                   <button
                     style={s.btnPay}
                     onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 0 16px rgba(255, 215, 0, 0.45)'; }}
@@ -252,11 +328,11 @@ export default function BorrowerPortal({ onHome }) {
                     <div style={s.statBox}>
                       <div style={s.sbLabel}>Last payment</div>
                       <div style={s.sbVal}>{fmt$(borrower.last_payment_amount)}</div>
-                      <div style={s.sbSub}>{borrower.last_payment_date || '—'}</div>
+                      <div style={s.sbSub}>{fmtDate(borrower.last_payment_date)}</div>
                     </div>
                     <div style={s.statBox}>
                       <div style={s.sbLabel}>Loan start</div>
-                      <div style={{ ...s.sbVal, fontSize: 13 }}>{borrower.loan_start_date || '—'}</div>
+                      <div style={{ ...s.sbVal, fontSize: 13 }}>{fmtDate(borrower.loan_start_date)}</div>
                     </div>
                   </div>
                   <div style={s.accrualBar}>
@@ -278,17 +354,25 @@ export default function BorrowerPortal({ onHome }) {
                 </div>
                 <div style={s.cardBody}>
                   <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
-                    <svg width="200" height="200" viewBox="0 0 200 200">
-                      <circle cx="100" cy="100" r="75" fill="none" stroke="#1a1a1a" strokeWidth="22"/>
-                      <circle cx="100" cy="100" r="75" fill="none" stroke="#2a2a2a" strokeWidth="22" strokeDasharray="471 0" transform="rotate(-90 100 100)"/>
-                      <text x="100" y="94" textAnchor="middle" fontSize="13" fill="#555">Remaining</text>
-                      <text x="100" y="114" textAnchor="middle" fontSize="18" fontWeight="500" fill="#fff">100%</text>
-                    </svg>
+                    <DonutChart
+                      principal={borrower.principal_balance}
+                      interestPaid={borrower.total_interest_paid || 0}
+                      original={borrower.original_loan_amount}
+                    />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#666' }}><div style={{ width: 9, height: 9, borderRadius: '50%', background: '#2a2a2a', flexShrink: 0 }}></div>Remaining balance</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#666' }}><div style={{ width: 9, height: 9, borderRadius: '50%', background: '#4a90b8', flexShrink: 0 }}></div>Principal paid</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#666' }}><div style={{ width: 9, height: 9, borderRadius: '50%', background: '#D4A017', flexShrink: 0 }}></div>Interest paid</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, color: '#666' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><div style={{ width: 9, height: 9, borderRadius: '50%', background: '#2a2a2a', flexShrink: 0 }}></div>Remaining balance</div>
+                      <span style={{ color: '#888' }}>{fmt$(borrower.principal_balance)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, color: '#666' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><div style={{ width: 9, height: 9, borderRadius: '50%', background: '#4a90b8', flexShrink: 0 }}></div>Principal paid</div>
+                      <span style={{ color: '#888' }}>{fmt$(borrower.original_loan_amount ? borrower.original_loan_amount - borrower.principal_balance : null)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, color: '#666' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><div style={{ width: 9, height: 9, borderRadius: '50%', background: '#D4A017', flexShrink: 0 }}></div>Interest paid</div>
+                      <span style={{ color: '#888' }}>{fmt$(borrower.total_interest_paid)}</span>
+                    </div>
                   </div>
                   <div style={s.statGrid}>
                     <div style={s.statBox}><div style={s.sbLabel}>Principal balance</div><div style={{ ...s.sbVal, color: '#D4A017' }}>{fmt$(borrower.principal_balance)}</div></div>
@@ -309,7 +393,7 @@ export default function BorrowerPortal({ onHome }) {
                     </div>
                     <div style={s.infoRow}>
                       <span style={s.irLabel}>Origination date</span>
-                      <span style={s.irVal}>{borrower.loan_start_date || '—'}</span>
+                      <span style={s.irVal}>{fmtDate(borrower.loan_start_date)}</span>
                     </div>
                     <div style={s.infoRow}>
                       <span style={s.irLabel}>Interest rate</span>
