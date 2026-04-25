@@ -111,6 +111,7 @@ const s = {
     textDecoration: 'none', transition: 'all 0.15s', marginTop: 4,
   },
   noPanel: { display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#333', fontSize: 13 },
+  liveLoading: { fontSize: 11, color: '#444', fontStyle: 'italic' },
 };
 
 export default function Portal({ onSubmitRequest }) {
@@ -123,6 +124,8 @@ export default function Portal({ onSubmitRequest }) {
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState(null);
   const [hoveredId, setHoveredId] = useState(null);
+  const [liveData, setLiveData] = useState(null);
+  const [liveLoading, setLiveLoading] = useState(false);
 
   const email = user?.primaryEmailAddress?.emailAddress;
 
@@ -137,7 +140,9 @@ export default function Portal({ onSubmitRequest }) {
         const data = await res.json();
         const rows = Array.isArray(data) ? data : [];
         setRequests(rows);
-        if (rows.length > 0) setSelected(rows[0]);
+        if (rows.length > 0) {
+          setSelected(rows[0]);
+        }
 
         const ids = rows.map(r => r.loan_id_internal).filter(Boolean);
         if (ids.length > 0) {
@@ -160,6 +165,31 @@ export default function Portal({ onSubmitRequest }) {
     }
     load();
   }, [email]);
+
+  // Fetch live borrower data whenever selected row changes
+  useEffect(() => {
+    if (!selected?.loan_id_internal) {
+      setLiveData(null);
+      return;
+    }
+    async function fetchLive() {
+      setLiveLoading(true);
+      try {
+        const res = await fetch(
+          `${SUPABASE_URL}/rest/v1/borrowers?loan_id_internal=eq.${encodeURIComponent(selected.loan_id_internal)}&limit=1`,
+          { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
+        );
+        const data = await res.json();
+        setLiveData(Array.isArray(data) && data.length > 0 ? data[0] : null);
+      } catch (e) {
+        console.error(e);
+        setLiveData(null);
+      } finally {
+        setLiveLoading(false);
+      }
+    }
+    fetchLive();
+  }, [selected]);
 
   const filtered = requests.filter(r => {
     const q = search.toLowerCase();
@@ -207,6 +237,18 @@ export default function Portal({ onSubmitRequest }) {
       background: isSelected ? '#1e1a00' : isHovered ? '#191500' : '#141414',
     };
   };
+
+  // Live fields — from borrowers table. Fall back to payoff_requests if no live data yet.
+  const live = liveData || {};
+  const balance = live.principal_balance != null ? live.principal_balance : selected?.total_due;
+  const rate = live.interest_rate != null ? live.interest_rate : selected?.interest_rate;
+  const perDiem = live.per_diem != null ? live.per_diem : selected?.per_diem;
+  const loanStart = live.loan_start_date || selected?.loan_start_date;
+  const maturity = live.maturity_date || selected?.maturity_date;
+  const paymentStatus = live.payment_status || selected?.payment_status;
+  const lastPaymentDate = live.last_payment_date || selected?.last_payment_date;
+  const nextPaymentDate = live.next_payment_date || selected?.next_payment_date;
+  const totalPaymentsMade = live.total_payments_made ?? selected?.total_payments_made;
 
   return (
     <div style={s.page}>
@@ -320,26 +362,28 @@ export default function Portal({ onSubmitRequest }) {
               </div>
 
               <div style={s.panelSection}>
-                <div style={s.panelSectionLabel}>Loan Details</div>
+                <div style={s.panelSectionLabel}>
+                  Loan Details {liveLoading && <span style={s.liveLoading}>updating...</span>}
+                </div>
                 <div style={s.panelRow}>
                   <span style={s.panelKey}>Balance</span>
-                  <span style={s.panelVal}>{formatCurrency(selected.total_due)}</span>
+                  <span style={s.panelVal}>{formatCurrency(balance)}</span>
                 </div>
                 <div style={s.panelRow}>
                   <span style={s.panelKey}>Rate</span>
-                  <span style={s.panelVal}>{selected.interest_rate ? selected.interest_rate + '%' : '—'}</span>
+                  <span style={s.panelVal}>{rate ? rate + '%' : '—'}</span>
                 </div>
                 <div style={s.panelRow}>
                   <span style={s.panelKey}>Per diem</span>
-                  <span style={s.panelVal}>{selected.per_diem ? formatCurrency(selected.per_diem) : '—'}</span>
+                  <span style={s.panelVal}>{perDiem ? formatCurrency(perDiem) : '—'}</span>
                 </div>
                 <div style={s.panelRow}>
                   <span style={s.panelKey}>Loan start date</span>
-                  <span style={s.panelVal}>{formatDate(selected.loan_start_date)}</span>
+                  <span style={s.panelVal}>{formatDate(loanStart)}</span>
                 </div>
                 <div style={s.panelRow}>
                   <span style={s.panelKey}>Maturity date</span>
-                  <span style={s.panelVal}>{formatDate(selected.maturity_date)}</span>
+                  <span style={s.panelVal}>{formatDate(maturity)}</span>
                 </div>
               </div>
 
@@ -347,23 +391,23 @@ export default function Portal({ onSubmitRequest }) {
                 <div style={s.panelSectionLabel}>Payment Info</div>
                 <div style={s.panelRow}>
                   <span style={s.panelKey}>Payment status</span>
-                  <span style={paymentStatusStyle(selected.payment_status)}>{selected.payment_status || '—'}</span>
+                  <span style={paymentStatusStyle(paymentStatus)}>{paymentStatus || '—'}</span>
                 </div>
                 <div style={s.panelRow}>
                   <span style={s.panelKey}>Last payment</span>
-                  <span style={s.panelVal}>{formatDate(selected.last_payment_date)}</span>
+                  <span style={s.panelVal}>{formatDate(lastPaymentDate)}</span>
                 </div>
                 <div style={s.panelRow}>
                   <span style={s.panelKey}>Next payment</span>
-                  <span style={s.panelVal}>{formatDate(selected.next_payment_date)}</span>
+                  <span style={s.panelVal}>{formatDate(nextPaymentDate)}</span>
                 </div>
                 <div style={s.panelRow}>
                   <span style={s.panelKey}>Days until next</span>
-                  <span style={s.panelVal}>{daysUntil(selected.next_payment_date)}</span>
+                  <span style={s.panelVal}>{daysUntil(nextPaymentDate)}</span>
                 </div>
                 <div style={s.panelRow}>
                   <span style={s.panelKey}>Total payments made</span>
-                  <span style={s.panelVal}>{selected.total_payments_made ?? '—'}</span>
+                  <span style={s.panelVal}>{totalPaymentsMade ?? '—'}</span>
                 </div>
               </div>
 
