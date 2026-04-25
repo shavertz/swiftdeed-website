@@ -91,15 +91,18 @@ export default function App() {
 
   async function routeByEmail(email) {
     try {
+      // Always check borrowers table first — if they're in there, they're a borrower, full stop
       const borrowerRes = await fetch(
         `${SUPABASE_URL}/rest/v1/borrowers?borrower_email=eq.${encodeURIComponent(email)}&select=id,phone,mailing_address&limit=1`,
         { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
       );
+
+      if (!borrowerRes.ok) throw new Error('Borrower fetch failed');
       const borrowerData = await borrowerRes.json();
 
       if (Array.isArray(borrowerData) && borrowerData.length > 0) {
-        setPortalType('borrower');
         const borrower = borrowerData[0];
+        setPortalType('borrower');
         if (!borrower.phone || !borrower.mailing_address) {
           setBorrowerOnboardingId(borrower.id);
           setPage('borrower-onboarding');
@@ -110,21 +113,25 @@ export default function App() {
         return;
       }
 
-      setPortalType('lender');
+      // Not a borrower — check lenders table
       const lenderRes = await fetch(
         `${SUPABASE_URL}/rest/v1/lenders?email=eq.${encodeURIComponent(email)}&select=id&limit=1`,
         { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
       );
+
+      if (!lenderRes.ok) throw new Error('Lender fetch failed');
       const lenderData = await lenderRes.json();
 
+      setPortalType('lender');
       if (Array.isArray(lenderData) && lenderData.length > 0) {
         setPage('choice');
       } else {
         setPage('onboarding');
       }
-    } catch {
-      setPortalType('lender');
-      setPage('choice');
+    } catch (err) {
+      console.error('Routing error:', err);
+      // On error, show a safe error page rather than silently routing to wrong place
+      setPage('routing-error');
     }
     setLoading(false);
   }
@@ -434,6 +441,19 @@ export default function App() {
             <button
               onClick={handleLogout}
               style={{ marginTop: 24, background: '#FFD700', color: '#0f0f0f', fontSize: 14, fontWeight: 500, padding: '10px 24px', borderRadius: 7, border: 'none', cursor: 'pointer', transition: 'background 0.15s' }}
+              {...hov.solid}
+            >Log out</button>
+          </div>
+        </div>
+      )}
+      {page === 'routing-error' && (
+        <div style={{ minHeight: 'calc(100vh - 65px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40 }}>
+          <div style={{ textAlign: 'center', maxWidth: 440 }}>
+            <div style={{ fontSize: 20, fontWeight: 500, color: '#fff', marginBottom: 12 }}>Something went wrong</div>
+            <div style={{ fontSize: 14, color: '#555', lineHeight: 1.7, marginBottom: 24 }}>We had trouble loading your account. Please try logging out and back in. If the issue continues, contact support.</div>
+            <button
+              onClick={handleLogout}
+              style={{ background: '#FFD700', color: '#0f0f0f', fontSize: 14, fontWeight: 500, padding: '10px 24px', borderRadius: 7, border: 'none', cursor: 'pointer', transition: 'background 0.15s' }}
               {...hov.solid}
             >Log out</button>
           </div>
