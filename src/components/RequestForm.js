@@ -22,7 +22,7 @@ function PaymentForm({ turnaround, form, files, onSuccess }) {
   const [error, setError] = useState('');
 
   const handleSubmit = async (skipPayment = false) => {
-    if (!form.name || !form.email || !form.company || !form.phone) {
+    if (!form.name || !form.email || !form.company || !form.phone || !form.borrowerName || !form.borrowerEmail) {
       setError('Please fill in all required fields.');
       return;
     }
@@ -233,11 +233,11 @@ export default function RequestForm() {
           <div style={s.field}><div style={s.label}>Company / Lender name <span style={s.req}>*</span></div><input style={s.input} value={form.company} onChange={set('company')} placeholder="Acme Lending LLC" /></div>
           <div style={s.field}><div style={s.label}>Phone number <span style={s.req}>*</span></div><input style={s.input} value={form.phone} onChange={handlePhoneChange} placeholder="(555) 000-0000" /></div>
           <div style={s.field}>
-            <div style={s.label}>Borrower name <span style={s.opt}>optional</span></div>
-            <input style={s.input} value={form.borrowerName} onChange={set('borrowerName')} placeholder="John Martinez" />
+            <div style={s.label}>Borrower name (individual or entity) <span style={s.req}>*</span></div>
+            <input style={s.input} value={form.borrowerName} onChange={set('borrowerName')} placeholder="John Martinez or Acme LLC" />
           </div>
           <div style={s.field}>
-            <div style={s.label}>Borrower email <span style={s.opt}>optional</span></div>
+            <div style={s.label}>Borrower email <span style={s.req}>*</span></div>
             <input style={s.input} type="email" value={form.borrowerEmail} onChange={set('borrowerEmail')} placeholder="borrower@email.com" />
             <div style={{ fontSize: 11, color: '#444', marginTop: 3 }}>We'll send the borrower an activation link for their portal</div>
           </div>
