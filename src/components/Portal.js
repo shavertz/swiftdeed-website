@@ -71,8 +71,8 @@ const s = {
     padding: '14px 20px', borderBottom: '0.5px solid #1a1a1a',
     alignItems: 'center', fontSize: 12, cursor: 'pointer',
     background: selected ? '#1e1a00' : '#141414',
-    outline: selected ? '1px solid #FFD700' : '1px solid transparent',
-    transition: 'all 0.1s',
+    borderLeft: selected ? '3px solid #FFD700' : '3px solid transparent',
+    transition: 'background 0.1s',
   }),
   grey: { color: '#555' },
   badge: (color) => ({
@@ -122,6 +122,7 @@ export default function Portal({ onSubmitRequest }) {
   const [sort, setSort] = useState('newest');
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState(null);
+  const [hoveredId, setHoveredId] = useState(null);
 
   const email = user?.primaryEmailAddress?.emailAddress;
 
@@ -198,6 +199,15 @@ export default function Portal({ onSubmitRequest }) {
     ? (borrowerEmails[selected.loan_id_internal] || selected.borrower_email || '—')
     : '—';
 
+  const getRowStyle = (r) => {
+    const isSelected = selected?.id === r.id;
+    const isHovered = hoveredId === r.id && !isSelected;
+    return {
+      ...s.trow(isSelected),
+      background: isSelected ? '#1e1a00' : isHovered ? '#191500' : '#141414',
+    };
+  };
+
   return (
     <div style={s.page}>
       <div style={s.heading}>My Loans</div>
@@ -259,25 +269,13 @@ export default function Portal({ onSubmitRequest }) {
 
           {!loading && paginated.map(r => {
             const isCompleted = r.status?.toLowerCase() === 'completed';
-            const isSelected = selected?.id === r.id;
             return (
               <div
                 key={r.id}
-                style={s.trow(isSelected)}
+                style={getRowStyle(r)}
                 onClick={() => setSelected(r)}
-                onMouseEnter={e => {
-                  if (!isSelected) {
-                    e.currentTarget.style.background = '#191500';
-                    e.currentTarget.style.border = '1px solid #3a3000';
-                  }
-                }}
-                onMouseLeave={e => {
-                  if (!isSelected) {
-                    e.currentTarget.style.background = '#141414';
-                    e.currentTarget.style.border = '1px solid transparent';
-                    e.currentTarget.style.borderBottom = '0.5px solid #1a1a1a';
-                  }
-                }}
+                onMouseEnter={() => setHoveredId(r.id)}
+                onMouseLeave={() => setHoveredId(null)}
               >
                 <span style={s.grey}>{formatDate(r.created_at)}</span>
                 <span style={s.grey}>{r.loan_id_internal || r.loan_id || '—'}</span>
