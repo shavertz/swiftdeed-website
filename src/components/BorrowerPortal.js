@@ -61,7 +61,8 @@ function fmt$(v) {
 
 function fmtPct(v) {
   if (v == null) return '—';
-  return parseFloat(v).toFixed(3) + '%';
+  const n = parseFloat(v);
+  return (n % 1 === 0 ? n.toFixed(0) : n % 0.1 === 0 ? n.toFixed(1) : n.toFixed(3)) + '%';
 }
 
 function fmtDate(str) {
@@ -437,7 +438,7 @@ export default function BorrowerPortal({ onHome }) {
                     {docUrls.length === 0 ? (
                       <div style={{ fontSize: 13, color: '#555', textAlign: 'center', padding: '20px 0' }}>No documents available yet</div>
                     ) : docUrls.map((url, i) => {
-                      const name = url.split('/').pop().replace(/^\d+_/, '').replace(/-/g, ' ').replace('.pdf', '');
+                      const name = url.split('/').pop().replace(/^\d+_/, '').replace(/[-_]/g, ' ').replace('.pdf', '').replace(/\s+/g, ' ').trim();
                       return (
                         <div key={i} style={{ ...s.stmtRow, borderBottom: i === docUrls.length - 1 ? 'none' : '0.5px solid #1a1a1a' }}>
                           <div style={s.stmtInfo}>
