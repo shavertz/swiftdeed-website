@@ -5,16 +5,13 @@
  *
  * Supports: interest_only, amortizing
  * Future: partial_amortization, interest_reserve, pik, step_rate
+ *
+ * Partial payment logic:
+ *   - Payment >= full amount owed → normal flow, dates roll forward
+ *   - Payment < interest owed → unpaid interest added to principal (negative amortization),
+ *     next payment date does NOT roll forward, status flips to Late
  */
 
-/**
- * Calculate the result of processing a payment on a loan.
- *
- * @param {Object} loan - The borrowers row from Supabase
- * @param {string} paymentDate - ISO date string of when payment was initiated (YYYY-MM-DD)
- * @param {number|null} paymentAmount - Override amount (for balloon/partial). If null, uses monthly_payment.
- * @returns {Object} result - Full breakdown + updated fields to write back to Supabase
- */
 export function calculatePayment(loan, paymentDate, paymentAmount = null) {
   const {
     loan_type,
@@ -24,6 +21,7 @@ export function calculatePayment(loan, paymentDate, paymentAmount = null) {
     total_interest_paid,
     total_payments_made,
     last_payment_date,
+    next_payment_date,
     maturity_date,
     day_count_convention,
   } = loan;
@@ -44,68 +42,110 @@ export function calculatePayment(loan, paymentDate, paymentAmount = null) {
 
   // ── 3. Detect balloon payment (final payment) ───────────────────────────────
   const matDate = new Date(maturity_date);
-  const nextMonth = new Date(initDate);
-  nextMonth.setMonth(nextMonth.getMonth() + 1);
   const daysToMaturity = Math.round((matDate - initDate) / msPerDay);
   const isBalloon = daysToMaturity <= 30;
 
-  // ── 4. Calculate split based on loan type ───────────────────────────────────
-  let interestPortion = 0;
-  let principalPortion = 0;
+  // ── 4. Calculate full amounts owed ───────────────────────────────────────────
+  let interestOwed = 0;
+  let principalOwed = 0;
   let expectedPayment = 0;
 
   if (loan_type === 'interest_only') {
-    interestPortion = parseFloat((effectivePerDiem * daysElapsed).toFixed(2));
-    principalPortion = isBalloon ? parseFloat(principal_balance.toFixed(2)) : 0;
-    expectedPayment = parseFloat((interestPortion + principalPortion).toFixed(2));
+    interestOwed = parseFloat((effectivePerDiem * daysElapsed).toFixed(2));
+    principalOwed = isBalloon ? parseFloat(principal_balance.toFixed(2)) : 0;
+    expectedPayment = parseFloat((interestOwed + principalOwed).toFixed(2));
 
   } else if (loan_type === 'amortizing') {
-    interestPortion = parseFloat(((principal_balance * (interest_rate / 100)) / 12).toFixed(2));
-    principalPortion = parseFloat((monthly_payment - interestPortion).toFixed(2));
-    // On final payment, pay whatever principal remains
-    if (isBalloon) principalPortion = parseFloat(principal_balance.toFixed(2));
-    expectedPayment = parseFloat((interestPortion + principalPortion).toFixed(2));
+    interestOwed = parseFloat(((principal_balance * (interest_rate / 100)) / 12).toFixed(2));
+    principalOwed = parseFloat((monthly_payment - interestOwed).toFixed(2));
+    if (isBalloon) principalOwed = parseFloat(principal_balance.toFixed(2));
+    expectedPayment = parseFloat((interestOwed + principalOwed).toFixed(2));
 
   } else {
     return { error: `Loan type "${loan_type}" is not yet supported in calculatePayment.` };
   }
 
-  // ── 5. Actual payment amount (override for manual/partial) ──────────────────
+  // ── 5. Actual payment amount ─────────────────────────────────────────────────
   const actualPayment = paymentAmount !== null
-    ? parseFloat(paymentAmount.toFixed(2))
+    ? parseFloat(parseFloat(paymentAmount).toFixed(2))
     : expectedPayment;
 
-  // ── 6. New balances ─────────────────────────────────────────────────────────
-  const newPrincipalBalance = parseFloat(Math.max(0, principal_balance - principalPortion).toFixed(2));
+  // ── 6. Partial payment detection ─────────────────────────────────────────────
+  const isPartial = actualPayment < expectedPayment;
+
+  // How much of the actual payment went to interest vs principal
+  let interestPortion = 0;
+  let principalPortion = 0;
+
+  if (!isPartial) {
+    // Full or overpayment — normal split
+    interestPortion = interestOwed;
+    principalPortion = principalOwed;
+  } else if (actualPayment <= interestOwed) {
+    // Partial — doesn't even cover full interest
+    interestPortion = actualPayment;
+    principalPortion = 0;
+  } else {
+    // Partial — covers interest but not all principal
+    interestPortion = interestOwed;
+    principalPortion = parseFloat((actualPayment - interestOwed).toFixed(2));
+  }
+
+  // Unpaid interest gets added to principal (negative amortization)
+  const unpaidInterest = parseFloat(Math.max(0, interestOwed - interestPortion).toFixed(2));
+
+  // ── 7. New balances ──────────────────────────────────────────────────────────
+  const newPrincipalBalance = parseFloat(
+    Math.max(0, principal_balance - principalPortion + unpaidInterest).toFixed(2)
+  );
   const newTotalInterestPaid = parseFloat((total_interest_paid + interestPortion).toFixed(2));
   const newTotalPaymentsMade = total_payments_made + 1;
 
-  // ── 7. Next payment date (1 month forward from initiation date) ─────────────
-  const nextPaymentDate = new Date(initDate);
-  nextPaymentDate.setMonth(nextPaymentDate.getMonth() + 1);
-  const nextPaymentDateStr = nextPaymentDate.toISOString().split('T')[0];
+  // ── 8. Next payment date ─────────────────────────────────────────────────────
+  // Partial: keep existing next_payment_date — borrower still delinquent
+  // Full: roll forward 1 month from initiation date
+  let nextPaymentDateStr;
+  if (isPartial) {
+    nextPaymentDateStr = next_payment_date || paymentDate;
+  } else {
+    const nextDate = new Date(initDate);
+    nextDate.setMonth(nextDate.getMonth() + 1);
+    nextPaymentDateStr = nextDate.toISOString().split('T')[0];
+  }
 
-  // ── 8. Status update ────────────────────────────────────────────────────────
+  // ── 9. Status update ─────────────────────────────────────────────────────────
   const isPaidOff = newPrincipalBalance === 0 && (isBalloon || loan_type === 'amortizing');
-  const newPaymentStatus = isPaidOff ? 'Paid Off' : 'Current';
-  const newStatus = isPaidOff ? 'paid_off' : 'active';
+  let newPaymentStatus;
+  let newStatus;
 
-  // ── 9. Return full breakdown + Supabase fields ──────────────────────────────
+  if (isPaidOff) {
+    newPaymentStatus = 'Paid Off';
+    newStatus = 'paid_off';
+  } else if (isPartial) {
+    newPaymentStatus = 'Late';
+    newStatus = 'active';
+  } else {
+    newPaymentStatus = 'Current';
+    newStatus = 'active';
+  }
+
+  // ── 10. Return full breakdown + Supabase fields ──────────────────────────────
   return {
-    // Human-readable breakdown (for test UI display)
     breakdown: {
       daysElapsed,
       effectivePerDiem,
+      interestOwed,
+      principalOwed,
       interestPortion,
       principalPortion,
       expectedPayment,
       actualPayment,
+      unpaidInterest,
+      isPartial,
       isBalloon,
       isPaidOff,
       daysToMaturity,
     },
-
-    // Exact fields to write back to Supabase
     updates: {
       principal_balance: newPrincipalBalance,
       total_interest_paid: newTotalInterestPaid,

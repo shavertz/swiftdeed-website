@@ -170,7 +170,7 @@ export default function PaymentTest() {
               onChange={e => { setOverrideAmount(e.target.value); setResult(null); setWriteSuccess(false); }}
               style={s.input}
             />
-            <div style={{ fontSize: 12, color: '#555', marginTop: 6 }}>Leave blank for standard monthly payment</div>
+            <div style={{ fontSize: 12, color: '#555', marginTop: 6 }}>Leave blank for standard monthly payment. Enter less to test partial payment.</div>
           </div>
         </div>
         <div style={s.row}>
@@ -188,7 +188,20 @@ export default function PaymentTest() {
             Calculation Breakdown
             {breakdown.isBalloon && <span style={{ ...s.tag('red'), marginLeft: 12 }}>BALLOON PAYMENT</span>}
             {breakdown.isPaidOff && <span style={{ ...s.tag('green'), marginLeft: 12 }}>LOAN PAID OFF</span>}
+            {breakdown.isPartial && <span style={{ ...s.tag('red'), marginLeft: 12 }}>PARTIAL PAYMENT</span>}
           </div>
+
+          {/* Partial payment warning */}
+          {breakdown.isPartial && (
+            <div style={{ background: '#2e0d0d', border: '0.5px solid #e74c3c', borderRadius: 8, padding: '12px 16px', marginBottom: 16 }}>
+              <div style={{ fontSize: 13, color: '#e74c3c', fontWeight: 600, marginBottom: 4 }}>⚠ Partial Payment — Negative Amortization</div>
+              <div style={{ fontSize: 13, color: '#aaa', lineHeight: 1.6 }}>
+                Payment of {fmt$(breakdown.actualPayment)} is less than the {fmt$(breakdown.expectedPayment)} owed.
+                Unpaid interest of {fmt$(breakdown.unpaidInterest)} will be added to the principal balance.
+                Next payment date will NOT roll forward. Status will flip to Late.
+              </div>
+            </div>
+          )}
 
           {/* Math breakdown */}
           <div style={{ marginBottom: 20 }}>
@@ -201,16 +214,30 @@ export default function PaymentTest() {
               <span style={{ fontSize: 15, fontWeight: 600 }}>{fmt$(breakdown.effectivePerDiem)}/day</span>
             </div>
             <div style={s.resultRow}>
-              <span style={{ color: '#aaa', fontSize: 14 }}>Interest portion ({breakdown.daysElapsed} days × {fmt$(breakdown.effectivePerDiem)})</span>
+              <span style={{ color: '#aaa', fontSize: 14 }}>Full interest owed ({breakdown.daysElapsed} days × {fmt$(breakdown.effectivePerDiem)})</span>
+              <span style={{ fontSize: 15, fontWeight: 600, color: '#e67e22' }}>{fmt$(breakdown.interestOwed)}</span>
+            </div>
+            <div style={s.resultRow}>
+              <span style={{ color: '#aaa', fontSize: 14 }}>Interest covered by this payment</span>
               <span style={{ fontSize: 15, fontWeight: 600, color: '#e67e22' }}>{fmt$(breakdown.interestPortion)}</span>
             </div>
+            {breakdown.unpaidInterest > 0 && (
+              <div style={s.resultRow}>
+                <span style={{ color: '#e74c3c', fontSize: 14 }}>Unpaid interest → added to principal balance</span>
+                <span style={{ fontSize: 15, fontWeight: 600, color: '#e74c3c' }}>+{fmt$(breakdown.unpaidInterest)}</span>
+              </div>
+            )}
             <div style={s.resultRow}>
               <span style={{ color: '#aaa', fontSize: 14 }}>Principal portion</span>
               <span style={{ fontSize: 15, fontWeight: 600, color: '#3498db' }}>{fmt$(breakdown.principalPortion)}</span>
             </div>
+            <div style={s.resultRow}>
+              <span style={{ color: '#aaa', fontSize: 14 }}>Full amount owed</span>
+              <span style={{ fontSize: 15, fontWeight: 600 }}>{fmt$(breakdown.expectedPayment)}</span>
+            </div>
             <div style={{ ...s.resultRow, borderBottom: 'none' }}>
-              <span style={{ color: '#fff', fontSize: 15, fontWeight: 600 }}>Total payment</span>
-              <span style={{ fontSize: 18, fontWeight: 700, color: '#FFD700' }}>{fmt$(breakdown.actualPayment)}</span>
+              <span style={{ color: '#fff', fontSize: 15, fontWeight: 600 }}>Actual payment received</span>
+              <span style={{ fontSize: 18, fontWeight: 700, color: breakdown.isPartial ? '#e74c3c' : '#FFD700' }}>{fmt$(breakdown.actualPayment)}</span>
             </div>
           </div>
 
@@ -232,7 +259,7 @@ export default function PaymentTest() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   <span style={{ fontSize: 13, color: '#555' }}>{raw ? oldVal : fmt$(oldVal)}</span>
                   <span style={s.arrow}>→</span>
-                  <span style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>{raw ? newVal : fmt$(newVal)}</span>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: breakdown.isPartial && label === 'Payment Status' ? '#e74c3c' : breakdown.isPartial && label === 'Principal Balance' && updates.principal_balance > loan.principal_balance ? '#e74c3c' : '#fff' }}>{raw ? newVal : fmt$(newVal)}</span>
                 </div>
               </div>
             ))}
