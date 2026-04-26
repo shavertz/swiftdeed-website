@@ -8,6 +8,7 @@ import BorrowerOnboarding from './components/BorrowerOnboarding';
 import LenderOnboarding from './components/LenderOnboarding';
 import TermsPage from './components/TermsPage';
 import PrivacyPage from './components/PrivacyPage';
+import PaymentTest from './components/PaymentTest';
 
 const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY;
@@ -91,7 +92,6 @@ export default function App() {
 
   async function routeByEmail(email) {
     try {
-      // Always check borrowers table first — if they're in there, they're a borrower, full stop
       const borrowerRes = await fetch(
         `${SUPABASE_URL}/rest/v1/borrowers?borrower_email=eq.${encodeURIComponent(email)}&select=id,phone,mailing_address&limit=1`,
         { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
@@ -113,7 +113,6 @@ export default function App() {
         return;
       }
 
-      // Not a borrower — check lenders table
       const lenderRes = await fetch(
         `${SUPABASE_URL}/rest/v1/lenders?email=eq.${encodeURIComponent(email)}&select=id&limit=1`,
         { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
@@ -130,7 +129,6 @@ export default function App() {
       }
     } catch (err) {
       console.error('Routing error:', err);
-      // On error, show a safe error page rather than silently routing to wrong place
       setPage('routing-error');
     }
     setLoading(false);
@@ -249,11 +247,17 @@ export default function App() {
                 {...hov.solid}
               >My loan</button>
             ) : (
-              <button
-                onClick={() => setPage('portal')}
-                style={{ background: '#FFD700', color: '#0f0f0f', fontSize: 14, fontWeight: 500, padding: '8px 18px', borderRadius: 6, border: 'none', cursor: 'pointer', transition: 'background 0.15s' }}
-                {...hov.solid}
-              >My loans</button>
+              <>
+                <button
+                  onClick={() => setPage('portal')}
+                  style={{ background: '#FFD700', color: '#0f0f0f', fontSize: 14, fontWeight: 500, padding: '8px 18px', borderRadius: 6, border: 'none', cursor: 'pointer', transition: 'background 0.15s' }}
+                  {...hov.solid}
+                >My loans</button>
+                <button
+                  onClick={() => setPage('payment-test')}
+                  style={{ background: 'transparent', color: '#555', fontSize: 12, padding: '6px 12px', borderRadius: 6, border: '0.5px solid #2a2a2a', cursor: 'pointer' }}
+                >⚡ Test</button>
+              </>
             )}
             <button
               onClick={handleLogout}
@@ -463,6 +467,7 @@ export default function App() {
       {page === 'onboarding' && <LenderOnboarding onComplete={() => { setPortalType('lender'); setPage('choice'); }} />}
       {page === 'terms' && <TermsPage onHome={() => setPage('home')} />}
       {page === 'privacy' && <PrivacyPage onHome={() => setPage('home')} />}
+      {page === 'payment-test' && <PaymentTest />}
     </div>
   );
 }
