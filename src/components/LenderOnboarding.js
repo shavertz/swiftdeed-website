@@ -21,6 +21,9 @@ const s = {
   topLabel: { fontSize: 12, color: '#4a90b8', letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: 10 },
   title: { fontSize: 24, fontWeight: 500, color: '#fff', marginBottom: 8 },
   sub: { fontSize: 14, color: '#555', lineHeight: 1.6, marginBottom: 32 },
+  sectionDivider: { borderTop: '0.5px solid #2a2a2a', marginTop: 8, marginBottom: 24, paddingTop: 24 },
+  sectionTitle: { fontSize: 13, color: '#fff', fontWeight: 500, marginBottom: 4 },
+  sectionSub: { fontSize: 12, color: '#555', lineHeight: 1.6, marginBottom: 20 },
   fieldLabel: { fontSize: 12, color: '#888', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 7, display: 'block' },
   input: { width: '100%', background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 7, padding: '11px 14px', fontSize: 14, color: '#fff', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box', marginBottom: 18 },
   inputFocus: { border: '0.5px solid #D4A017' },
@@ -32,6 +35,7 @@ const s = {
   btn: { width: '100%', background: '#FFD700', color: '#0f0f0f', border: 'none', borderRadius: 7, padding: 13, fontSize: 15, fontWeight: 500, cursor: 'pointer' },
   btnDisabled: { width: '100%', background: '#3a3000', color: '#888', border: 'none', borderRadius: 7, padding: 13, fontSize: 15, fontWeight: 500, cursor: 'not-allowed' },
   errorMsg: { fontSize: 13, color: '#c0392b', background: '#1a0a0a', border: '0.5px solid #3a1010', borderRadius: 7, padding: '10px 14px', marginBottom: 16 },
+  optionalTag: { fontSize: 11, color: '#444', marginLeft: 6, textTransform: 'none', letterSpacing: 0 },
 };
 
 export default function LenderOnboarding({ onComplete }) {
@@ -45,6 +49,13 @@ export default function LenderOnboarding({ onComplete }) {
   const [error, setError] = useState('');
   const [focused, setFocused] = useState(null);
 
+  // Wire detail fields
+  const [wireBankName, setWireBankName] = useState('');
+  const [wireRoutingNumber, setWireRoutingNumber] = useState('');
+  const [wireAccountNumber, setWireAccountNumber] = useState('');
+  const [wireAccountName, setWireAccountName] = useState('');
+  const [wireBankAddress, setWireBankAddress] = useState('');
+
   function formatPhone(val) {
     const digits = val.replace(/\D/g, '').slice(0, 10);
     if (digits.length <= 3) return digits;
@@ -52,7 +63,8 @@ export default function LenderOnboarding({ onComplete }) {
     return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
   }
 
-  const isValid = fullName.trim() && companyName.trim() && phone.trim() && state && agreed;
+  const isValid = fullName.trim() && companyName.trim() && phone.trim() && state && agreed &&
+    wireBankName.trim() && wireRoutingNumber.trim() && wireAccountNumber.trim() && wireAccountName.trim();
 
   async function handleSubmit() {
     if (!isValid) return;
@@ -77,6 +89,11 @@ export default function LenderOnboarding({ onComplete }) {
           phone: phone.trim(),
           state,
           agreed_to_terms: true,
+          wire_bank_name: wireBankName.trim(),
+          wire_routing_number: wireRoutingNumber.trim(),
+          wire_account_number: wireAccountNumber.trim(),
+          wire_account_name: wireAccountName.trim(),
+          wire_bank_address: wireBankAddress.trim() || null,
         }),
       });
 
@@ -141,6 +158,66 @@ export default function LenderOnboarding({ onComplete }) {
           <option value="">Select a state...</option>
           {US_STATES.map(st => <option key={st} value={st}>{st}</option>)}
         </select>
+
+        {/* Wire Details Section */}
+        <div style={s.sectionDivider}>
+          <div style={s.sectionTitle}>Wire receiving details</div>
+          <div style={s.sectionSub}>This is where borrowers will wire payments to you. It will appear on all payoff statements automatically.</div>
+        </div>
+
+        <label style={s.fieldLabel}>Bank name</label>
+        <input
+          style={{ ...s.input, ...(focused === 'wireBankName' ? s.inputFocus : {}) }}
+          placeholder="e.g. JPMorgan Chase"
+          value={wireBankName}
+          onChange={e => setWireBankName(e.target.value)}
+          onFocus={() => setFocused('wireBankName')}
+          onBlur={() => setFocused(null)}
+        />
+
+        <label style={s.fieldLabel}>Routing number</label>
+        <input
+          style={{ ...s.input, ...(focused === 'wireRouting' ? s.inputFocus : {}) }}
+          placeholder="9-digit routing number"
+          value={wireRoutingNumber}
+          onChange={e => setWireRoutingNumber(e.target.value.replace(/\D/g, '').slice(0, 9))}
+          onFocus={() => setFocused('wireRouting')}
+          onBlur={() => setFocused(null)}
+          maxLength={9}
+        />
+
+        <label style={s.fieldLabel}>Account number</label>
+        <input
+          style={{ ...s.input, ...(focused === 'wireAccount' ? s.inputFocus : {}) }}
+          placeholder="Account number"
+          value={wireAccountNumber}
+          onChange={e => setWireAccountNumber(e.target.value)}
+          onFocus={() => setFocused('wireAccount')}
+          onBlur={() => setFocused(null)}
+        />
+
+        <label style={s.fieldLabel}>Account name</label>
+        <input
+          style={{ ...s.input, ...(focused === 'wireAccountName' ? s.inputFocus : {}) }}
+          placeholder="Name on account"
+          value={wireAccountName}
+          onChange={e => setWireAccountName(e.target.value)}
+          onFocus={() => setFocused('wireAccountName')}
+          onBlur={() => setFocused(null)}
+        />
+
+        <label style={s.fieldLabel}>
+          Bank address
+          <span style={s.optionalTag}>optional</span>
+        </label>
+        <input
+          style={{ ...s.input, ...(focused === 'wireBankAddress' ? s.inputFocus : {}) }}
+          placeholder="Bank branch address"
+          value={wireBankAddress}
+          onChange={e => setWireBankAddress(e.target.value)}
+          onFocus={() => setFocused('wireBankAddress')}
+          onBlur={() => setFocused(null)}
+        />
 
         <div style={s.termsRow}>
           <input
