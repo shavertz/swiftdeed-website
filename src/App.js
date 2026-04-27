@@ -9,6 +9,7 @@ import LenderOnboarding from './components/LenderOnboarding';
 import TermsPage from './components/TermsPage';
 import PrivacyPage from './components/PrivacyPage';
 import PaymentTest from './components/PaymentTest';
+import ProfilePage from './components/ProfilePage';
 
 const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY;
@@ -59,6 +60,13 @@ const LenderIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFD700" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
     <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
     <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+  </svg>
+);
+
+const ProfileIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+    <circle cx="12" cy="7" r="4"/>
   </svg>
 );
 
@@ -239,7 +247,6 @@ export default function App() {
       <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
         {isSignedIn ? (
           <>
-            <span style={{ fontSize: 13, color: '#aaa' }}>{user.primaryEmailAddress?.emailAddress}</span>
             {portalType === 'borrower' ? (
               <button
                 onClick={() => routeByEmail(user.primaryEmailAddress?.emailAddress)}
@@ -253,6 +260,13 @@ export default function App() {
                   style={{ background: '#FFD700', color: '#0f0f0f', fontSize: 14, fontWeight: 500, padding: '8px 18px', borderRadius: 6, border: 'none', cursor: 'pointer', transition: 'background 0.15s' }}
                   {...hov.solid}
                 >My loans</button>
+                <button
+                  onClick={() => setPage('profile')}
+                  title="Profile"
+                  style={{ background: 'transparent', color: '#aaa', fontSize: 14, padding: '7px 10px', borderRadius: 6, border: '0.5px solid #2a2a2a', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = '#FFD700'; e.currentTarget.style.color = '#FFD700'; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = '#2a2a2a'; e.currentTarget.style.color = '#aaa'; }}
+                ><ProfileIcon /></button>
                 <button
                   onClick={() => setPage('payment-test')}
                   style={{ background: 'transparent', color: '#555', fontSize: 12, padding: '6px 12px', borderRadius: 6, border: '0.5px solid #2a2a2a', cursor: 'pointer' }}
@@ -422,6 +436,7 @@ export default function App() {
       {page === 'auth' && (ACTIVATION_TOKEN ? activationAuthPage : standardAuthPage)}
       {page === 'request' && <RequestForm />}
       {page === 'portal' && <Portal onSubmitRequest={() => setPage('request')} />}
+      {page === 'profile' && <ProfilePage onBack={() => setPage('portal')} />}
       {page === 'borrower-portal' && <BorrowerPortal onHome={() => setPage('home')} />}
       {page === 'borrower-onboarding' && (
         <BorrowerOnboarding
