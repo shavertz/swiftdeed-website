@@ -114,6 +114,223 @@ const s = {
   liveLoading: { fontSize: 11, color: '#444', fontStyle: 'italic' },
 };
 
+function WireDetailsSection({ lenderEmail }) {
+  const [wireData, setWireData] = useState(null);
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [form, setForm] = useState({
+    wire_bank_name: '',
+    wire_routing_number: '',
+    wire_account_number: '',
+    wire_account_name: '',
+    wire_bank_address: '',
+  });
+
+  useEffect(() => {
+    if (!lenderEmail) return;
+    async function fetchWire() {
+      try {
+        const res = await fetch(
+          `${SUPABASE_URL}/rest/v1/lenders?email=eq.${encodeURIComponent(lenderEmail)}&select=wire_bank_name,wire_routing_number,wire_account_number,wire_account_name,wire_bank_address&limit=1`,
+          { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
+        );
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          setWireData(data[0]);
+          setForm({
+            wire_bank_name: data[0].wire_bank_name || '',
+            wire_routing_number: data[0].wire_routing_number || '',
+            wire_account_number: data[0].wire_account_number || '',
+            wire_account_name: data[0].wire_account_name || '',
+            wire_bank_address: data[0].wire_bank_address || '',
+          });
+        }
+      } catch (e) {
+        console.error('Wire fetch error:', e);
+      }
+    }
+    fetchWire();
+  }, [lenderEmail]);
+
+  const hasWireData = wireData &&
+    wireData.wire_bank_name &&
+    wireData.wire_routing_number &&
+    wireData.wire_account_number;
+
+  async function handleSave() {
+    setSaving(true);
+    setSaveError('');
+    setSaveSuccess(false);
+    try {
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/lenders?email=eq.${encodeURIComponent(lenderEmail)}`,
+        {
+          method: 'PATCH',
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            Prefer: 'return=representation',
+          },
+          body: JSON.stringify(form),
+        }
+      );
+      if (!res.ok) throw new Error('Save failed');
+      const updated = await res.json();
+      if (Array.isArray(updated) && updated.length > 0) {
+        setWireData(updated[0]);
+      } else {
+        setWireData({ ...form });
+      }
+      setEditing(false);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (e) {
+      setSaveError('Failed to save. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function handleCancel() {
+    setForm({
+      wire_bank_name: wireData?.wire_bank_name || '',
+      wire_routing_number: wireData?.wire_routing_number || '',
+      wire_account_number: wireData?.wire_account_number || '',
+      wire_account_name: wireData?.wire_account_name || '',
+      wire_bank_address: wireData?.wire_bank_address || '',
+    });
+    setEditing(false);
+    setSaveError('');
+  }
+
+  const inputStyle = {
+    background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 5,
+    padding: '6px 10px', fontSize: 12, color: '#fff', fontFamily: 'inherit',
+    outline: 'none', width: '100%', boxSizing: 'border-box', marginBottom: 8,
+  };
+
+  const labelStyle = { fontSize: 10, color: '#555', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 3, display: 'block' };
+
+  return (
+    <div style={s.panelSection}>
+      <div style={{ ...s.panelSectionLabel, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: editing ? 12 : 10 }}>
+        <span>Wire Details</span>
+        {!editing && (
+          <button
+            onClick={() => setEditing(true)}
+            style={{ background: 'transparent', border: '0.5px solid #2a2a2a', borderRadius: 4, color: '#555', fontSize: 10, padding: '3px 8px', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = '#FFD700'; e.currentTarget.style.color = '#FFD700'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = '#2a2a2a'; e.currentTarget.style.color = '#555'; }}
+          >
+            {hasWireData ? 'Edit' : 'Add'}
+          </button>
+        )}
+      </div>
+
+      {!editing && !hasWireData && (
+        <div style={{ fontSize: 12, color: '#333', lineHeight: 1.6 }}>
+          No wire details on file. Add your banking info so it auto-populates on payoff statements.
+        </div>
+      )}
+
+      {!editing && hasWireData && (
+        <>
+          <div style={s.panelRow}>
+            <span style={s.panelKey}>Bank</span>
+            <span style={s.panelVal}>{wireData.wire_bank_name}</span>
+          </div>
+          <div style={s.panelRow}>
+            <span style={s.panelKey}>Routing</span>
+            <span style={s.panelVal}>••••{wireData.wire_routing_number?.slice(-4)}</span>
+          </div>
+          <div style={s.panelRow}>
+            <span style={s.panelKey}>Account</span>
+            <span style={s.panelVal}>••••{wireData.wire_account_number?.slice(-4)}</span>
+          </div>
+          <div style={s.panelRow}>
+            <span style={s.panelKey}>Account name</span>
+            <span style={s.panelVal}>{wireData.wire_account_name}</span>
+          </div>
+          {wireData.wire_bank_address && (
+            <div style={s.panelRow}>
+              <span style={s.panelKey}>Bank address</span>
+              <span style={{ ...s.panelVal, maxWidth: 140, wordBreak: 'break-word' }}>{wireData.wire_bank_address}</span>
+            </div>
+          )}
+          {saveSuccess && (
+            <div style={{ fontSize: 11, color: '#34d399', marginTop: 8 }}>✓ Wire details saved</div>
+          )}
+        </>
+      )}
+
+      {editing && (
+        <div>
+          <label style={labelStyle}>Bank name</label>
+          <input
+            style={inputStyle}
+            value={form.wire_bank_name}
+            onChange={e => setForm(f => ({ ...f, wire_bank_name: e.target.value }))}
+            placeholder="e.g. JPMorgan Chase"
+          />
+          <label style={labelStyle}>Routing number</label>
+          <input
+            style={inputStyle}
+            value={form.wire_routing_number}
+            onChange={e => setForm(f => ({ ...f, wire_routing_number: e.target.value }))}
+            placeholder="9-digit routing number"
+            maxLength={9}
+          />
+          <label style={labelStyle}>Account number</label>
+          <input
+            style={inputStyle}
+            value={form.wire_account_number}
+            onChange={e => setForm(f => ({ ...f, wire_account_number: e.target.value }))}
+            placeholder="Account number"
+          />
+          <label style={labelStyle}>Account name</label>
+          <input
+            style={inputStyle}
+            value={form.wire_account_name}
+            onChange={e => setForm(f => ({ ...f, wire_account_name: e.target.value }))}
+            placeholder="Name on account"
+          />
+          <label style={labelStyle}>Bank address (optional)</label>
+          <input
+            style={inputStyle}
+            value={form.wire_bank_address}
+            onChange={e => setForm(f => ({ ...f, wire_bank_address: e.target.value }))}
+            placeholder="Bank branch address"
+          />
+          {saveError && <div style={{ fontSize: 11, color: '#f87171', marginBottom: 8 }}>{saveError}</div>}
+          <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              style={{ flex: 1, background: '#FFD700', color: '#0f0f0f', fontSize: 12, fontWeight: 600, padding: '7px', borderRadius: 5, border: 'none', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1, transition: 'box-shadow 0.15s' }}
+              onMouseEnter={e => { if (!saving) e.currentTarget.style.boxShadow = '0 0 12px rgba(255,215,0,0.4)'; }}
+              onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; }}
+            >
+              {saving ? 'Saving...' : 'Save'}
+            </button>
+            <button
+              onClick={handleCancel}
+              disabled={saving}
+              style={{ flex: 1, background: 'transparent', color: '#fff', fontSize: 12, padding: '7px', borderRadius: 5, border: '0.5px solid #2a2a2a', cursor: 'pointer', transition: 'all 0.15s' }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = '#555'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = '#2a2a2a'; }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Portal({ onSubmitRequest }) {
   const { user } = useUser();
   const [requests, setRequests] = useState([]);
@@ -166,7 +383,6 @@ export default function Portal({ onSubmitRequest }) {
     load();
   }, [email]);
 
-  // Fetch live borrower data whenever selected row changes
   useEffect(() => {
     if (!selected?.loan_id_internal) {
       setLiveData(null);
@@ -238,7 +454,6 @@ export default function Portal({ onSubmitRequest }) {
     };
   };
 
-  // Live fields — from borrowers table. Fall back to payoff_requests if no live data yet.
   const live = liveData || {};
   const balance = live.principal_balance != null ? live.principal_balance : selected?.total_due;
   const rate = live.interest_rate != null ? live.interest_rate : selected?.interest_rate;
@@ -421,6 +636,8 @@ export default function Portal({ onSubmitRequest }) {
                   : <div style={{ fontSize: 12, color: '#333' }}>No statement available</div>
                 }
               </div>
+
+              <WireDetailsSection lenderEmail={email} />
             </>
           )}
         </div>
