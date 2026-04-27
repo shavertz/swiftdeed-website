@@ -10,6 +10,7 @@ import TermsPage from './components/TermsPage';
 import PrivacyPage from './components/PrivacyPage';
 import PaymentTest from './components/PaymentTest';
 import ProfilePage from './components/ProfilePage';
+import BorrowerProfilePage from './components/BorrowerProfilePage';
 
 const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY;
@@ -248,11 +249,20 @@ export default function App() {
         {isSignedIn ? (
           <>
             {portalType === 'borrower' ? (
-              <button
-                onClick={() => routeByEmail(user.primaryEmailAddress?.emailAddress)}
-                style={{ background: '#FFD700', color: '#0f0f0f', fontSize: 14, fontWeight: 500, padding: '8px 18px', borderRadius: 6, border: 'none', cursor: 'pointer', transition: 'background 0.15s' }}
-                {...hov.solid}
-              >My loan</button>
+              <>
+                <button
+                  onClick={() => setPage('borrower-profile')}
+                  title="Profile"
+                  style={{ background: 'transparent', color: '#aaa', fontSize: 14, padding: '7px 10px', borderRadius: 6, border: '0.5px solid #2a2a2a', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = '#FFD700'; e.currentTarget.style.color = '#FFD700'; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = '#2a2a2a'; e.currentTarget.style.color = '#aaa'; }}
+                ><ProfileIcon /></button>
+                <button
+                  onClick={() => routeByEmail(user.primaryEmailAddress?.emailAddress)}
+                  style={{ background: '#FFD700', color: '#0f0f0f', fontSize: 14, fontWeight: 500, padding: '8px 18px', borderRadius: 6, border: 'none', cursor: 'pointer', transition: 'background 0.15s' }}
+                  {...hov.solid}
+                >My loan</button>
+              </>
             ) : (
               <>
                 <button
@@ -437,6 +447,7 @@ export default function App() {
       {page === 'request' && <RequestForm />}
       {page === 'portal' && <Portal onSubmitRequest={() => setPage('request')} />}
       {page === 'profile' && <ProfilePage onBack={() => setPage('portal')} />}
+      {page === 'borrower-profile' && <BorrowerProfilePage onBack={() => routeByEmail(user?.primaryEmailAddress?.emailAddress)} />}
       {page === 'borrower-portal' && <BorrowerPortal onHome={() => setPage('home')} />}
       {page === 'borrower-onboarding' && (
         <BorrowerOnboarding

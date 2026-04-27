@@ -525,28 +525,7 @@ export default function BorrowerPortal({ onHome }) {
 
             <WireInstructionsCard loanIdInternal={borrower.loan_id_internal} />
 
-            <div style={s.card}>
-              <div style={s.cardHead}>
-                <div style={s.cardTitle}>My information</div>
-                {saveMsg && <span style={{ fontSize: 12, color: '#4a9a4a' }}>{saveMsg}</span>}
-              </div>
-              <div style={s.cardBody}>
-                <div style={{ fontSize: 12, color: '#555', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>Contact</div>
-                <EditableRow label="Full legal name" value={borrower.legal_name} field="legal_name" onSave={handleSaveField} />
-                <EditableRow label="Phone" value={borrower.phone} field="phone" onSave={handleSaveField} />
-                <EditableRow label="Email" value={borrower.borrower_email} field="borrower_email" onSave={handleSaveField} />
-                <EditableRow label="Mailing address" value={borrower.mailing_address} field="mailing_address" onSave={handleSaveField} />
-                <div style={{ fontSize: 12, color: '#555', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: 20, marginBottom: 10 }}>Guarantor</div>
-                <EditableRow label="Guarantor name" value={borrower.guarantor_name} field="guarantor_name" onSave={handleSaveField} />
-                <EditableRow label="Guarantor phone" value={borrower.guarantor_phone} field="guarantor_phone" onSave={handleSaveField} />
-                <div style={{ ...s.infoRow, borderBottom: 'none' }}>
-                  <span style={s.irLabel}>Guarantor email</span>
-                  <div style={{ display: 'flex', alignItems: 'center' }}>
-                    <span style={s.irVal}>{borrower.guarantor_email || '—'}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+
           </>
         )}
       </div>
