@@ -132,29 +132,6 @@ function DonutChart({ principal, interestPaid, original }) {
   );
 }
 
-function EditableRow({ label, value, field, onSave }) {
-  const [editing, setEditing] = useState(false);
-  const [val, setVal] = useState(value || '');
-  function handleSave() { onSave(field, val); setEditing(false); }
-  return (
-    <div style={s.infoRow}>
-      <span style={s.irLabel}>{label}</span>
-      {editing ? (
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <input style={s.editInput} value={val} onChange={e => field.includes('phone') ? setVal(formatPhone(e.target.value)) : setVal(e.target.value)} autoFocus />
-          <button style={s.editBtn} onClick={handleSave}>Save</button>
-          <button style={s.cancelBtn} onClick={() => setEditing(false)}>Cancel</button>
-        </div>
-      ) : (
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <span style={s.irVal}>{value || '—'}</span>
-          <span style={s.editIcon} onClick={() => { setVal(value || ''); setEditing(true); }}>Edit</span>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function WireInstructionsCard({ loanIdInternal }) {
   const [wire, setWire] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -246,7 +223,6 @@ export default function BorrowerPortal({ onHome }) {
   const { user } = useUser();
   const [borrower, setBorrower] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [saveMsg, setSaveMsg] = useState('');
 
   useEffect(() => {
     if (!user) return;
@@ -284,18 +260,6 @@ export default function BorrowerPortal({ onHome }) {
     const data = await res.json();
     if (data && data.length > 0) setBorrower(data[0]);
     setLoading(false);
-  }
-
-  async function handleSaveField(field, value) {
-    if (!borrower) return;
-    await fetch(`${SUPABASE_URL}/rest/v1/borrowers?id=eq.${borrower.id}`, {
-      method: 'PATCH',
-      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-      body: JSON.stringify({ [field]: value }),
-    });
-    setBorrower(prev => ({ ...prev, [field]: value }));
-    setSaveMsg('Saved.');
-    setTimeout(() => setSaveMsg(''), 2000);
   }
 
   const email = user?.primaryEmailAddress?.emailAddress || '';
