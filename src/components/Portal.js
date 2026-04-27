@@ -251,6 +251,7 @@ export default function Portal({ onSubmitRequest }) {
   return (
     <div style={s.page}>
       <div style={s.heading}>My Loans</div>
+      <div style={{ fontSize: 13, color: '#555', marginTop: -18, marginBottom: 24 }}>{email}</div>
 
       <div style={s.statRow}>
         <div style={s.statCard}>
