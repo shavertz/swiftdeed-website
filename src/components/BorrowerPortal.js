@@ -52,6 +52,11 @@ const s = {
   editBtn: { background: '#D4A017', color: '#0f0f0f', border: 'none', borderRadius: 6, padding: '6px 14px', fontSize: 12, fontWeight: 500, cursor: 'pointer', marginLeft: 8 },
   cancelBtn: { background: 'transparent', color: '#555', border: '0.5px solid #2a2a2a', borderRadius: 6, padding: '6px 12px', fontSize: 12, cursor: 'pointer', marginLeft: 4 },
   editIcon: { fontSize: 11, color: '#4a90b8', cursor: 'pointer', marginLeft: 8 },
+  wireRow: { display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '0.5px solid #1a1a1a', alignItems: 'center' },
+  wireLabel: { fontSize: 13, color: '#555' },
+  wireVal: { fontSize: 13, color: '#ccc', textAlign: 'right' },
+  wireRef: { fontSize: 13, color: '#D4A017', textAlign: 'right', fontFamily: 'monospace' },
+  wireNote: { fontSize: 12, color: '#444', marginTop: 14, lineHeight: 1.6, background: '#1a1800', border: '0.5px solid #3a3000', borderRadius: 6, padding: '10px 12px' },
 };
 
 function fmt$(v) {
@@ -85,23 +90,14 @@ function formatPhone(val) {
 }
 
 function getAlertConfig(daysUntil) {
-  if (daysUntil < 0) return {
-    bg: '#1a0000', border: '#3a0000', dot: '#ef4444', text: '#ef4444',
-  };
-  if (daysUntil === 0) return {
-    bg: '#1a0000', border: '#3a0000', dot: '#ef4444', text: '#ef4444',
-  };
-  if (daysUntil <= 7) return {
-    bg: '#1a0d00', border: '#3a1a00', dot: '#f97316', text: '#f97316',
-  };
-  return {
-    bg: '#1a1800', border: '#3a3000', dot: '#D4A017', text: '#D4A017',
-  };
+  if (daysUntil < 0) return { bg: '#1a0000', border: '#3a0000', dot: '#ef4444', text: '#ef4444' };
+  if (daysUntil === 0) return { bg: '#1a0000', border: '#3a0000', dot: '#ef4444', text: '#ef4444' };
+  if (daysUntil <= 7) return { bg: '#1a0d00', border: '#3a1a00', dot: '#f97316', text: '#f97316' };
+  return { bg: '#1a1800', border: '#3a3000', dot: '#D4A017', text: '#D4A017' };
 }
 
 function DonutChart({ principal, interestPaid, original }) {
   if (!original || original === 0) return null;
-
   const principalPaid = Math.max(0, original - principal);
   const remainingPct = Math.min(100, Math.max(0, (principal / original) * 100));
   const principalPaidPct = Math.min(100, Math.max(0, (principalPaid / original) * 100));
@@ -112,25 +108,21 @@ function DonutChart({ principal, interestPaid, original }) {
   const interestDash = (interestPct / 100) * circumference;
   const principalOffset = -(remainingDash);
   const interestOffset = -(remainingDash + principalDash);
-
   return (
     <svg width="200" height="200" viewBox="0 0 200 200">
       <circle cx="100" cy="100" r="75" fill="none" stroke="#1a1a1a" strokeWidth="22"/>
       <circle cx="100" cy="100" r="75" fill="none" stroke="#2a2a2a" strokeWidth="22"
         strokeDasharray={`${remainingDash} ${circumference - remainingDash}`}
-        strokeDashoffset={0}
-        transform="rotate(-90 100 100)"/>
+        strokeDashoffset={0} transform="rotate(-90 100 100)"/>
       {principalDash > 0 && (
         <circle cx="100" cy="100" r="75" fill="none" stroke="#4a90b8" strokeWidth="22"
           strokeDasharray={`${principalDash} ${circumference - principalDash}`}
-          strokeDashoffset={principalOffset}
-          transform="rotate(-90 100 100)"/>
+          strokeDashoffset={principalOffset} transform="rotate(-90 100 100)"/>
       )}
       {interestDash > 0 && (
         <circle cx="100" cy="100" r="75" fill="none" stroke="#D4A017" strokeWidth="22"
           strokeDasharray={`${interestDash} ${circumference - interestDash}`}
-          strokeDashoffset={interestOffset}
-          transform="rotate(-90 100 100)"/>
+          strokeDashoffset={interestOffset} transform="rotate(-90 100 100)"/>
       )}
       <text x="100" y="94" textAnchor="middle" fontSize="13" fill="#555">Remaining</text>
       <text x="100" y="114" textAnchor="middle" fontSize="18" fontWeight="500" fill="#fff">
@@ -143,23 +135,13 @@ function DonutChart({ principal, interestPaid, original }) {
 function EditableRow({ label, value, field, onSave }) {
   const [editing, setEditing] = useState(false);
   const [val, setVal] = useState(value || '');
-
-  function handleSave() {
-    onSave(field, val);
-    setEditing(false);
-  }
-
+  function handleSave() { onSave(field, val); setEditing(false); }
   return (
     <div style={s.infoRow}>
       <span style={s.irLabel}>{label}</span>
       {editing ? (
         <div style={{ display: 'flex', alignItems: 'center' }}>
-          <input
-            style={s.editInput}
-            value={val}
-            onChange={e => field.includes('phone') ? setVal(formatPhone(e.target.value)) : setVal(e.target.value)}
-            autoFocus
-          />
+          <input style={s.editInput} value={val} onChange={e => field.includes('phone') ? setVal(formatPhone(e.target.value)) : setVal(e.target.value)} autoFocus />
           <button style={s.editBtn} onClick={handleSave}>Save</button>
           <button style={s.cancelBtn} onClick={() => setEditing(false)}>Cancel</button>
         </div>
@@ -169,6 +151,93 @@ function EditableRow({ label, value, field, onSave }) {
           <span style={s.editIcon} onClick={() => { setVal(value || ''); setEditing(true); }}>Edit</span>
         </div>
       )}
+    </div>
+  );
+}
+
+function WireInstructionsCard({ loanIdInternal }) {
+  const [wire, setWire] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!loanIdInternal) return;
+    async function fetchWire() {
+      try {
+        const reqRes = await fetch(
+          `${SUPABASE_URL}/rest/v1/payoff_requests?loan_id_internal=eq.${encodeURIComponent(loanIdInternal)}&select=from_email&limit=1`,
+          { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
+        );
+        const reqData = await reqRes.json();
+        if (!Array.isArray(reqData) || reqData.length === 0) { setLoading(false); return; }
+        const lenderEmail = reqData[0].from_email;
+        if (!lenderEmail) { setLoading(false); return; }
+
+        const lenderRes = await fetch(
+          `${SUPABASE_URL}/rest/v1/lenders?email=eq.${encodeURIComponent(lenderEmail)}&select=wire_bank_name,wire_routing_number,wire_account_number,wire_account_name,wire_bank_address&limit=1`,
+          { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
+        );
+        const lenderData = await lenderRes.json();
+        if (Array.isArray(lenderData) && lenderData.length > 0) {
+          setWire(lenderData[0]);
+        }
+      } catch (e) {
+        console.error('Wire fetch error:', e);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchWire();
+  }, [loanIdInternal]);
+
+  const hasWire = wire && wire.wire_bank_name && wire.wire_routing_number && wire.wire_account_number;
+
+  return (
+    <div style={{ ...s.card, marginBottom: 20 }}>
+      <div style={s.cardHead}>
+        <div style={s.cardTitle}>Wire instructions</div>
+        <span style={{ fontSize: 12, color: '#555' }}>For balloon & payoff payments</span>
+      </div>
+      <div style={s.cardBody}>
+        {loading ? (
+          <div style={{ fontSize: 13, color: '#555', textAlign: 'center', padding: '16px 0' }}>Loading...</div>
+        ) : !hasWire ? (
+          <div style={{ fontSize: 13, color: '#555', textAlign: 'center', padding: '16px 0' }}>
+            Wire details not on file yet. Contact your lender directly.
+          </div>
+        ) : (
+          <>
+            <div style={s.wireRow}>
+              <span style={s.wireLabel}>Bank</span>
+              <span style={s.wireVal}>{wire.wire_bank_name}</span>
+            </div>
+            <div style={s.wireRow}>
+              <span style={s.wireLabel}>Account name</span>
+              <span style={s.wireVal}>{wire.wire_account_name}</span>
+            </div>
+            <div style={s.wireRow}>
+              <span style={s.wireLabel}>Routing number</span>
+              <span style={s.wireVal}>{wire.wire_routing_number}</span>
+            </div>
+            <div style={s.wireRow}>
+              <span style={s.wireLabel}>Account number</span>
+              <span style={s.wireVal}>{wire.wire_account_number}</span>
+            </div>
+            {wire.wire_bank_address && (
+              <div style={s.wireRow}>
+                <span style={s.wireLabel}>Bank address</span>
+                <span style={s.wireVal}>{wire.wire_bank_address}</span>
+              </div>
+            )}
+            <div style={{ ...s.wireRow, borderBottom: 'none' }}>
+              <span style={s.wireLabel}>Reference / memo</span>
+              <span style={s.wireRef}>{loanIdInternal}</span>
+            </div>
+            <div style={s.wireNote}>
+              Always include your loan ID in the memo field of your wire. Contact your lender to confirm receipt before closing.
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -295,12 +364,11 @@ export default function BorrowerPortal({ onHome }) {
               </div>
               <div style={s.loanStat(true)}>
                 <div style={s.lsLabel}>Loan status</div>
-                <div style={{ ...s.lsVal, color: isPaidOff ? '#4a9a4a' : '#4a9a4a' }}>{fmtStatus(borrower.status)}</div>
+                <div style={{ ...s.lsVal, color: '#4a9a4a' }}>{fmtStatus(borrower.status)}</div>
               </div>
             </div>
 
             <div style={s.grid2}>
-              {/* Payment card — replaced with paid off message when balance is zero */}
               <div style={s.card}>
                 <div style={s.cardHead}>
                   <div style={s.cardTitle}>{isPaidOff ? 'Loan summary' : 'Make a payment'}</div>
@@ -332,13 +400,11 @@ export default function BorrowerPortal({ onHome }) {
                       <div style={s.payTitle}>Amount due</div>
                       <div style={s.payBig}>{fmt$(borrower.last_payment_amount)}</div>
                       <div style={s.payDue}>Due {fmtDate(borrower.next_payment_date)} · Monthly payment</div>
-                      <button
-                        style={s.btnPay}
+                      <button style={s.btnPay}
                         onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 0 16px rgba(255, 215, 0, 0.45)'; }}
                         onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; }}
                       >Make a one-time payment</button>
-                      <button
-                        style={s.btnAutopay}
+                      <button style={s.btnAutopay}
                         onMouseEnter={e => { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.color = '#FFD700'; e.currentTarget.style.boxShadow = '0 0 16px rgba(255, 215, 0, 0.3)'; }}
                         onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#fff'; e.currentTarget.style.boxShadow = 'none'; }}
                       >Set up autopay</button>
@@ -370,16 +436,10 @@ export default function BorrowerPortal({ onHome }) {
               </div>
 
               <div style={s.card}>
-                <div style={s.cardHead}>
-                  <div style={s.cardTitle}>Loan breakdown</div>
-                </div>
+                <div style={s.cardHead}><div style={s.cardTitle}>Loan breakdown</div></div>
                 <div style={s.cardBody}>
                   <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
-                    <DonutChart
-                      principal={borrower.principal_balance}
-                      interestPaid={borrower.total_interest_paid || 0}
-                      original={borrower.original_loan_amount}
-                    />
+                    <DonutChart principal={borrower.principal_balance} interestPaid={borrower.total_interest_paid || 0} original={borrower.original_loan_amount} />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, color: '#666' }}>
@@ -404,9 +464,7 @@ export default function BorrowerPortal({ onHome }) {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                 <div style={s.card}>
-                  <div style={s.cardHead}>
-                    <div style={s.cardTitle}>Loan details</div>
-                  </div>
+                  <div style={s.cardHead}><div style={s.cardTitle}>Loan details</div></div>
                   <div style={s.cardBody}>
                     <div style={s.infoRow}>
                       <span style={s.irLabel}>Loan ID</span>
@@ -431,9 +489,7 @@ export default function BorrowerPortal({ onHome }) {
                   </div>
                 </div>
                 <div style={s.card}>
-                  <div style={s.cardHead}>
-                    <div style={s.cardTitle}>Loan documents</div>
-                  </div>
+                  <div style={s.cardHead}><div style={s.cardTitle}>Loan documents</div></div>
                   <div style={s.cardBody}>
                     {docUrls.length === 0 ? (
                       <div style={{ fontSize: 13, color: '#555', textAlign: 'center', padding: '20px 0' }}>No documents available yet</div>
@@ -445,9 +501,7 @@ export default function BorrowerPortal({ onHome }) {
                             <div style={s.stmtName}>{name}</div>
                             <div style={s.stmtDate}>Loan document</div>
                           </div>
-                          <button
-                            style={s.stmtBtn}
-                            onClick={() => window.open(url, '_blank')}
+                          <button style={s.stmtBtn} onClick={() => window.open(url, '_blank')}
                             onMouseEnter={e => { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.color = '#FFD700'; e.currentTarget.style.boxShadow = '0 0 16px rgba(255, 215, 0, 0.3)'; }}
                             onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#888'; e.currentTarget.style.boxShadow = 'none'; }}
                           >Download PDF</button>
@@ -468,6 +522,8 @@ export default function BorrowerPortal({ onHome }) {
                 Monthly statements will appear here once generated. Your first statement will be sent to <span style={{ color: '#D4A017' }}>{email}</span>.
               </div>
             </div>
+
+            <WireInstructionsCard loanIdInternal={borrower.loan_id_internal} />
 
             <div style={s.card}>
               <div style={s.cardHead}>
