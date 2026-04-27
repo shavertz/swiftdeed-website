@@ -82,13 +82,6 @@ function fmtStatus(str) {
   return str.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
-function formatPhone(val) {
-  const digits = val.replace(/\D/g, '').slice(0, 10);
-  if (digits.length <= 3) return digits;
-  if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
-  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
-}
-
 function getAlertConfig(daysUntil) {
   if (daysUntil < 0) return { bg: '#1a0000', border: '#3a0000', dot: '#ef4444', text: '#ef4444' };
   if (daysUntil === 0) return { bg: '#1a0000', border: '#3a0000', dot: '#ef4444', text: '#ef4444' };
