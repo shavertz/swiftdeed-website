@@ -128,7 +128,7 @@ function PaymentModal({ borrower, onClose, onSuccess }) {
   const [step, setStep] = useState('amount'); // amount | bank | confirm | processing | success | error
   const [errorMsg, setErrorMsg] = useState('');
   const [stripeObj, setStripeObj] = useState(null);
-  const [elements, setElements] = useState(null);
+  
   const [customerId, setCustomerId] = useState(borrower.stripe_customer_id || null);
   const [paymentMethodId, setPaymentMethodId] = useState(borrower.stripe_payment_method_id || null);
   const [bankName, setBankName] = useState(null);
