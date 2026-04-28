@@ -326,7 +326,6 @@ export default function Portal({ onSubmitRequest }) {
   useEffect(() => {
     if (!selected?.loan_id_internal) {
       setLoanPayments([]);
-      setShowAllPayments(false);
       return;
     }
     async function fetchPayments() {
