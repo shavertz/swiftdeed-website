@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useUser } from '@clerk/clerk-react';
 
 const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY;
+const STRIPE_PUBLISHABLE_KEY = process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY;
 
 const s = {
   page: { background: '#0f0f0f', minHeight: '100vh', color: '#f0f0f0', fontFamily: 'inherit' },
@@ -49,6 +50,24 @@ const s = {
   emptyTitle: { fontSize: 18, fontWeight: 500, color: '#fff', marginBottom: 12 },
   emptyText: { fontSize: 14, color: '#555', lineHeight: 1.7, maxWidth: 400, margin: '0 auto' },
   stmtBtn: { background: 'transparent', border: '0.5px solid #FFD700', color: '#888', fontSize: 11, padding: '4px 10px', borderRadius: 5, cursor: 'pointer', transition: 'all 0.15s' },
+  overlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
+  modal: { background: '#111', border: '0.5px solid #2a2a2a', borderRadius: 12, width: 420, maxHeight: '90vh', overflowY: 'auto' },
+  modalHead: { padding: '16px 20px', borderBottom: '0.5px solid #1e1e1e', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  modalTitle: { fontSize: 14, fontWeight: 500, color: '#fff' },
+  modalClose: { fontSize: 20, color: '#555', cursor: 'pointer', background: 'none', border: 'none', lineHeight: 1 },
+  modalBody: { padding: 20 },
+  inputLabel: { fontSize: 11, color: '#555', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6, display: 'block' },
+  inputWrap: { position: 'relative', marginBottom: 6 },
+  inputPrefix: { position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#888', fontSize: 14 },
+  input: { width: '100%', background: '#1a1a1a', border: '0.5px solid #333', borderRadius: 7, padding: '11px 12px 11px 24px', fontSize: 15, color: '#fff', fontWeight: 500, boxSizing: 'border-box', outline: 'none' },
+  breakdownBox: { background: '#1a1a1a', borderRadius: 7, padding: '12px 14px', marginBottom: 20 },
+  breakdownRow: { display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 5 },
+  breakdownTotal: { borderTop: '0.5px solid #2a2a2a', marginTop: 6, paddingTop: 6, display: 'flex', justifyContent: 'space-between', fontSize: 12 },
+  wireWarning: { background: '#0f1a0f', border: '0.5px solid #1a3a1a', borderRadius: 7, padding: '10px 12px', marginBottom: 16, fontSize: 12, color: '#555', lineHeight: 1.6 },
+  btnConfirm: { width: '100%', background: '#D4A017', color: '#0f0f0f', border: 'none', borderRadius: 7, padding: 13, fontSize: 14, fontWeight: 500, cursor: 'pointer', marginBottom: 8 },
+  btnConfirmDisabled: { width: '100%', background: '#2a2a2a', color: '#555', border: 'none', borderRadius: 7, padding: 13, fontSize: 14, fontWeight: 500, cursor: 'not-allowed', marginBottom: 8 },
+  btnCancel: { width: '100%', background: 'transparent', color: '#555', border: '0.5px solid #2a2a2a', borderRadius: 7, padding: 11, fontSize: 13, cursor: 'pointer' },
+  successBox: { textAlign: 'center', padding: '32px 20px' },
 };
 
 function fmt$(v) {
@@ -79,6 +98,247 @@ function getAlertConfig(daysUntil) {
   if (daysUntil === 0) return { bg: '#1a0000', border: '#3a0000', dot: '#ef4444', text: '#ef4444' };
   if (daysUntil <= 7) return { bg: '#1a0d00', border: '#3a1a00', dot: '#f97316', text: '#f97316' };
   return { bg: '#1a1800', border: '#3a3000', dot: '#D4A017', text: '#D4A017' };
+}
+
+function calcBreakdown(amount, borrower) {
+  const principal = parseFloat(borrower.principal_balance) || 0;
+  const rate = parseFloat(borrower.interest_rate) || 0;
+  const lastDate = borrower.last_payment_date || borrower.loan_start_date;
+  if (!lastDate) return { interest: 0, principalPortion: 0, balanceAfter: principal };
+  const from = new Date(lastDate + 'T00:00:00');
+  const to = new Date();
+  const days = Math.max(0, Math.floor((to - from) / (1000 * 60 * 60 * 24)));
+  const dailyRate = rate / 100 / 365;
+  const interest = parseFloat((principal * dailyRate * days).toFixed(2));
+  const paid = parseFloat(amount) || 0;
+  const principalPortion = parseFloat(Math.max(0, paid - interest).toFixed(2));
+  const balanceAfter = parseFloat(Math.max(0, principal - principalPortion).toFixed(2));
+  return { interest, principalPortion, balanceAfter };
+}
+
+function nextMonthDate(fromDate) {
+  const d = fromDate ? new Date(fromDate + 'T00:00:00') : new Date();
+  d.setMonth(d.getMonth() + 1);
+  return d.toISOString().split('T')[0];
+}
+
+function PaymentModal({ borrower, onClose, onSuccess }) {
+  const { user } = useUser();
+  const [amount, setAmount] = useState(String(borrower.last_payment_amount || ''));
+  const [step, setStep] = useState('amount'); // amount | bank | confirm | processing | success | error
+  const [errorMsg, setErrorMsg] = useState('');
+  const [stripeObj, setStripeObj] = useState(null);
+  const [elements, setElements] = useState(null);
+  const [customerId, setCustomerId] = useState(borrower.stripe_customer_id || null);
+  const [paymentMethodId, setPaymentMethodId] = useState(borrower.stripe_payment_method_id || null);
+  const [bankName, setBankName] = useState(null);
+
+  const amountNum = parseFloat(amount) || 0;
+  const overLimit = amountNum >= 25000;
+  const breakdown = calcBreakdown(amount, borrower);
+
+  // Load Stripe.js once
+  useEffect(() => {
+    if (window.Stripe) { setStripeObj(window.Stripe(STRIPE_PUBLISHABLE_KEY)); return; }
+    const script = document.createElement('script');
+    script.src = 'https://js.stripe.com/v3/';
+    script.onload = () => setStripeObj(window.Stripe(STRIPE_PUBLISHABLE_KEY));
+    document.head.appendChild(script);
+  }, []);
+
+  // If borrower already has a payment method, skip bank step
+  useEffect(() => {
+    if (paymentMethodId) setBankName('Bank on file');
+  }, [paymentMethodId]);
+
+  async function handleConnectBank() {
+    if (!stripeObj) return;
+    setStep('processing');
+    setErrorMsg('');
+    try {
+      const res = await fetch('/api/stripe-setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          borrowerEmail: user?.primaryEmailAddress?.emailAddress,
+          borrowerName: borrower.legal_name,
+          loanIdInternal: borrower.loan_id_internal,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Setup failed');
+      setCustomerId(data.customerId);
+
+      const { setupIntent, error } = await stripeObj.collectBankAccountForSetup({
+        clientSecret: data.clientSecret,
+        params: {
+          payment_method_type: 'us_bank_account',
+          payment_method_data: {
+            billing_details: {
+              name: borrower.legal_name || '',
+              email: user?.primaryEmailAddress?.emailAddress || '',
+            },
+          },
+        },
+      });
+
+      if (error) throw new Error(error.message);
+      if (setupIntent.status === 'requires_confirmation') {
+        const { setupIntent: confirmed, error: confirmError } = await stripeObj.confirmUsBankAccountSetup(data.clientSecret);
+        if (confirmError) throw new Error(confirmError.message);
+        setPaymentMethodId(confirmed.payment_method);
+        setBankName('Bank account connected');
+        setStep('confirm');
+      } else {
+        setPaymentMethodId(setupIntent.payment_method);
+        setBankName('Bank account connected');
+        setStep('confirm');
+      }
+    } catch (e) {
+      setErrorMsg(e.message);
+      setStep('amount');
+    }
+  }
+
+  async function handleConfirmPayment() {
+    setStep('processing');
+    setErrorMsg('');
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const res = await fetch('/api/stripe-charge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerId,
+          paymentMethodId,
+          amount: amountNum,
+          borrowerId: borrower.id,
+          loanIdInternal: borrower.loan_id_internal,
+          borrowerName: borrower.legal_name,
+          borrowerEmail: user?.primaryEmailAddress?.emailAddress,
+          lenderEmail: null,
+          interestPortion: breakdown.interest,
+          principalPortion: breakdown.principalPortion,
+          principalBalanceAfter: breakdown.balanceAfter,
+          nextPaymentDate: nextMonthDate(today),
+          totalPaymentsMade: (borrower.total_payments_made || 0) + 1,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Payment failed');
+      setStep('success');
+    } catch (e) {
+      setErrorMsg(e.message);
+      setStep('amount');
+    }
+  }
+
+  return (
+    <div style={s.overlay} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={s.modal}>
+        <div style={s.modalHead}>
+          <div style={s.modalTitle}>
+            {step === 'success' ? 'Payment submitted' : 'Make a payment'}
+          </div>
+          <button style={s.modalClose} onClick={onClose}>×</button>
+        </div>
+
+        {step === 'success' && (
+          <div style={s.successBox}>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>✓</div>
+            <div style={{ fontSize: 16, fontWeight: 500, color: '#4a9a4a', marginBottom: 8 }}>Payment submitted</div>
+            <div style={{ fontSize: 13, color: '#555', marginBottom: 24, lineHeight: 1.6 }}>
+              Your ACH payment of <strong style={{ color: '#fff' }}>{fmt$(amountNum)}</strong> has been submitted. ACH payments typically settle in 2–3 business days.
+            </div>
+            <button style={s.btnConfirm} onClick={() => { onClose(); onSuccess(); }}>Done</button>
+          </div>
+        )}
+
+        {step === 'processing' && (
+          <div style={{ padding: 40, textAlign: 'center', color: '#555', fontSize: 14 }}>Processing...</div>
+        )}
+
+        {(step === 'amount' || step === 'bank' || step === 'confirm') && (
+          <div style={s.modalBody}>
+
+            {/* Amount */}
+            <label style={s.inputLabel}>Payment amount</label>
+            <div style={s.inputWrap}>
+              <span style={s.inputPrefix}>$</span>
+              <input
+                style={s.input}
+                type="number"
+                value={amount}
+                onChange={e => setAmount(e.target.value)}
+                min="0"
+                step="0.01"
+              />
+            </div>
+            <div style={{ fontSize: 11, color: '#555', marginBottom: 16 }}>
+              Monthly payment pre-filled · Pay more to reduce principal
+            </div>
+
+            {/* Breakdown */}
+            {amountNum > 0 && !overLimit && (
+              <div style={s.breakdownBox}>
+                <div style={s.breakdownRow}>
+                  <span style={{ color: '#555' }}>Interest</span>
+                  <span style={{ color: '#ccc' }}>{fmt$(breakdown.interest)}</span>
+                </div>
+                <div style={s.breakdownRow}>
+                  <span style={{ color: '#555' }}>Principal</span>
+                  <span style={{ color: '#ccc' }}>{fmt$(breakdown.principalPortion)}</span>
+                </div>
+                <div style={s.breakdownTotal}>
+                  <span style={{ color: '#888' }}>Total</span>
+                  <span style={{ color: '#fff', fontWeight: 500 }}>{fmt$(amountNum)}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Wire warning */}
+            {overLimit && (
+              <div style={{ ...s.wireWarning, background: '#1a0000', border: '0.5px solid #3a0000', color: '#888' }}>
+                Payments of $25,000 or more must be sent via wire transfer. Use the wire instructions on your portal.
+              </div>
+            )}
+
+            {errorMsg && (
+              <div style={{ ...s.wireWarning, background: '#1a0000', border: '0.5px solid #3a0000', color: '#ef4444', marginBottom: 16 }}>
+                {errorMsg}
+              </div>
+            )}
+
+            {/* Bank account display if already connected */}
+            {paymentMethodId && step !== 'bank' && (
+              <div style={{ background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 7, padding: '12px 14px', marginBottom: 16 }}>
+                <div style={{ fontSize: 12, color: '#888', marginBottom: 6, fontWeight: 500 }}>Connected bank account</div>
+                <div style={{ fontSize: 13, color: '#ccc' }}>{bankName || 'Bank on file'}</div>
+                <button
+                  style={{ fontSize: 11, color: '#555', background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginTop: 4 }}
+                  onClick={() => { setPaymentMethodId(null); setBankName(null); }}
+                >Change bank account</button>
+              </div>
+            )}
+
+            {/* Actions */}
+            {overLimit ? (
+              <button style={s.btnConfirmDisabled} disabled>Use wire transfer for this amount</button>
+            ) : paymentMethodId ? (
+              <button style={s.btnConfirm} onClick={handleConfirmPayment}>
+                Confirm payment · {fmt$(amountNum)}
+              </button>
+            ) : (
+              <button style={s.btnConfirm} onClick={handleConnectBank}>
+                Connect bank &amp; pay {fmt$(amountNum)}
+              </button>
+            )}
+            <button style={s.btnCancel} onClick={onClose}>Cancel</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function DonutChart({ principal, interestPaid, original }) {
@@ -232,7 +492,7 @@ function PaymentHistoryCard({ loanIdInternal }) {
                     <td style={{ ...valStyle, borderBottom: i === payments.length - 1 ? 'none' : '0.5px solid #1a1a1a' }}>
                       {p.invoice_url ? (
                         <a href={p.invoice_url} target="_blank" rel="noreferrer"
-                          style={{ background: 'transparent', border: '0.5px solid #FFD700', color: '#888', fontSize: 11, padding: '4px 10px', borderRadius: 5, cursor: 'pointer', textDecoration: 'none', transition: 'all 0.15s' }}
+                          style={{ background: 'transparent', border: '0.5px solid #FFD700', color: '#888', fontSize: 11, padding: '4px 10px', borderRadius: 5, cursor: 'pointer', textDecoration: 'none' }}
                           onMouseEnter={e => { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.color = '#FFD700'; }}
                           onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#888'; }}
                         >Download</a>
@@ -253,10 +513,7 @@ function LoanDocumentsCard({ docUrls }) {
   const [open, setOpen] = useState(false);
   return (
     <div style={{ ...s.card, marginBottom: 20 }}>
-      <div
-        style={{ ...s.cardHead, cursor: 'pointer' }}
-        onClick={() => setOpen(o => !o)}
-      >
+      <div style={{ ...s.cardHead, cursor: 'pointer' }} onClick={() => setOpen(o => !o)}>
         <div style={s.cardTitle}>Loan documents</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 12, color: '#555' }}>{docUrls.length} document{docUrls.length !== 1 ? 's' : ''}</span>
@@ -275,10 +532,8 @@ function LoanDocumentsCard({ docUrls }) {
                   <div style={{ fontSize: 13, color: '#ccc' }}>{name}</div>
                   <div style={{ fontSize: 11, color: '#555' }}>Loan document</div>
                 </div>
-                <button
-                  style={s.stmtBtn}
-                  onClick={() => window.open(url, '_blank')}
-                  onMouseEnter={e => { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.color = '#FFD700'; e.currentTarget.style.boxShadow = '0 0 16px rgba(255, 215, 0, 0.3)'; }}
+                <button style={s.stmtBtn} onClick={() => window.open(url, '_blank')}
+                  onMouseEnter={e => { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.color = '#FFD700'; e.currentTarget.style.boxShadow = '0 0 16px rgba(255,215,0,0.3)'; }}
                   onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#888'; e.currentTarget.style.boxShadow = 'none'; }}
                 >Download PDF</button>
               </div>
@@ -294,13 +549,10 @@ export default function BorrowerPortal({ onHome }) {
   const { user } = useUser();
   const [borrower, setBorrower] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
-  useEffect(() => {
+  const fetchBorrower = useCallback(async () => {
     if (!user) return;
-    fetchBorrower();
-  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  async function fetchBorrower() {
     setLoading(true);
     const userEmail = user?.primaryEmailAddress?.emailAddress;
     const hash = window.location.hash;
@@ -331,7 +583,9 @@ export default function BorrowerPortal({ onHome }) {
     const data = await res.json();
     if (data && data.length > 0) setBorrower(data[0]);
     setLoading(false);
-  }
+  }, [user]);
+
+  useEffect(() => { fetchBorrower(); }, [fetchBorrower]);
 
   const email = user?.primaryEmailAddress?.emailAddress || '';
   const isPaidOff = parseFloat(borrower?.principal_balance) === 0 || borrower?.status === 'paid_off';
@@ -345,6 +599,14 @@ export default function BorrowerPortal({ onHome }) {
 
   return (
     <div style={s.page}>
+      {showPaymentModal && borrower && (
+        <PaymentModal
+          borrower={borrower}
+          onClose={() => setShowPaymentModal(false)}
+          onSuccess={() => { setShowPaymentModal(false); fetchBorrower(); }}
+        />
+      )}
+
       {showAlert && alertConfig && (
         <div style={{ background: alertConfig.bg, borderBottom: `0.5px solid ${alertConfig.border}`, padding: '10px 32px', display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ width: 7, height: 7, borderRadius: '50%', background: alertConfig.dot, flexShrink: 0 }}></div>
@@ -453,11 +715,13 @@ export default function BorrowerPortal({ onHome }) {
                         </div>
                       )}
                       <button style={s.btnPay}
-                        onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 0 16px rgba(255, 215, 0, 0.45)'; }}
+                        onClick={() => setShowPaymentModal(true)}
+                        onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 0 16px rgba(255,215,0,0.45)'; }}
                         onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; }}
                       >Make a one-time payment</button>
                       <button style={s.btnAutopay}
-                        onMouseEnter={e => { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.color = '#FFD700'; e.currentTarget.style.boxShadow = '0 0 16px rgba(255, 215, 0, 0.3)'; }}
+                        onClick={() => setShowPaymentModal(true)}
+                        onMouseEnter={e => { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.color = '#FFD700'; e.currentTarget.style.boxShadow = '0 0 16px rgba(255,215,0,0.3)'; }}
                         onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#fff'; e.currentTarget.style.boxShadow = 'none'; }}
                       >Set up autopay</button>
                       <div style={s.divider}></div>
@@ -515,7 +779,7 @@ export default function BorrowerPortal({ onHome }) {
                 </div>
               </div>
 
-              {/* Right column: Loan details + Wire instructions */}
+              {/* Right column */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                 <div style={s.card}>
                   <div style={s.cardHead}><div style={s.cardTitle}>Loan details</div></div>
@@ -550,10 +814,7 @@ export default function BorrowerPortal({ onHome }) {
               </div>
             </div>
 
-            {/* Payment history — full width */}
             <PaymentHistoryCard loanIdInternal={borrower.loan_id_internal} />
-
-            {/* Loan documents — collapsible */}
             <LoanDocumentsCard docUrls={docUrls} />
           </>
         )}
