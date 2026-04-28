@@ -222,18 +222,6 @@ function RecordPaymentModal({ borrower, onClose, onSuccess }) {
           >Cancel</button>
         </div>
       </div>
-      {showPaymentModal && liveData && (
-        <RecordPaymentModal
-          borrower={liveData}
-          onClose={() => setShowPaymentModal(false)}
-          onSuccess={(updates) => {
-            setShowPaymentModal(false);
-            setPaymentSuccess(true);
-            setLiveData(prev => ({ ...prev, ...updates }));
-            setTimeout(() => setPaymentSuccess(false), 5000);
-          }}
-        />
-      )}
     </div>
   );
 }
@@ -564,6 +552,18 @@ export default function Portal({ onSubmitRequest }) {
           )}
         </div>
       </div>
+      {showPaymentModal && liveData && (
+        <RecordPaymentModal
+          borrower={liveData}
+          onClose={() => setShowPaymentModal(false)}
+          onSuccess={(updates) => {
+            setShowPaymentModal(false);
+            setPaymentSuccess(true);
+            setLiveData(prev => ({ ...prev, ...updates }));
+            setTimeout(() => setPaymentSuccess(false), 5000);
+          }}
+        />
+      )}
       {showPaymentModal && liveData && (
         <RecordPaymentModal
           borrower={liveData}
