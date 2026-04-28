@@ -324,6 +324,26 @@ export default function Portal({ onSubmitRequest }) {
 
   useEffect(() => {
     if (!selected?.loan_id_internal) {
+      setLoanPayments([]);
+      setShowAllPayments(false);
+      return;
+    }
+    async function fetchPayments() {
+      try {
+        const res = await fetch(
+          `${SUPABASE_URL}/rest/v1/payments?loan_id_internal=eq.${encodeURIComponent(selected.loan_id_internal)}&order=payment_date.desc`,
+          { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
+        );
+        const data = await res.json();
+        setLoanPayments(Array.isArray(data) ? data : []);
+        setShowAllPayments(false);
+      } catch (e) { console.error(e); }
+    }
+    fetchPayments();
+  }, [selected]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!selected?.loan_id_internal) {
       setLiveData(null);
       return;
     }
