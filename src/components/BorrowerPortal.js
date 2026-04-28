@@ -212,6 +212,95 @@ function WireInstructionsCard({ loanIdInternal }) {
   );
 }
 
+function PaymentHistoryCard({ loanIdInternal }) {
+  const [payments, setPayments] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!loanIdInternal) return;
+    async function fetchPayments() {
+      try {
+        const res = await fetch(
+          `${SUPABASE_URL}/rest/v1/payments?loan_id_internal=eq.${encodeURIComponent(loanIdInternal)}&order=payment_date.desc`,
+          { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
+        );
+        const data = await res.json();
+        setPayments(Array.isArray(data) ? data : []);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchPayments();
+  }, [loanIdInternal]);
+
+  function fmt$(v) {
+    if (v == null) return '—';
+    return '$' + parseFloat(v).toLocaleString('en-US', { minimumFractionDigits: 2 });
+  }
+
+  function fmtDate(str) {
+    if (!str) return '—';
+    const d = new Date(str + 'T00:00:00');
+    if (isNaN(d.getTime())) return '—';
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  const colStyle = { fontSize: 12, color: '#555', padding: '10px 8px', borderBottom: '0.5px solid #1a1a1a' };
+  const valStyle = { fontSize: 12, color: '#ccc', padding: '10px 8px', borderBottom: '0.5px solid #1a1a1a', textAlign: 'right' };
+  const headStyle = { fontSize: 10, color: '#FFD700', textTransform: 'uppercase', letterSpacing: 0.6, padding: '8px 8px', borderBottom: '0.5px solid #2a2a2a', textAlign: 'right' };
+  const headStyleLeft = { ...headStyle, textAlign: 'left' };
+
+  return (
+    <div style={{ background: '#111', border: '0.5px solid #2a2a2a', borderRadius: 10, overflow: 'hidden', marginBottom: 20 }}>
+      <div style={{ padding: '14px 18px', borderBottom: '0.5px solid #1e1e1e', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ fontSize: 13, fontWeight: 500, color: '#fff' }}>Payment history</div>
+        <span style={{ fontSize: 12, color: '#555' }}>{payments.length} payment{payments.length !== 1 ? 's' : ''}</span>
+      </div>
+      <div style={{ padding: 18 }}>
+        {loading ? (
+          <div style={{ fontSize: 13, color: '#555', textAlign: 'center', padding: '20px 0' }}>Loading...</div>
+        ) : payments.length === 0 ? (
+          <div style={{ fontSize: 13, color: '#555', textAlign: 'center', padding: '20px 0' }}>No payments recorded yet.</div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  <th style={headStyleLeft}>Date</th>
+                  <th style={headStyle}>Amount</th>
+                  <th style={headStyle}>Method</th>
+                  <th style={headStyle}>Interest</th>
+                  <th style={headStyle}>Principal</th>
+                  <th style={headStyle}>Balance after</th>
+                  <th style={headStyle}>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {payments.map((p, i) => (
+                  <tr key={p.id || i}>
+                    <td style={{ ...colStyle, textAlign: 'left' }}>{fmtDate(p.payment_date)}</td>
+                    <td style={{ ...valStyle, color: '#fff', fontWeight: 500 }}>{fmt$(p.amount)}</td>
+                    <td style={valStyle}>{p.method || '—'}</td>
+                    <td style={valStyle}>{fmt$(p.interest_portion)}</td>
+                    <td style={valStyle}>{fmt$(p.principal_portion)}</td>
+                    <td style={valStyle}>{fmt$(p.principal_balance_after)}</td>
+                    <td style={{ ...valStyle, color: p.payment_status === 'Current' ? '#34d399' : '#f87171' }}>
+                      {p.payment_status || '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
 export default function BorrowerPortal({ onHome }) {
   const { user } = useUser();
   const [borrower, setBorrower] = useState(null);
@@ -480,6 +569,7 @@ export default function BorrowerPortal({ onHome }) {
               </div>
             </div>
 
+            <PaymentHistoryCard loanIdInternal={borrower.loan_id_internal} />
             <WireInstructionsCard loanIdInternal={borrower.loan_id_internal} />
 
 
