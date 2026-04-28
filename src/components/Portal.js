@@ -139,6 +139,7 @@ function RecordPaymentModal({ borrower, onClose, onSuccess }) {
       const lastDate = borrower.last_payment_date || borrower.loan_start_date;
       if (!lastDate) { setError('Missing loan start date — please update the borrower record in Supabase.'); setSaving(false); return; }
       if (new Date(date) <= new Date(lastDate)) { setError('Payment date must be after the last payment date.'); setSaving(false); return; }
+      console.log('borrower id:', borrower.id, 'liveData:', borrower);
       console.log('calculatePayment input:', { loan_type: borrower.loan_type, principal_balance: borrower.principal_balance, interest_rate: borrower.interest_rate, last_payment_date: borrower.last_payment_date || borrower.loan_start_date, maturity_date: borrower.maturity_date, date });
       const result = calculatePayment(
         {
