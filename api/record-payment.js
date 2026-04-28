@@ -257,6 +257,14 @@ export default async function handler(req, res) {
 
       invoiceUrl = urlData?.publicUrl || null;
 
+      // Save invoice_url back to payments row
+      if (invoiceUrl && paymentId) {
+        await supabase
+          .from('payments')
+          .update({ invoice_url: invoiceUrl })
+          .eq('id', paymentId);
+      }
+
       // Email borrower
       if (borrowerEmail) {
         await fetch('https://api.postmarkapp.com/email', {

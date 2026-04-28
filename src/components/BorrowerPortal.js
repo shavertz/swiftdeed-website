@@ -40,23 +40,15 @@ const s = {
   infoRow: { display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '0.5px solid #1a1a1a', alignItems: 'center' },
   irLabel: { fontSize: 13, color: '#555' },
   irVal: { fontSize: 13, color: '#ccc' },
-  stmtRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '0.5px solid #1a1a1a' },
-  stmtInfo: { display: 'flex', flexDirection: 'column', gap: 2 },
-  stmtName: { fontSize: 13, color: '#ccc' },
-  stmtDate: { fontSize: 11, color: '#555' },
-  stmtBtn: { background: 'transparent', border: '0.5px solid #FFD700', color: '#888', fontSize: 12, padding: '5px 12px', borderRadius: 5, cursor: 'pointer', transition: 'all 0.15s' },
-  emptyWrap: { textAlign: 'center', padding: '80px 40px' },
-  emptyTitle: { fontSize: 18, fontWeight: 500, color: '#fff', marginBottom: 12 },
-  emptyText: { fontSize: 14, color: '#555', lineHeight: 1.7, maxWidth: 400, margin: '0 auto' },
-  editInput: { background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 6, padding: '6px 10px', fontSize: 13, color: '#fff', fontFamily: 'inherit', outline: 'none', width: '200px' },
-  editBtn: { background: '#D4A017', color: '#0f0f0f', border: 'none', borderRadius: 6, padding: '6px 14px', fontSize: 12, fontWeight: 500, cursor: 'pointer', marginLeft: 8 },
-  cancelBtn: { background: 'transparent', color: '#555', border: '0.5px solid #2a2a2a', borderRadius: 6, padding: '6px 12px', fontSize: 12, cursor: 'pointer', marginLeft: 4 },
-  editIcon: { fontSize: 11, color: '#4a90b8', cursor: 'pointer', marginLeft: 8 },
   wireRow: { display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '0.5px solid #1a1a1a', alignItems: 'center' },
   wireLabel: { fontSize: 13, color: '#555' },
   wireVal: { fontSize: 13, color: '#ccc', textAlign: 'right' },
   wireRef: { fontSize: 13, color: '#D4A017', textAlign: 'right', fontFamily: 'monospace' },
   wireNote: { fontSize: 12, color: '#444', marginTop: 14, lineHeight: 1.6, background: '#1a1800', border: '0.5px solid #3a3000', borderRadius: 6, padding: '10px 12px' },
+  emptyWrap: { textAlign: 'center', padding: '80px 40px' },
+  emptyTitle: { fontSize: 18, fontWeight: 500, color: '#fff', marginBottom: 12 },
+  emptyText: { fontSize: 14, color: '#555', lineHeight: 1.7, maxWidth: 400, margin: '0 auto' },
+  stmtBtn: { background: 'transparent', border: '0.5px solid #FFD700', color: '#888', fontSize: 11, padding: '4px 10px', borderRadius: 5, cursor: 'pointer', transition: 'all 0.15s' },
 };
 
 function fmt$(v) {
@@ -141,20 +133,14 @@ function WireInstructionsCard({ loanIdInternal }) {
         if (!Array.isArray(reqData) || reqData.length === 0) { setLoading(false); return; }
         const lenderEmail = reqData[0].from_email;
         if (!lenderEmail) { setLoading(false); return; }
-
         const lenderRes = await fetch(
           `${SUPABASE_URL}/rest/v1/lenders?email=eq.${encodeURIComponent(lenderEmail)}&select=wire_bank_name,wire_routing_number,wire_account_number,wire_account_name,wire_bank_address&limit=1`,
           { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
         );
         const lenderData = await lenderRes.json();
-        if (Array.isArray(lenderData) && lenderData.length > 0) {
-          setWire(lenderData[0]);
-        }
-      } catch (e) {
-        console.error('Wire fetch error:', e);
-      } finally {
-        setLoading(false);
-      }
+        if (Array.isArray(lenderData) && lenderData.length > 0) setWire(lenderData[0]);
+      } catch (e) { console.error(e); }
+      finally { setLoading(false); }
     }
     fetchWire();
   }, [loanIdInternal]);
@@ -162,49 +148,25 @@ function WireInstructionsCard({ loanIdInternal }) {
   const hasWire = wire && wire.wire_bank_name && wire.wire_routing_number && wire.wire_account_number;
 
   return (
-    <div style={{ ...s.card, marginBottom: 20 }}>
-      <div style={s.cardHead}>
+    <div style={s.card}>
+      <div style={{ ...s.cardHead }}>
         <div style={s.cardTitle}>Wire instructions</div>
-        <span style={{ fontSize: 12, color: '#555' }}>For balloon & payoff payments</span>
+        <span style={{ fontSize: 11, color: '#555' }}>Balloon & payoff</span>
       </div>
       <div style={s.cardBody}>
         {loading ? (
-          <div style={{ fontSize: 13, color: '#555', textAlign: 'center', padding: '16px 0' }}>Loading...</div>
+          <div style={{ fontSize: 13, color: '#555', textAlign: 'center', padding: '12px 0' }}>Loading...</div>
         ) : !hasWire ? (
-          <div style={{ fontSize: 13, color: '#555', textAlign: 'center', padding: '16px 0' }}>
-            Wire details not on file yet. Contact your lender directly.
-          </div>
+          <div style={{ fontSize: 13, color: '#555', textAlign: 'center', padding: '12px 0' }}>Contact your lender for wire details.</div>
         ) : (
           <>
-            <div style={s.wireRow}>
-              <span style={s.wireLabel}>Bank</span>
-              <span style={s.wireVal}>{wire.wire_bank_name}</span>
-            </div>
-            <div style={s.wireRow}>
-              <span style={s.wireLabel}>Account name</span>
-              <span style={s.wireVal}>{wire.wire_account_name}</span>
-            </div>
-            <div style={s.wireRow}>
-              <span style={s.wireLabel}>Routing number</span>
-              <span style={s.wireVal}>{wire.wire_routing_number}</span>
-            </div>
-            <div style={s.wireRow}>
-              <span style={s.wireLabel}>Account number</span>
-              <span style={s.wireVal}>{wire.wire_account_number}</span>
-            </div>
-            {wire.wire_bank_address && (
-              <div style={s.wireRow}>
-                <span style={s.wireLabel}>Bank address</span>
-                <span style={s.wireVal}>{wire.wire_bank_address}</span>
-              </div>
-            )}
-            <div style={{ ...s.wireRow, borderBottom: 'none' }}>
-              <span style={s.wireLabel}>Reference / memo</span>
-              <span style={s.wireRef}>{loanIdInternal}</span>
-            </div>
-            <div style={s.wireNote}>
-              Always include your loan ID in the memo field of your wire. Contact your lender to confirm receipt before closing.
-            </div>
+            <div style={s.wireRow}><span style={s.wireLabel}>Bank</span><span style={s.wireVal}>{wire.wire_bank_name}</span></div>
+            <div style={s.wireRow}><span style={s.wireLabel}>Account name</span><span style={s.wireVal}>{wire.wire_account_name}</span></div>
+            <div style={s.wireRow}><span style={s.wireLabel}>Routing</span><span style={s.wireVal}>{wire.wire_routing_number}</span></div>
+            <div style={s.wireRow}><span style={s.wireLabel}>Account</span><span style={s.wireVal}>{wire.wire_account_number}</span></div>
+            {wire.wire_bank_address && <div style={s.wireRow}><span style={s.wireLabel}>Bank address</span><span style={s.wireVal}>{wire.wire_bank_address}</span></div>}
+            <div style={{ ...s.wireRow, borderBottom: 'none' }}><span style={s.wireLabel}>Reference / memo</span><span style={s.wireRef}>{loanIdInternal}</span></div>
+            <div style={s.wireNote}>Always include your loan ID in the memo field. Contact your lender to confirm receipt before closing.</div>
           </>
         )}
       </div>
@@ -215,6 +177,7 @@ function WireInstructionsCard({ loanIdInternal }) {
 function PaymentHistoryCard({ loanIdInternal }) {
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [docsOpen, setDocsOpen] = useState(false);
 
   useEffect(() => {
     if (!loanIdInternal) return;
@@ -226,55 +189,38 @@ function PaymentHistoryCard({ loanIdInternal }) {
         );
         const data = await res.json();
         setPayments(Array.isArray(data) ? data : []);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
-      }
+      } catch (e) { console.error(e); }
+      finally { setLoading(false); }
     }
     fetchPayments();
   }, [loanIdInternal]);
 
-  function fmt$(v) {
-    if (v == null) return '—';
-    return '$' + parseFloat(v).toLocaleString('en-US', { minimumFractionDigits: 2 });
-  }
-
-  function fmtDate(str) {
-    if (!str) return '—';
-    const d = new Date(str + 'T00:00:00');
-    if (isNaN(d.getTime())) return '—';
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  }
-
+  const headStyle = { fontSize: 10, color: '#D4A017', textTransform: 'uppercase', letterSpacing: 0.6, padding: '8px 8px', borderBottom: '0.5px solid #2a2a2a', textAlign: 'right' };
   const colStyle = { fontSize: 12, color: '#555', padding: '10px 8px', borderBottom: '0.5px solid #1a1a1a' };
   const valStyle = { fontSize: 12, color: '#ccc', padding: '10px 8px', borderBottom: '0.5px solid #1a1a1a', textAlign: 'right' };
-  const headStyle = { fontSize: 10, color: '#FFD700', textTransform: 'uppercase', letterSpacing: 0.6, padding: '8px 8px', borderBottom: '0.5px solid #2a2a2a', textAlign: 'right' };
-  const headStyleLeft = { ...headStyle, textAlign: 'left' };
 
   return (
-    <div style={{ background: '#111', border: '0.5px solid #2a2a2a', borderRadius: 10, overflow: 'hidden', marginBottom: 20 }}>
-      <div style={{ padding: '14px 18px', borderBottom: '0.5px solid #1e1e1e', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ fontSize: 13, fontWeight: 500, color: '#fff' }}>Payment history</div>
+    <div style={{ ...s.card, marginBottom: 20 }}>
+      <div style={s.cardHead}>
+        <div style={s.cardTitle}>Payment history</div>
         <span style={{ fontSize: 12, color: '#555' }}>{payments.length} payment{payments.length !== 1 ? 's' : ''}</span>
       </div>
-      <div style={{ padding: 18 }}>
+      <div style={s.cardBody}>
         {loading ? (
-          <div style={{ fontSize: 13, color: '#555', textAlign: 'center', padding: '20px 0' }}>Loading...</div>
+          <div style={{ fontSize: 13, color: '#555', textAlign: 'center', padding: '16px 0' }}>Loading...</div>
         ) : payments.length === 0 ? (
-          <div style={{ fontSize: 13, color: '#555', textAlign: 'center', padding: '20px 0' }}>No payments recorded yet.</div>
+          <div style={{ fontSize: 13, color: '#555', textAlign: 'center', padding: '16px 0' }}>No payments recorded yet.</div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
-                  <th style={headStyleLeft}>Date</th>
+                  <th style={{ ...headStyle, textAlign: 'left' }}>Date</th>
                   <th style={headStyle}>Amount</th>
                   <th style={headStyle}>Method</th>
                   <th style={headStyle}>Interest</th>
-                  <th style={headStyle}>Principal</th>
                   <th style={headStyle}>Balance after</th>
-                  <th style={headStyle}>Status</th>
+                  <th style={headStyle}>Receipt</th>
                 </tr>
               </thead>
               <tbody>
@@ -284,10 +230,15 @@ function PaymentHistoryCard({ loanIdInternal }) {
                     <td style={{ ...valStyle, color: '#fff', fontWeight: 500 }}>{fmt$(p.amount)}</td>
                     <td style={valStyle}>{p.method || '—'}</td>
                     <td style={valStyle}>{fmt$(p.interest_portion)}</td>
-                    <td style={valStyle}>{fmt$(p.principal_portion)}</td>
                     <td style={valStyle}>{fmt$(p.principal_balance_after)}</td>
-                    <td style={{ ...valStyle, color: p.payment_status === 'Current' ? '#34d399' : '#f87171' }}>
-                      {p.payment_status || '—'}
+                    <td style={{ ...valStyle, borderBottom: i === payments.length - 1 ? 'none' : '0.5px solid #1a1a1a' }}>
+                      {p.invoice_url ? (
+                        <a href={p.invoice_url} target="_blank" rel="noreferrer"
+                          style={{ background: 'transparent', border: '0.5px solid #FFD700', color: '#888', fontSize: 11, padding: '4px 10px', borderRadius: 5, cursor: 'pointer', textDecoration: 'none', transition: 'all 0.15s' }}
+                          onMouseEnter={e => { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.color = '#FFD700'; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#888'; }}
+                        >Download</a>
+                      ) : <span style={{ fontSize: 11, color: '#333' }}>—</span>}
                     </td>
                   </tr>
                 ))}
@@ -300,6 +251,46 @@ function PaymentHistoryCard({ loanIdInternal }) {
   );
 }
 
+function LoanDocumentsCard({ docUrls }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ ...s.card, marginBottom: 20 }}>
+      <div
+        style={{ ...s.cardHead, cursor: 'pointer' }}
+        onClick={() => setOpen(o => !o)}
+      >
+        <div style={s.cardTitle}>Loan documents</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 12, color: '#555' }}>{docUrls.length} document{docUrls.length !== 1 ? 's' : ''}</span>
+          <span style={{ fontSize: 12, color: '#555', transition: 'transform 0.2s', display: 'inline-block', transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
+        </div>
+      </div>
+      {open && (
+        <div style={s.cardBody}>
+          {docUrls.length === 0 ? (
+            <div style={{ fontSize: 13, color: '#555', textAlign: 'center', padding: '16px 0' }}>No documents available yet.</div>
+          ) : docUrls.map((url, i) => {
+            const name = url.split('/').pop().replace(/^\d+_/, '').replace(/[-_]/g, ' ').replace('.pdf', '').replace(/\s+/g, ' ').trim();
+            return (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: i === docUrls.length - 1 ? 'none' : '0.5px solid #1a1a1a' }}>
+                <div>
+                  <div style={{ fontSize: 13, color: '#ccc' }}>{name}</div>
+                  <div style={{ fontSize: 11, color: '#555' }}>Loan document</div>
+                </div>
+                <button
+                  style={s.stmtBtn}
+                  onClick={() => window.open(url, '_blank')}
+                  onMouseEnter={e => { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.color = '#FFD700'; e.currentTarget.style.boxShadow = '0 0 16px rgba(255, 215, 0, 0.3)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#888'; e.currentTarget.style.boxShadow = 'none'; }}
+                >Download PDF</button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function BorrowerPortal({ onHome }) {
   const { user } = useUser();
@@ -415,6 +406,7 @@ export default function BorrowerPortal({ onHome }) {
             </div>
 
             <div style={s.grid2}>
+              {/* Payment card */}
               <div style={s.card}>
                 <div style={s.cardHead}>
                   <div style={s.cardTitle}>{isPaidOff ? 'Loan summary' : 'Make a payment'}</div>
@@ -481,6 +473,7 @@ export default function BorrowerPortal({ onHome }) {
                 </div>
               </div>
 
+              {/* Loan breakdown */}
               <div style={s.card}>
                 <div style={s.cardHead}><div style={s.cardTitle}>Loan breakdown</div></div>
                 <div style={s.cardBody}>
@@ -508,6 +501,7 @@ export default function BorrowerPortal({ onHome }) {
                 </div>
               </div>
 
+              {/* Right column: Loan details + Wire instructions */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                 <div style={s.card}>
                   <div style={s.cardHead}><div style={s.cardTitle}>Loan details</div></div>
@@ -519,6 +513,10 @@ export default function BorrowerPortal({ onHome }) {
                     <div style={s.infoRow}>
                       <span style={s.irLabel}>Origination date</span>
                       <span style={s.irVal}>{fmtDate(borrower.loan_start_date)}</span>
+                    </div>
+                    <div style={s.infoRow}>
+                      <span style={s.irLabel}>Maturity date</span>
+                      <span style={s.irVal}>{fmtDate(borrower.maturity_date)}</span>
                     </div>
                     <div style={s.infoRow}>
                       <span style={s.irLabel}>Interest rate</span>
@@ -534,45 +532,15 @@ export default function BorrowerPortal({ onHome }) {
                     </div>
                   </div>
                 </div>
-                <div style={s.card}>
-                  <div style={s.cardHead}><div style={s.cardTitle}>Loan documents</div></div>
-                  <div style={s.cardBody}>
-                    {docUrls.length === 0 ? (
-                      <div style={{ fontSize: 13, color: '#555', textAlign: 'center', padding: '20px 0' }}>No documents available yet</div>
-                    ) : docUrls.map((url, i) => {
-                      const name = url.split('/').pop().replace(/^\d+_/, '').replace(/[-_]/g, ' ').replace('.pdf', '').replace(/\s+/g, ' ').trim();
-                      return (
-                        <div key={i} style={{ ...s.stmtRow, borderBottom: i === docUrls.length - 1 ? 'none' : '0.5px solid #1a1a1a' }}>
-                          <div style={s.stmtInfo}>
-                            <div style={s.stmtName}>{name}</div>
-                            <div style={s.stmtDate}>Loan document</div>
-                          </div>
-                          <button style={s.stmtBtn} onClick={() => window.open(url, '_blank')}
-                            onMouseEnter={e => { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.color = '#FFD700'; e.currentTarget.style.boxShadow = '0 0 16px rgba(255, 215, 0, 0.3)'; }}
-                            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#888'; e.currentTarget.style.boxShadow = 'none'; }}
-                          >Download PDF</button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
+                <WireInstructionsCard loanIdInternal={borrower.loan_id_internal} />
               </div>
             </div>
 
-            <div style={{ ...s.card, marginBottom: 20 }}>
-              <div style={s.cardHead}>
-                <div style={s.cardTitle}>Statements</div>
-                <span style={{ fontSize: 12, color: '#555' }}>Monthly statements coming soon</span>
-              </div>
-              <div style={{ padding: '32px', textAlign: 'center', color: '#555', fontSize: 13 }}>
-                Monthly statements will appear here once generated. Your first statement will be sent to <span style={{ color: '#D4A017' }}>{email}</span>.
-              </div>
-            </div>
-
+            {/* Payment history — full width */}
             <PaymentHistoryCard loanIdInternal={borrower.loan_id_internal} />
-            <WireInstructionsCard loanIdInternal={borrower.loan_id_internal} />
 
-
+            {/* Loan documents — collapsible */}
+            <LoanDocumentsCard docUrls={docUrls} />
           </>
         )}
       </div>
