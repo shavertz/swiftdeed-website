@@ -596,9 +596,9 @@ export default function Portal({ onSubmitRequest }) {
                         <span key={h} style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: 0.5, textAlign: h === 'Date' ? 'left' : 'right' }}>{h}</span>
                       ))}
                     </div>
-                    <div style={{ maxHeight: 136, overflowY: 'auto', overflowX: 'hidden', scrollbarWidth: 'thin', scrollbarColor: '#FFD700 #0f0f0f' }}>
+                    <div style={{ maxHeight: 136, overflowY: 'auto', overflowX: 'hidden', scrollbarWidth: 'thin', scrollbarColor: '#FFD700 #0f0f0f', marginRight: -8, paddingRight: 8 }}>
                       {loanPayments.map((p, i) => (
-                        <div key={p.id || i} style={{ display: 'grid', gridTemplateColumns: '1fr 76px 44px', gap: 4, padding: '6px 0', paddingRight: 8, borderBottom: '0.5px solid #1a1a1a', alignItems: 'center' }}>
+                        <div key={p.id || i} style={{ display: 'grid', gridTemplateColumns: '1fr 76px 44px', gap: 4, padding: '6px 0', borderBottom: '0.5px solid #1a1a1a', alignItems: 'center' }}>
                           <span style={{ fontSize: 11, color: '#555' }}>{p.payment_date ? new Date(p.payment_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</span>
                           <span style={{ fontSize: 11, color: '#fff', fontWeight: 500, textAlign: 'right' }}>${parseFloat(p.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                           <span style={{ fontSize: 11, color: '#ccc', textAlign: 'right' }}>{p.method || '—'}</span>
