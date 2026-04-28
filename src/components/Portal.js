@@ -115,7 +115,7 @@ const s = {
   liveLoading: { fontSize: 11, color: '#444', fontStyle: 'italic' },
 };
 
-function RecordPaymentModal({ borrower, lenderEmail, onClose, onSuccess }) {
+function RecordPaymentModal({ borrower, lenderEmail, lenderName, onClose, onSuccess }) {
   const today = new Date().toISOString().split('T')[0];
   const [amount, setAmount] = useState(borrower?.monthly_payment ? String(borrower.monthly_payment) : '');
   const [date, setDate] = useState(today);
@@ -175,6 +175,7 @@ function RecordPaymentModal({ borrower, lenderEmail, onClose, onSuccess }) {
           updates,
           borrowerEmail: borrower.borrower_email || null,
           lenderEmail: lenderEmail || null,
+          lenderName: lenderName || null,
           borrowerName: borrower.legal_name || null,
           propertyAddress: borrower.property_address || null,
           perDiem: borrower.per_diem || null,
@@ -261,8 +262,26 @@ export default function Portal({ onSubmitRequest }) {
   const [liveLoading, setLiveLoading] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [lenderName, setLenderName] = useState('');
 
   const email = user?.primaryEmailAddress?.emailAddress;
+
+  useEffect(() => {
+    if (!email) return;
+    async function fetchLenderName() {
+      try {
+        const res = await fetch(
+          `${SUPABASE_URL}/rest/v1/lenders?email=eq.${encodeURIComponent(email)}&select=company_name&limit=1`,
+          { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
+        );
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          setLenderName(data[0].company_name || '');
+        }
+      } catch (e) { console.error(e); }
+    }
+    fetchLenderName();
+  }, [email]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!email) return;
@@ -576,6 +595,7 @@ export default function Portal({ onSubmitRequest }) {
         <RecordPaymentModal
           borrower={liveData}
           lenderEmail={email}
+          lenderName={lenderName}
           onClose={() => setShowPaymentModal(false)}
           onSuccess={(updates) => {
             setShowPaymentModal(false);
