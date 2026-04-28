@@ -115,7 +115,7 @@ const s = {
   liveLoading: { fontSize: 11, color: '#444', fontStyle: 'italic' },
 };
 
-function RecordPaymentModal({ borrower, onClose, onSuccess }) {
+function RecordPaymentModal({ borrower, lenderEmail, onClose, onSuccess }) {
   const today = new Date().toISOString().split('T')[0];
   const [amount, setAmount] = useState(borrower?.monthly_payment ? String(borrower.monthly_payment) : '');
   const [date, setDate] = useState(today);
@@ -173,6 +173,12 @@ function RecordPaymentModal({ borrower, onClose, onSuccess }) {
           borrowerId: borrower.id,
           loanIdInternal: borrower.loan_id_internal,
           updates,
+          borrowerEmail: borrower.borrower_email || null,
+          lenderEmail: lenderEmail || null,
+          borrowerName: borrower.legal_name || null,
+          propertyAddress: borrower.property_address || null,
+          perDiem: borrower.per_diem || null,
+          nextPaymentDate: result.updates.next_payment_date || null,
           paymentLog: {
             loan_id_internal: borrower.loan_id_internal,
             payment_date: date,
@@ -569,6 +575,7 @@ export default function Portal({ onSubmitRequest }) {
       {showPaymentModal && liveData && (
         <RecordPaymentModal
           borrower={liveData}
+          lenderEmail={email}
           onClose={() => setShowPaymentModal(false)}
           onSuccess={(updates) => {
             setShowPaymentModal(false);
