@@ -135,6 +135,10 @@ function RecordPaymentModal({ borrower, onClose, onSuccess }) {
     setSaving(true);
     setError('');
     try {
+      // Validate we have required fields
+      const lastDate = borrower.last_payment_date || borrower.loan_start_date;
+      if (!lastDate) { setError('Missing loan start date — please update the borrower record in Supabase.'); setSaving(false); return; }
+      if (new Date(date) <= new Date(lastDate)) { setError('Payment date must be after the last payment date.'); setSaving(false); return; }
       const result = calculatePayment(
         {
           loan_type: borrower.loan_type || 'interest_only',
@@ -143,7 +147,7 @@ function RecordPaymentModal({ borrower, onClose, onSuccess }) {
           monthly_payment: parseFloat(borrower.monthly_payment) || 0,
           total_interest_paid: parseFloat(borrower.total_interest_paid) || 0,
           total_payments_made: parseInt(borrower.total_payments_made) || 0,
-          last_payment_date: borrower.last_payment_date || borrower.loan_start_date,
+          last_payment_date: borrower.last_payment_date || borrower.loan_start_date || borrower.next_payment_date,
           next_payment_date: borrower.next_payment_date,
           maturity_date: borrower.maturity_date,
           day_count_convention: borrower.day_count_convention || 360,
@@ -152,7 +156,7 @@ function RecordPaymentModal({ borrower, onClose, onSuccess }) {
         parseFloat(amount)
       );
 
-      if (result.error) { setError(result.error); setSaving(false); return; }
+      if (result.error) { setError(result.error + ' (missing loan dates — check borrower record)'); setSaving(false); return; }
 
       const updates = {
         ...result.updates,
