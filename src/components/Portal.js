@@ -175,6 +175,32 @@ function RecordPaymentModal({ borrower, onClose, onSuccess }) {
       );
 
       if (!res.ok) throw new Error('Failed to save payment');
+
+      // Log to payments table
+      await fetch(
+        `${SUPABASE_URL}/rest/v1/payments`,
+        {
+          method: 'POST',
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            Prefer: 'return=minimal',
+          },
+          body: JSON.stringify({
+            loan_id_internal: borrower.loan_id_internal,
+            payment_date: date,
+            amount: parseFloat(amount),
+            method,
+            interest_portion: result.breakdown.interestPortion,
+            principal_portion: result.breakdown.principalPortion,
+            principal_balance_after: result.updates.principal_balance,
+            payment_status: result.updates.payment_status,
+            recorded_by: 'lender',
+          }),
+        }
+      );
+
       onSuccess(updates);
     } catch (e) {
       setError('Failed to record payment. Please try again.');
