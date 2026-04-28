@@ -166,7 +166,7 @@ function RecordPaymentModal({ borrower, onClose, onSuccess }) {
       };
 
       const res = await fetch(
-        `${SUPABASE_URL}/rest/v1/borrowers?loan_id_internal=eq.${encodeURIComponent(borrower.loan_id_internal)}`,
+        `${SUPABASE_URL}/rest/v1/borrowers?id=eq.${borrower.id}`,
         {
           method: 'PATCH',
           headers: {
