@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { calculatePayment } from '../utils/calculatePayment';
 import { useUser } from '@clerk/clerk-react';
 
 const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
@@ -114,6 +115,130 @@ const s = {
   liveLoading: { fontSize: 11, color: '#444', fontStyle: 'italic' },
 };
 
+function RecordPaymentModal({ borrower, onClose, onSuccess }) {
+  const today = new Date().toISOString().split('T')[0];
+  const [amount, setAmount] = useState(borrower?.monthly_payment ? String(borrower.monthly_payment) : '');
+  const [date, setDate] = useState(today);
+  const [method, setMethod] = useState('Wire');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const inputStyle = {
+    background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 6,
+    padding: '9px 12px', fontSize: 13, color: '#fff', fontFamily: 'inherit',
+    outline: 'none', width: '100%', boxSizing: 'border-box',
+  };
+  const labelStyle = { fontSize: 11, color: '#555', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 5, display: 'block' };
+
+  async function handleConfirm() {
+    if (!amount || !date) { setError('Please enter an amount and date.'); return; }
+    setSaving(true);
+    setError('');
+    try {
+      const result = calculatePayment(
+        {
+          loan_type: borrower.loan_type || 'interest_only',
+          principal_balance: parseFloat(borrower.principal_balance),
+          interest_rate: parseFloat(borrower.interest_rate),
+          monthly_payment: parseFloat(borrower.monthly_payment) || 0,
+          total_interest_paid: parseFloat(borrower.total_interest_paid) || 0,
+          total_payments_made: parseInt(borrower.total_payments_made) || 0,
+          last_payment_date: borrower.last_payment_date || borrower.loan_start_date,
+          next_payment_date: borrower.next_payment_date,
+          maturity_date: borrower.maturity_date,
+          day_count_convention: borrower.day_count_convention || 360,
+        },
+        date,
+        parseFloat(amount)
+      );
+
+      if (result.error) { setError(result.error); setSaving(false); return; }
+
+      const updates = {
+        ...result.updates,
+        last_payment_amount: parseFloat(amount),
+        last_payment_method: method,
+      };
+
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/borrowers?loan_id_internal=eq.${encodeURIComponent(borrower.loan_id_internal)}`,
+        {
+          method: 'PATCH',
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            Prefer: 'return=minimal',
+          },
+          body: JSON.stringify(updates),
+        }
+      );
+
+      if (!res.ok) throw new Error('Failed to save payment');
+      onSuccess(updates);
+    } catch (e) {
+      setError('Failed to record payment. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+      <div style={{ background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: 12, padding: '32px', width: '100%', maxWidth: 400, fontFamily: 'system-ui, sans-serif' }}>
+        <div style={{ fontSize: 16, fontWeight: 500, color: '#fff', marginBottom: 6 }}>Record payment</div>
+        <div style={{ fontSize: 12, color: '#555', marginBottom: 24 }}>{borrower.legal_name} · {borrower.loan_id_internal}</div>
+
+        <label style={labelStyle}>Payment amount</label>
+        <input style={{ ...inputStyle, marginBottom: 16 }} type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" />
+
+        <label style={labelStyle}>Payment date</label>
+        <input style={{ ...inputStyle, marginBottom: 16 }} type="date" value={date} onChange={e => setDate(e.target.value)} />
+
+        <label style={labelStyle}>Payment method</label>
+        <select style={{ ...inputStyle, marginBottom: 24, cursor: 'pointer' }} value={method} onChange={e => setMethod(e.target.value)}>
+          <option value="Wire">Wire transfer</option>
+          <option value="Check">Check</option>
+          <option value="ACH">ACH</option>
+          <option value="Other">Other</option>
+        </select>
+
+        {error && <div style={{ fontSize: 12, color: '#f87171', marginBottom: 16 }}>{error}</div>}
+
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            onClick={handleConfirm}
+            disabled={saving}
+            style={{ flex: 1, background: '#FFD700', color: '#0f0f0f', fontSize: 13, fontWeight: 600, padding: '10px', borderRadius: 6, border: 'none', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1, transition: 'box-shadow 0.15s' }}
+            onMouseEnter={e => { if (!saving) e.currentTarget.style.boxShadow = '0 0 12px rgba(255,215,0,0.4)'; }}
+            onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
+          >{saving ? 'Recording...' : 'Confirm payment'}</button>
+          <button
+            onClick={onClose}
+            disabled={saving}
+            style={{ flex: 1, background: 'transparent', color: '#fff', fontSize: 13, padding: '10px', borderRadius: 6, border: '0.5px solid #2a2a2a', cursor: 'pointer', transition: 'border-color 0.15s' }}
+            onMouseEnter={e => e.currentTarget.style.borderColor = '#555'}
+            onMouseLeave={e => e.currentTarget.style.borderColor = '#2a2a2a'}
+          >Cancel</button>
+        </div>
+      </div>
+      {showPaymentModal && liveData && (
+        <RecordPaymentModal
+          borrower={liveData}
+          onClose={() => setShowPaymentModal(false)}
+          onSuccess={(updates) => {
+            setShowPaymentModal(false);
+            setPaymentSuccess(true);
+            setLiveData(prev => ({ ...prev, ...updates }));
+            setTimeout(() => setPaymentSuccess(false), 5000);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+
 export default function Portal({ onSubmitRequest }) {
   const { user } = useUser();
   const [requests, setRequests] = useState([]);
@@ -126,6 +251,8 @@ export default function Portal({ onSubmitRequest }) {
   const [hoveredId, setHoveredId] = useState(null);
   const [liveData, setLiveData] = useState(null);
   const [liveLoading, setLiveLoading] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
 
   const email = user?.primaryEmailAddress?.emailAddress;
 
@@ -411,6 +538,17 @@ export default function Portal({ onSubmitRequest }) {
               </div>
 
               <div style={s.panelSection}>
+                <div style={s.panelSectionLabel}>Manual Payment</div>
+                {paymentSuccess && <div style={{ fontSize: 11, color: '#34d399', marginBottom: 8 }}>✓ Payment recorded successfully</div>}
+                <button
+                  onClick={() => { setPaymentSuccess(false); setShowPaymentModal(true); }}
+                  style={{ display: 'block', width: '100%', background: 'transparent', color: '#fff', fontSize: 12, fontWeight: 500, padding: '7px', borderRadius: 6, border: '0.5px solid #FFD700', cursor: 'pointer', textAlign: 'center', transition: 'all 0.15s', marginBottom: 4 }}
+                  onMouseEnter={e => { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.color = '#FFD700'; e.currentTarget.style.boxShadow = '0 0 16px rgba(255, 215, 0, 0.3)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#fff'; e.currentTarget.style.boxShadow = 'none'; }}
+                >Record payment (wire / check)</button>
+              </div>
+
+              <div style={s.panelSection}>
                 <div style={s.panelSectionLabel}>Statement</div>
                 {selected.payoff_statement_url
                   ? <a href={selected.payoff_statement_url} target="_blank" rel="noreferrer" style={s.dlBtn}
@@ -426,6 +564,18 @@ export default function Portal({ onSubmitRequest }) {
           )}
         </div>
       </div>
+      {showPaymentModal && liveData && (
+        <RecordPaymentModal
+          borrower={liveData}
+          onClose={() => setShowPaymentModal(false)}
+          onSuccess={(updates) => {
+            setShowPaymentModal(false);
+            setPaymentSuccess(true);
+            setLiveData(prev => ({ ...prev, ...updates }));
+            setTimeout(() => setPaymentSuccess(false), 5000);
+          }}
+        />
+      )}
     </div>
   );
 }
