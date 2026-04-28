@@ -263,6 +263,8 @@ export default function Portal({ onSubmitRequest }) {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [lenderName, setLenderName] = useState('');
+  const [loanPayments, setLoanPayments] = useState([]);
+  const [showAllPayments, setShowAllPayments] = useState(false);
 
   const email = user?.primaryEmailAddress?.emailAddress;
 
@@ -562,6 +564,36 @@ export default function Portal({ onSubmitRequest }) {
                   <span style={s.panelKey}>Total payments made</span>
                   <span style={s.panelVal}>{totalPaymentsMade ?? '—'}</span>
                 </div>
+              </div>
+
+              <div style={s.panelSection}>
+                <div style={{ ...s.panelSectionLabel, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>Payment History</span>
+                  {loanPayments.length > 3 && (
+                    <button onClick={() => setShowAllPayments(v => !v)} style={{ background: 'transparent', border: 'none', color: '#4a90b8', fontSize: 10, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
+                      {showAllPayments ? 'Show less' : `View all ${loanPayments.length}`}
+                    </button>
+                  )}
+                </div>
+                {loanPayments.length === 0 ? (
+                  <div style={{ fontSize: 11, color: '#333' }}>No payments recorded yet.</div>
+                ) : (
+                  <>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 70px 46px 54px', gap: 4, marginBottom: 4 }}>
+                      {['Date','Amount','Method','Status'].map(h => (
+                        <span key={h} style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: 0.5, textAlign: h === 'Date' ? 'left' : 'right' }}>{h}</span>
+                      ))}
+                    </div>
+                    {(showAllPayments ? loanPayments : loanPayments.slice(0, 3)).map((p, i) => (
+                      <div key={p.id || i} style={{ display: 'grid', gridTemplateColumns: '1fr 70px 46px 54px', gap: 4, padding: '6px 0', borderBottom: '0.5px solid #1a1a1a', alignItems: 'center' }}>
+                        <span style={{ fontSize: 11, color: '#555' }}>{p.payment_date ? new Date(p.payment_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</span>
+                        <span style={{ fontSize: 11, color: '#fff', fontWeight: 500, textAlign: 'right' }}>${parseFloat(p.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                        <span style={{ fontSize: 11, color: '#ccc', textAlign: 'right' }}>{p.method || '—'}</span>
+                        <span style={{ fontSize: 11, color: p.payment_status === 'Current' ? '#34d399' : '#f87171', textAlign: 'right' }}>{p.payment_status || '—'}</span>
+                      </div>
+                    ))}
+                  </>
+                )}
               </div>
 
               <div style={s.panelSection}>
