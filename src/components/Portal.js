@@ -164,6 +164,8 @@ function RecordPaymentModal({ borrower, lenderEmail, lenderName, onClose, onSucc
         ...result.updates,
         last_payment_amount: parseFloat(amount),
         last_payment_method: method,
+        last_payment_interest: result.breakdown.interestPortion,
+        last_payment_principal: result.breakdown.principalPortion,
       };
 
       const res = await fetch('/api/record-payment', {
@@ -600,7 +602,7 @@ export default function Portal({ onSubmitRequest }) {
                 ) : (
                   <>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 70px 46px 54px', gap: 4, marginBottom: 4 }}>
-                      {['Date','Amount','Method','Status'].map(h => (
+                      {['Date','Amount','Method','Balance after'].map(h => (
                         <span key={h} style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: 0.5, textAlign: h === 'Date' ? 'left' : 'right' }}>{h}</span>
                       ))}
                     </div>
@@ -609,7 +611,7 @@ export default function Portal({ onSubmitRequest }) {
                         <span style={{ fontSize: 11, color: '#555' }}>{p.payment_date ? new Date(p.payment_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</span>
                         <span style={{ fontSize: 11, color: '#fff', fontWeight: 500, textAlign: 'right' }}>${parseFloat(p.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                         <span style={{ fontSize: 11, color: '#ccc', textAlign: 'right' }}>{p.method || '—'}</span>
-                        <span style={{ fontSize: 11, color: p.payment_status === 'Current' ? '#34d399' : '#f87171', textAlign: 'right' }}>{p.payment_status || '—'}</span>
+                        <span style={{ fontSize: 11, color: '#ccc', textAlign: 'right' }}>${parseFloat(p.principal_balance_after || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                       </div>
                     ))}
                   </>

@@ -436,6 +436,22 @@ export default function BorrowerPortal({ onHome }) {
                       <div style={s.payTitle}>Amount due</div>
                       <div style={s.payBig}>{fmt$(borrower.last_payment_amount)}</div>
                       <div style={s.payDue}>Due {fmtDate(borrower.next_payment_date)} · Monthly payment</div>
+                      {(borrower.last_payment_interest != null || borrower.last_payment_principal != null) && (
+                        <div style={{ background: '#1a1a1a', borderRadius: 7, padding: '10px 12px', marginBottom: 14 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 5 }}>
+                            <span style={{ color: '#555' }}>Interest</span>
+                            <span style={{ color: '#ccc' }}>{fmt$(borrower.last_payment_interest)}</span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 5 }}>
+                            <span style={{ color: '#555' }}>Principal</span>
+                            <span style={{ color: '#ccc' }}>{fmt$(borrower.last_payment_principal)}</span>
+                          </div>
+                          <div style={{ borderTop: '0.5px solid #2a2a2a', marginTop: 6, paddingTop: 6, display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                            <span style={{ color: '#888' }}>Total</span>
+                            <span style={{ color: '#fff', fontWeight: 500 }}>{fmt$(borrower.last_payment_amount)}</span>
+                          </div>
+                        </div>
+                      )}
                       <button style={s.btnPay}
                         onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 0 16px rgba(255, 215, 0, 0.45)'; }}
                         onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; }}
