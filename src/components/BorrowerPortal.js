@@ -177,8 +177,6 @@ function WireInstructionsCard({ loanIdInternal }) {
 function PaymentHistoryCard({ loanIdInternal }) {
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [docsOpen, setDocsOpen] = useState(false);
-
   useEffect(() => {
     if (!loanIdInternal) return;
     async function fetchPayments() {
