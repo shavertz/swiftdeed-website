@@ -22,7 +22,7 @@ const STEPS = [
   'Sending to your inbox',
 ];
 
-function LoadingScreen({ lenderEmail, onSuccess, submitTime }) {
+function LoadingScreen({ lenderEmail, onSuccess, baseCount }) {
   const [activeStep, setActiveStep] = useState(0);
   const [progress, setProgress] = useState(0);
 
@@ -46,17 +46,14 @@ function LoadingScreen({ lenderEmail, onSuccess, submitTime }) {
     };
     setTimeout(advanceStep, stepDurations[0]);
 
-    // Poll Supabase every 3 seconds for the new payoff_requests row
+    // Poll every 3 seconds — succeed when row count exceeds baseCount
     const poll = setInterval(async () => {
       try {
-        const since = new Date(submitTime - 2000).toISOString();
-        const { data } = await supabase
+        const { count } = await supabase
           .from('payoff_requests')
-          .select('id')
-          .eq('from_email', lenderEmail)
-          .gte('created_at', since)
-          .limit(1);
-        if (data && data.length > 0) {
+          .select('id', { count: 'exact', head: true })
+          .eq('from_email', lenderEmail);
+        if (count !== null && count > baseCount) {
           clearInterval(poll);
           clearInterval(tick);
           setProgress(100);
@@ -69,7 +66,7 @@ function LoadingScreen({ lenderEmail, onSuccess, submitTime }) {
     }, 3000);
 
     return () => { clearInterval(tick); clearInterval(poll); };
-  }, [lenderEmail, onSuccess, submitTime]);
+  }, [lenderEmail, onSuccess, baseCount]);
 
   return (
     <div style={{ background: '#0f0f0f', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 40 }}>
@@ -277,7 +274,7 @@ export default function RequestForm() {
   const [files, setFiles] = useState([]);
   const [dragging, setDragging] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [submitTime, setSubmitTime] = useState(null);
+  const [baseCount, setBaseCount] = useState(0);
   const [submitted, setSubmitted] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', company: '', phone: '', borrowerEmail: '', borrowerName: '', notes: '' });
   const fileInputRef = useRef();
@@ -335,12 +332,18 @@ export default function RequestForm() {
     securityText: { fontSize: 12, color: '#4a7a4a', lineHeight: 1.6 },
   };
 
-  const handleSetSubmitting = (val) => {
-    if (val) setSubmitTime(Date.now());
+  const handleSetSubmitting = async (val) => {
+    if (val) {
+      const { count } = await supabase
+        .from('payoff_requests')
+        .select('id', { count: 'exact', head: true })
+        .eq('from_email', form.email);
+      setBaseCount(count || 0);
+    }
     setSubmitting(val);
   };
 
-  if (submitting) return <LoadingScreen lenderEmail={form.email} onSuccess={() => setSubmitted(true)} submitTime={submitTime} />;
+  if (submitting) return <LoadingScreen lenderEmail={form.email} onSuccess={() => setSubmitted(true)} baseCount={baseCount} />;
   if (submitted) return <SuccessScreen form={form} files={files} turnaround={turnaround} onReset={handleReset} />;
 
   return (
