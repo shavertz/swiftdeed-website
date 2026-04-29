@@ -322,6 +322,7 @@ export default function Portal({ onSubmitRequest }) {
   const { user } = useUser();
   const [requests, setRequests] = useState([]);
   const [borrowerEmails, setBorrowerEmails] = useState({});
+  const [borrowerData, setBorrowerData] = useState({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState('newest');
@@ -366,12 +367,19 @@ export default function Portal({ onSubmitRequest }) {
         setRequests(rows);
         const ids = rows.map(r => r.loan_id_internal).filter(Boolean);
         if (ids.length > 0) {
-          const bRes = await fetch(`${SUPABASE_URL}/rest/v1/borrowers?loan_id_internal=in.(${ids.map(id => `"${id}"`).join(',')})&select=loan_id_internal,borrower_email`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
+          const bRes = await fetch(`${SUPABASE_URL}/rest/v1/borrowers?loan_id_internal=in.(${ids.map(id => `"${id}"`).join(',')})&select=loan_id_internal,borrower_email,principal_balance,next_payment_date,monthly_payment,payment_status`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
           const bData = await bRes.json();
           if (Array.isArray(bData)) {
-            const map = {};
-            bData.forEach(b => { if (b.loan_id_internal) map[b.loan_id_internal] = b.borrower_email; });
-            setBorrowerEmails(map);
+            const emailMap = {};
+            const dataMap = {};
+            bData.forEach(b => {
+              if (b.loan_id_internal) {
+                emailMap[b.loan_id_internal] = b.borrower_email;
+                dataMap[b.loan_id_internal] = b;
+              }
+            });
+            setBorrowerEmails(emailMap);
+            setBorrowerData(dataMap);
           }
         }
       } catch (e) { console.error(e); } finally { setLoading(false); }
@@ -466,25 +474,31 @@ export default function Portal({ onSubmitRequest }) {
 
   const filtered = requests.filter(r => {
     const q = search.toLowerCase();
-    const matchSearch = !q || r.loan_id_internal?.toLowerCase().includes(q) || r.loan_id?.toLowerCase().includes(q) || r.borrower_name?.toLowerCase().includes(q) || r.property_address?.toLowerCase().includes(q);
-    const matchStatus = sort === 'completed' ? r.status?.toLowerCase() === 'completed' : sort === 'pending' ? r.status?.toLowerCase() !== 'completed' : true;
-    return matchSearch && matchStatus;
+    return !q || r.loan_id_internal?.toLowerCase().includes(q) || r.loan_id?.toLowerCase().includes(q) || r.borrower_name?.toLowerCase().includes(q) || r.property_address?.toLowerCase().includes(q);
   });
 
   const sorted = [...filtered].sort((a, b) => {
     if (sort === 'oldest') return new Date(a.created_at) - new Date(b.created_at);
-    if (sort === 'amount_asc') return (parseFloat(a.total_due) || 0) - (parseFloat(b.total_due) || 0);
-    if (sort === 'amount_desc') return (parseFloat(b.total_due) || 0) - (parseFloat(a.total_due) || 0);
+    if (sort === 'amount_desc') return (parseFloat(borrowerData[b.loan_id_internal]?.principal_balance || b.total_due) || 0) - (parseFloat(borrowerData[a.loan_id_internal]?.principal_balance || a.total_due) || 0);
+    if (sort === 'amount_asc') return (parseFloat(borrowerData[a.loan_id_internal]?.principal_balance || a.total_due) || 0) - (parseFloat(borrowerData[b.loan_id_internal]?.principal_balance || b.total_due) || 0);
     return new Date(b.created_at) - new Date(a.created_at);
   });
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const paginated = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  const totalAmount = requests.reduce((sum, r) => sum + (parseFloat(r.total_due) || 0), 0);
-  const avgLoanSize = requests.length > 0 ? totalAmount / requests.length : 0;
+  const totalBalance = requests.reduce((sum, r) => sum + (parseFloat(borrowerData[r.loan_id_internal]?.principal_balance || r.total_due) || 0), 0);
+  const avgLoanSize = requests.length > 0 ? totalBalance / requests.length : 0;
   const activeBorrowers = new Set(requests.map(r => borrowerEmails[r.loan_id_internal]).filter(Boolean)).size;
 
-  const TABLE_COLS = '120px 140px 1fr 1fr 130px 130px 110px';
+  const TABLE_COLS = '100px 130px 1fr 1fr 120px 120px 110px 110px';
+
+  const loanStatusStyle = (status) => {
+    if (!status) return { color: '#555' };
+    const st = status.toLowerCase();
+    if (st === 'current' || st === 'on time') return { color: '#34d399' };
+    if (st === 'late' || st === 'missed' || st === 'overdue') return { color: '#f87171' };
+    return { color: '#888' };
+  };
 
   // If a loan is selected, show the detail page
   if (selected) {
@@ -545,7 +559,7 @@ export default function Portal({ onSubmitRequest }) {
 
       <div style={s.statRow}>
         <div style={s.statCard}><div style={s.statLabel}>Total Loans</div><div style={s.statValue}>{requests.length}</div></div>
-        <div style={s.statCard}><div style={s.statLabel}>Total Amount Processed</div><div style={{ ...s.statValue, fontSize: 22 }}>{formatCurrency(totalAmount)}</div></div>
+        <div style={s.statCard}><div style={s.statLabel}>Total Balance</div><div style={{ ...s.statValue, fontSize: 22 }}>{formatCurrency(totalBalance)}</div></div>
         <div style={s.statCard}><div style={s.statLabel}>Avg. Loan Size</div><div style={{ ...s.statValue, fontSize: 22 }}>{requests.length > 0 ? formatCurrency(avgLoanSize) : '—'}</div></div>
         <div style={s.statCard}><div style={s.statLabel}>Active Borrowers</div><div style={s.statValue}>{activeBorrowers}</div></div>
       </div>
@@ -555,40 +569,41 @@ export default function Portal({ onSubmitRequest }) {
         <select style={s.select} value={sort} onChange={e => { setSort(e.target.value); setPage(1); }}>
           <option value="newest">Sort: Newest first</option>
           <option value="oldest">Sort: Oldest first</option>
-          <option value="amount_desc">Sort: Amount ↓</option>
-          <option value="amount_asc">Sort: Amount ↑</option>
-          <option value="completed">Filter: Completed</option>
-          <option value="pending">Filter: Pending</option>
+          <option value="amount_desc">Sort: Balance ↓</option>
+          <option value="amount_asc">Sort: Balance ↑</option>
         </select>
         {(search || sort !== 'newest') && <span style={{ fontSize: 12, color: '#555' }}>{sorted.length} result{sorted.length !== 1 ? 's' : ''}</span>}
         <button style={s.serviceBtn} onClick={onSubmitRequest} {...hovSolid}>+ Service a loan</button>
       </div>
 
       <div style={{ border: '0.5px solid #222', borderRadius: 10, overflow: 'hidden' }}>
-        {/* Table header */}
         <div style={{ display: 'grid', gridTemplateColumns: TABLE_COLS, padding: '10px 20px', borderBottom: '0.5px solid #222', fontSize: 10, color: '#FFD700', textTransform: 'uppercase', letterSpacing: 0.8, background: '#141414' }}>
-          <span>Date</span><span>Loan ID</span><span>Borrower</span><span>Property</span><span style={{ textAlign: 'right' }}>Balance</span><span style={{ textAlign: 'right' }}>Next Payment</span><span style={{ textAlign: 'right' }}>Status</span>
+          <span>Date</span><span>Loan ID</span><span>Borrower</span><span>Property</span><span style={{ textAlign: 'right' }}>Balance</span><span style={{ textAlign: 'right' }}>Next Payment</span><span style={{ textAlign: 'right' }}>Pmt Amount</span><span style={{ textAlign: 'right' }}>Loan Status</span>
         </div>
 
         {loading && <div style={s.empty}>Loading your loans...</div>}
         {!loading && sorted.length === 0 && <div style={s.empty}>{search ? 'No results found.' : 'No loans yet — service your first loan above.'}</div>}
 
         {!loading && paginated.map(r => {
-          const isCompleted = r.status?.toLowerCase() === 'completed';
+          const b = borrowerData[r.loan_id_internal] || {};
           const isHov = hoveredId === r.id;
+          const nextPmt = b.next_payment_date;
+          const daysLeft = nextPmt ? Math.ceil((new Date(nextPmt) - new Date()) / (1000 * 60 * 60 * 24)) : null;
+          const nextPmtColor = daysLeft !== null && daysLeft <= 7 ? '#E9A800' : '#555';
           return (
             <div key={r.id}
-              style={{ display: 'grid', gridTemplateColumns: TABLE_COLS, padding: '14px 20px', borderBottom: '0.5px solid #1a1a1a', alignItems: 'center', fontSize: 13, cursor: 'pointer', background: isHov ? '#191500' : '#141414', transition: 'background 0.1s' }}
+              style={{ display: 'grid', gridTemplateColumns: TABLE_COLS, padding: '11px 20px', borderBottom: '0.5px solid #1a1a1a', alignItems: 'center', fontSize: 12, cursor: 'pointer', background: isHov ? '#191500' : '#141414', transition: 'background 0.1s' }}
               onClick={() => setSelected(r)}
               onMouseEnter={() => setHoveredId(r.id)}
               onMouseLeave={() => setHoveredId(null)}>
-              <span style={{ color: '#555', fontSize: 12 }}>{formatDate(r.created_at)}</span>
-              <span style={{ color: '#888', fontSize: 12 }}>{r.loan_id_internal || r.loan_id || '—'}</span>
-              <span style={{ color: '#fff' }}>{r.borrower_name || '—'}</span>
-              <span style={{ color: '#888', fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: 8 }}>{r.property_address || '—'}</span>
-              <span style={{ color: '#E9A800', fontWeight: 500, textAlign: 'right' }}>{formatCurrency(r.total_due)}</span>
-              <span style={{ color: '#555', fontSize: 12, textAlign: 'right' }}>—</span>
-              <span style={{ textAlign: 'right' }}><span style={s.badge(isCompleted ? 'green' : 'yellow')}>{isCompleted ? 'Completed' : 'Pending'}</span></span>
+              <span style={{ color: '#555' }}>{formatDate(r.created_at)}</span>
+              <span style={{ color: '#888' }}>{r.loan_id_internal || r.loan_id || '—'}</span>
+              <span style={{ color: '#fff', fontWeight: 500 }}>{r.borrower_name || '—'}</span>
+              <span style={{ color: '#888', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: 8 }}>{r.property_address || '—'}</span>
+              <span style={{ color: '#E9A800', fontWeight: 500, textAlign: 'right' }}>{formatCurrency(b.principal_balance || r.total_due)}</span>
+              <span style={{ color: nextPmtColor, textAlign: 'right' }}>{nextPmt ? formatDate(nextPmt) : '—'}</span>
+              <span style={{ color: '#888', textAlign: 'right' }}>{b.monthly_payment ? formatCurrency(b.monthly_payment) : '—'}</span>
+              <span style={{ textAlign: 'right', ...loanStatusStyle(b.payment_status) }}>{b.payment_status || '—'}</span>
             </div>
           );
         })}
