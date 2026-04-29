@@ -23,10 +23,7 @@ const hovSolid = {
   onMouseEnter: e => { e.currentTarget.style.boxShadow = '0 0 16px rgba(255, 215, 0, 0.45)'; },
   onMouseLeave: e => { e.currentTarget.style.boxShadow = 'none'; },
 };
-const hovOutline = {
-  onMouseEnter: e => { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.color = '#FFD700'; e.currentTarget.style.boxShadow = '0 0 16px rgba(255, 215, 0, 0.3)'; e.currentTarget.style.borderColor = '#FFD700'; },
-  onMouseLeave: e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#fff'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = '#FFD700'; },
-};
+
 
 const s = {
   page: { padding: '40px 60px', maxWidth: 1600, margin: '0 auto' },
