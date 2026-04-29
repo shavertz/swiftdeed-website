@@ -22,20 +22,19 @@ const STEPS = [
   'Sending to your inbox',
 ];
 
-function LoadingScreen({ lenderEmail, onSuccess, baseCount }) {
+function LoadingScreen({ onSuccess }) {
   const [activeStep, setActiveStep] = useState(0);
   const [progress, setProgress] = useState(0);
-  const baseCountRef = useRef(baseCount);
 
   useEffect(() => {
-    const stepDurations = [3000, 5000, 8000, 3000];
+    const stepDurations = [3000, 8000, 12000, 7000];
     let stepIndex = 0;
     let elapsed = 0;
     const total = stepDurations.reduce((a, b) => a + b, 0);
 
     const tick = setInterval(() => {
       elapsed += 100;
-      setProgress(Math.min(90, (elapsed / total) * 100));
+      setProgress(Math.min(98, (elapsed / total) * 100));
     }, 100);
 
     const advanceStep = () => {
@@ -47,29 +46,17 @@ function LoadingScreen({ lenderEmail, onSuccess, baseCount }) {
     };
     setTimeout(advanceStep, stepDurations[0]);
 
-    // Poll our own API every 3 seconds — uses service key, reliable count check
-    const poll = setInterval(async () => {
-      try {
-        const res = await fetch('/api/check-submission', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: lenderEmail, baseCount: baseCountRef.current }),
-        });
-        const data = await res.json();
-        if (data.done) {
-          clearInterval(poll);
-          clearInterval(tick);
-          setProgress(100);
-          setActiveStep(STEPS.length);
-          setTimeout(onSuccess, 600);
-        }
-      } catch (e) {
-        console.error('Poll error:', e);
-      }
-    }, 3000);
+    // After full animation completes, show success
+    const total_ms = stepDurations.reduce((a, b) => a + b, 0);
+    const done = setTimeout(() => {
+      clearInterval(tick);
+      setProgress(100);
+      setActiveStep(STEPS.length);
+      setTimeout(onSuccess, 600);
+    }, total_ms);
 
-    return () => { clearInterval(tick); clearInterval(poll); };
-  }, [lenderEmail, onSuccess]);
+    return () => { clearInterval(tick); clearTimeout(done); };
+  }, [onSuccess]);
 
   return (
     <div style={{ background: '#0f0f0f', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 40 }}>
@@ -353,7 +340,7 @@ export default function RequestForm() {
 
   const handleSuccess = useCallback(() => setSubmitted(true), []);
 
-  if (submitting) return <LoadingScreen lenderEmail={form.email} onSuccess={handleSuccess} baseCount={baseCount} />;
+  if (submitting) return <LoadingScreen onSuccess={handleSuccess} />;
   if (submitted) return <SuccessScreen form={form} files={files} turnaround={turnaround} onReset={handleReset} />;
 
   return (
