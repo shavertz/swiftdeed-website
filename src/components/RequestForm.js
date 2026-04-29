@@ -18,11 +18,11 @@ const formatPhone = (value) => {
 const STEPS = [
   'Uploading documents',
   'Extracting loan data',
-  'Generating payoff statement',
+  'Generating documents',
   'Sending to your inbox',
 ];
 
-function LoadingScreen() {
+function LoadingScreen({ lenderEmail, onSuccess }) {
   const [activeStep, setActiveStep] = useState(0);
   const [progress, setProgress] = useState(0);
 
@@ -34,7 +34,7 @@ function LoadingScreen() {
 
     const tick = setInterval(() => {
       elapsed += 100;
-      setProgress(Math.min(95, (elapsed / total) * 100));
+      setProgress(Math.min(90, (elapsed / total) * 100));
     }, 100);
 
     const advanceStep = () => {
@@ -46,8 +46,31 @@ function LoadingScreen() {
     };
     setTimeout(advanceStep, stepDurations[0]);
 
-    return () => clearInterval(tick);
-  }, []);
+    // Poll Supabase every 3 seconds for the new payoff_requests row
+    const startTime = Date.now();
+    const poll = setInterval(async () => {
+      try {
+        const since = new Date(startTime - 5000).toISOString();
+        const { data } = await supabase
+          .from('payoff_requests')
+          .select('id')
+          .eq('from_email', lenderEmail)
+          .gte('created_at', since)
+          .limit(1);
+        if (data && data.length > 0) {
+          clearInterval(poll);
+          clearInterval(tick);
+          setProgress(100);
+          setActiveStep(STEPS.length);
+          setTimeout(onSuccess, 600);
+        }
+      } catch (e) {
+        console.error('Poll error:', e);
+      }
+    }, 3000);
+
+    return () => { clearInterval(tick); clearInterval(poll); };
+  }, [lenderEmail, onSuccess]);
 
   return (
     <div style={{ background: '#0f0f0f', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 40 }}>
@@ -61,9 +84,9 @@ function LoadingScreen() {
         </div>
       </div>
 
-      <div style={{ fontSize: 20, fontWeight: 500, color: '#fff', marginBottom: 8 }}>Processing your request</div>
+      <div style={{ fontSize: 20, fontWeight: 500, color: '#fff', marginBottom: 8 }}>Processing your loan</div>
       <div style={{ fontSize: 13, color: '#555', marginBottom: 36, textAlign: 'center', lineHeight: 1.7 }}>
-        Extracting loan data and generating<br />your payoff statement
+        Extracting data and generating documents
       </div>
 
       <div style={{ width: '100%', maxWidth: 280, marginBottom: 10 }}>
@@ -109,7 +132,7 @@ function SuccessScreen({ form, files, turnaround, onReset }) {
 
       <div style={{ fontSize: 24, fontWeight: 500, color: '#fff', marginBottom: 8 }}>Loan serviced.</div>
       <div style={{ fontSize: 14, color: '#555', marginBottom: 32, textAlign: 'center', lineHeight: 1.7, maxWidth: 360 }}>
-        Your payoff statement is being prepared and will arrive in your inbox shortly.
+        Your documents have been processed and will arrive in your inbox shortly.
       </div>
 
       <div style={{ background: '#111', border: '0.5px solid #2a2a2a', borderRadius: 10, padding: '18px 22px', width: '100%', maxWidth: 340, marginBottom: 20 }}>
@@ -199,9 +222,8 @@ function PaymentForm({ turnaround, form, files, onSubmitting, onSuccess }) {
       data.append('skipPayment', skipPayment ? 'true' : 'false');
       data.append('fileUrls', JSON.stringify(uploadedUrls));
 
-      const res = await fetch('https://swiftdeed.vercel.app/api/submit', { method: 'POST', body: data });
-      if (!res.ok) throw new Error('Submission failed');
-      onSuccess();
+      // Fire and forget — polling handles completion detection
+      fetch('https://swiftdeed.vercel.app/api/submit', { method: 'POST', body: data }).catch(() => {});
     } catch (e) {
       setError('Something went wrong. Please try again.');
       console.error(e);
@@ -313,7 +335,7 @@ export default function RequestForm() {
     securityText: { fontSize: 12, color: '#4a7a4a', lineHeight: 1.6 },
   };
 
-  if (submitting) return <LoadingScreen />;
+  if (submitting) return <LoadingScreen lenderEmail={form.email} onSuccess={() => setSubmitted(true)} />;
   if (submitted) return <SuccessScreen form={form} files={files} turnaround={turnaround} onReset={handleReset} />;
 
   return (
