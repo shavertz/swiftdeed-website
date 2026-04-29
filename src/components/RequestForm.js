@@ -52,7 +52,7 @@ function LoadingScreen({ onSuccess }) {
       clearInterval(tick);
       setProgress(100);
       setActiveStep(STEPS.length);
-      setTimeout(onSuccess, 600);
+      onSuccess();
     }, total_ms);
 
     return () => { clearInterval(tick); clearTimeout(done); };
