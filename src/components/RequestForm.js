@@ -132,7 +132,7 @@ function SuccessScreen({ form, files, turnaround, onReset }) {
       )}
 
       <button
-        style={{ background: 'transparent', color: '#555', fontSize: 13, padding: '10px 24px', borderRadius: 7, border: '0.5px solid #2a2a2a', cursor: 'pointer' }}
+        style={{ background: 'transparent', color: '#FFD700', fontSize: 13, padding: '10px 24px', borderRadius: 7, border: '1px solid #FFD700', cursor: 'pointer' }}
         onClick={onReset}
       >
         Submit another request
