@@ -137,8 +137,8 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
   return (
     <div style={s.page}>
       {/* Back */}
-      <button onClick={onBack} style={{ background: 'none', border: 'none', color: '#555', fontSize: 13, cursor: 'pointer', marginBottom: 20, padding: 0, display: 'flex', alignItems: 'center', gap: 6 }}
-        onMouseEnter={e => e.currentTarget.style.color = '#fff'} onMouseLeave={e => e.currentTarget.style.color = '#555'}>
+      <button onClick={onBack} style={{ background: 'none', border: 'none', color: '#E9A800', fontSize: 13, cursor: 'pointer', marginBottom: 20, padding: 0, display: 'flex', alignItems: 'center', gap: 6 }}
+        onMouseEnter={e => e.currentTarget.style.opacity = '0.7'} onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
         ← My Loans
       </button>
 
@@ -218,7 +218,7 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
         {/* Payment history */}
         <div style={{ background: '#141414', border: '0.5px solid #222', borderRadius: 10, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 22px', borderBottom: '0.5px solid #1e1e1e' }}>
-            <span style={{ fontSize: 13, fontWeight: 500, color: '#fff' }}>Payment history</span>
+            <span style={{ fontSize: 10, color: '#FFD700', textTransform: 'uppercase', letterSpacing: 1 }}>Payment history</span>
             {loanPayments.length > 3 && (
               <button onClick={() => setShowAllPayments(p => !p)} style={{ background: 'none', border: 'none', color: '#E9A800', fontSize: 12, cursor: 'pointer', padding: 0 }}>
                 {showAllPayments ? 'Show less' : `View all ${loanPayments.length}`}
@@ -228,7 +228,7 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
           {loanPayments.length === 0 ? (
             <div style={{ padding: '24px 22px', color: '#333', fontSize: 13 }}>No payments recorded yet.</div>
           ) : (
-            <div style={{ overflowY: 'auto', maxHeight: showAllPayments ? 340 : 'none', scrollbarWidth: 'thin', scrollbarColor: '#333 #141414' }}>
+            <div style={{ overflowY: 'auto', maxHeight: 280, scrollbarWidth: 'thin', scrollbarColor: '#E9A800 #1a1a1a' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ borderBottom: '0.5px solid #1e1e1e' }}>
@@ -254,10 +254,10 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
         {/* Documents */}
         <div style={{ background: '#141414', border: '0.5px solid #222', borderRadius: 10, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           <div style={{ padding: '16px 22px', borderBottom: '0.5px solid #1e1e1e', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 13, fontWeight: 500, color: '#fff' }}>Documents</span>
+            <span style={{ fontSize: 10, color: '#FFD700', textTransform: 'uppercase', letterSpacing: 1 }}>Documents</span>
             {docSuccess && <span style={{ fontSize: 11, color: '#34d399' }}>✓ {docSuccess}</span>}
           </div>
-          <div style={{ flex: 1, overflowY: 'auto', maxHeight: 260, scrollbarWidth: 'thin', scrollbarColor: '#333 #141414' }}>
+          <div style={{ flex: 1, overflowY: 'auto', maxHeight: 260, scrollbarWidth: 'thin', scrollbarColor: '#E9A800 #1a1a1a' }}>
             {docUrls.length === 0 ? (
               <div style={{ padding: '20px 22px', color: '#333', fontSize: 13 }}>No documents on file.</div>
             ) : docUrls.map((url, i) => {
@@ -287,7 +287,7 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
         {/* Actions */}
         <div style={{ background: '#141414', border: '0.5px solid #222', borderRadius: 10, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           <div style={{ padding: '16px 22px', borderBottom: '0.5px solid #1e1e1e', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 13, fontWeight: 500, color: '#fff' }}>Actions</span>
+            <span style={{ fontSize: 10, color: '#FFD700', textTransform: 'uppercase', letterSpacing: 1 }}>Actions</span>
             {paymentSuccess && <span style={{ fontSize: 11, color: '#34d399' }}>✓ Payment recorded</span>}
           </div>
           <div style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 10, flex: 1 }}>
@@ -297,8 +297,8 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
               Record payment
             </button>
             {selected.payoff_statement_url
-              ? <a href={selected.payoff_statement_url} target="_blank" rel="noreferrer" style={{ width: '100%', background: 'transparent', color: '#fff', fontSize: 13, fontWeight: 500, padding: '10px', borderRadius: 6, border: '0.5px solid #333', cursor: 'pointer', textDecoration: 'none', textAlign: 'center', display: 'block', boxSizing: 'border-box', transition: 'all 0.15s' }}
-                  onMouseEnter={e => e.currentTarget.style.borderColor = '#555'} onMouseLeave={e => e.currentTarget.style.borderColor = '#333'}>Download statement</a>
+              ? <a href={selected.payoff_statement_url} target="_blank" rel="noreferrer" style={{ width: '100%', background: 'transparent', color: '#fff', fontSize: 13, fontWeight: 500, padding: '10px', borderRadius: 6, border: '0.5px solid #FFD700', cursor: 'pointer', textDecoration: 'none', textAlign: 'center', display: 'block', boxSizing: 'border-box', transition: 'all 0.15s' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.color = '#FFD700'; }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#fff'; }}>Download statement</a>
               : <button disabled style={{ width: '100%', background: 'transparent', color: '#333', fontSize: 13, padding: '10px', borderRadius: 6, border: '0.5px solid #222', cursor: 'not-allowed' }}>No statement available</button>
             }
             <div style={{ flex: 1 }} />
