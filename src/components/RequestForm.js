@@ -336,11 +336,16 @@ export default function RequestForm() {
 
   const handleSetSubmitting = async (val) => {
     if (val) {
-      const { count } = await supabase
-        .from('payoff_requests')
-        .select('id', { count: 'exact', head: true })
-        .eq('from_email', form.email);
-      setBaseCount(count || 0);
+      const res = await fetch('/api/check-submission', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: form.email, baseCount: 0 }),
+      });
+      const data = await res.json();
+      const currentCount = data.count || 0;
+      setBaseCount(currentCount);
+      // Small delay to ensure state is set before loading screen mounts
+      await new Promise(resolve => setTimeout(resolve, 50));
     }
     setSubmitting(val);
   };
