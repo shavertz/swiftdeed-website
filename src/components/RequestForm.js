@@ -22,7 +22,7 @@ const STEPS = [
   'Sending to your inbox',
 ];
 
-function LoadingScreen({ onSuccess }) {
+function LoadingScreen() {
   const [activeStep, setActiveStep] = useState(0);
   const [progress, setProgress] = useState(0);
 
@@ -46,17 +46,8 @@ function LoadingScreen({ onSuccess }) {
     };
     setTimeout(advanceStep, stepDurations[0]);
 
-    // After full animation completes, show success
-    const total_ms = stepDurations.reduce((a, b) => a + b, 0);
-    const done = setTimeout(() => {
-      clearInterval(tick);
-      setProgress(100);
-      setActiveStep(STEPS.length);
-      onSuccess();
-    }, total_ms);
-
-    return () => { clearInterval(tick); clearTimeout(done); };
-  }, [onSuccess]);
+    return () => { clearInterval(tick); };
+  }, []);
 
   return (
     <div style={{ background: '#0f0f0f', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 40 }}>
@@ -323,11 +314,17 @@ export default function RequestForm() {
 
   const handleSetSubmitting = (val) => {
     setSubmitting(val);
+    if (val) {
+      window.setTimeout(() => {
+        setSubmitting(false);
+        setSubmitted(true);
+      }, 30000);
+    }
   };
 
   const handleSuccess = useCallback(() => setSubmitted(true), []);
 
-  if (submitting) return <LoadingScreen onSuccess={handleSuccess} />;
+  if (submitting && !submitted) return <LoadingScreen />;
   if (submitted) return <SuccessScreen form={form} files={files} turnaround={turnaround} onReset={handleReset} />;
 
   return (
