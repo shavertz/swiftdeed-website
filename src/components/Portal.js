@@ -146,20 +146,9 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
       </button>
 
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
-        <div>
-          <div style={{ fontSize: 22, fontWeight: 400, color: '#fff', marginBottom: 4 }}>{selected.property_address || '—'}</div>
-          <div style={{ fontSize: 13, color: '#555' }}>{selected.loan_id_internal} · {selected.borrower_name}</div>
-        </div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          {paymentSuccess && <span style={{ fontSize: 12, color: '#34d399', alignSelf: 'center' }}>✓ Payment recorded</span>}
-          <button onClick={onRecordPayment} style={{ background: 'transparent', border: '0.5px solid #FFD700', color: '#fff', fontSize: 13, fontWeight: 500, padding: '9px 18px', borderRadius: 7, cursor: 'pointer', transition: 'all 0.15s' }} {...hovOutline}>Record payment</button>
-          {selected.payoff_statement_url
-            ? <a href={selected.payoff_statement_url} target="_blank" rel="noreferrer" style={{ background: 'transparent', border: '0.5px solid #333', color: '#fff', fontSize: 13, fontWeight: 500, padding: '9px 18px', borderRadius: 7, cursor: 'pointer', textDecoration: 'none', display: 'inline-block', transition: 'all 0.15s' }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = '#555'; }} onMouseLeave={e => { e.currentTarget.style.borderColor = '#333'; }}>Download statement</a>
-            : <button style={{ background: 'transparent', border: '0.5px solid #333', color: '#555', fontSize: 13, padding: '9px 18px', borderRadius: 7, cursor: 'not-allowed' }}>No statement</button>
-          }
-        </div>
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontSize: 22, fontWeight: 400, color: '#fff', marginBottom: 4 }}>{selected.property_address || '—'}</div>
+        <div style={{ fontSize: 13, color: '#555' }}>{selected.loan_id_internal} · {selected.borrower_name}</div>
       </div>
 
       {/* Stat bar */}
@@ -226,61 +215,62 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
         </div>
       </div>
 
-      {/* Payment history */}
-      <div style={{ background: '#141414', border: '0.5px solid #222', borderRadius: 10, marginBottom: 16, overflow: 'hidden' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 22px', borderBottom: '0.5px solid #1e1e1e' }}>
-          <span style={{ fontSize: 13, fontWeight: 500, color: '#fff' }}>Payment history</span>
-          {loanPayments.length > 3 && (
-            <button onClick={() => setShowAllPayments(p => !p)} style={{ background: 'none', border: 'none', color: '#E9A800', fontSize: 12, cursor: 'pointer', padding: 0 }}>
-              {showAllPayments ? 'Show less' : `View all ${loanPayments.length} payments`}
-            </button>
+      {/* Bottom 3-card row */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginBottom: 40 }}>
+
+        {/* Payment history */}
+        <div style={{ background: '#141414', border: '0.5px solid #222', borderRadius: 10, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 22px', borderBottom: '0.5px solid #1e1e1e' }}>
+            <span style={{ fontSize: 13, fontWeight: 500, color: '#fff' }}>Payment history</span>
+            {loanPayments.length > 3 && (
+              <button onClick={() => setShowAllPayments(p => !p)} style={{ background: 'none', border: 'none', color: '#E9A800', fontSize: 12, cursor: 'pointer', padding: 0 }}>
+                {showAllPayments ? 'Show less' : `View all ${loanPayments.length}`}
+              </button>
+            )}
+          </div>
+          {loanPayments.length === 0 ? (
+            <div style={{ padding: '24px 22px', color: '#333', fontSize: 13 }}>No payments recorded yet.</div>
+          ) : (
+            <div style={{ overflowY: 'auto', maxHeight: showAllPayments ? 340 : 'none', scrollbarWidth: 'thin', scrollbarColor: '#333 #141414' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '0.5px solid #1e1e1e' }}>
+                    {['Date', 'Amount', 'Balance'].map(h => (
+                      <th key={h} style={{ fontSize: 10, color: '#555', textTransform: 'uppercase', letterSpacing: 0.7, padding: '8px 16px', textAlign: h === 'Date' ? 'left' : 'right', fontWeight: 400 }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {displayPayments.map((p, i) => (
+                    <tr key={p.id || i} style={{ borderBottom: '0.5px solid #1a1a1a' }}>
+                      <td style={{ padding: '10px 16px', fontSize: 12, color: '#555' }}>{p.payment_date ? new Date(p.payment_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</td>
+                      <td style={{ padding: '10px 16px', fontSize: 12, color: '#fff', fontWeight: 500, textAlign: 'right' }}>{formatCurrency(p.amount)}</td>
+                      <td style={{ padding: '10px 16px', fontSize: 12, color: '#888', textAlign: 'right' }}>{formatCurrency(p.principal_balance_after)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
-        {loanPayments.length === 0 ? (
-          <div style={{ padding: '30px 22px', color: '#333', fontSize: 13 }}>No payments recorded yet.</div>
-        ) : (
-          <div style={showAllPayments ? { maxHeight: 280, overflowY: 'auto', scrollbarWidth: 'thin', scrollbarColor: '#333 #141414' } : {}}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ borderBottom: '0.5px solid #1e1e1e' }}>
-                  {['Date', 'Amount', 'Method', 'Principal', 'Interest', 'Balance after'].map(h => (
-                    <th key={h} style={{ fontSize: 10, color: '#555', textTransform: 'uppercase', letterSpacing: 0.7, padding: '10px 22px', textAlign: h === 'Date' ? 'left' : 'right', fontWeight: 400 }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {displayPayments.map((p, i) => (
-                  <tr key={p.id || i} style={{ borderBottom: '0.5px solid #1a1a1a' }}>
-                    <td style={{ padding: '11px 22px', fontSize: 13, color: '#555' }}>{p.payment_date ? new Date(p.payment_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</td>
-                    <td style={{ padding: '11px 22px', fontSize: 13, color: '#fff', fontWeight: 500, textAlign: 'right' }}>{formatCurrency(p.amount)}</td>
-                    <td style={{ padding: '11px 22px', fontSize: 13, color: '#555', textAlign: 'right' }}>{p.method || '—'}</td>
-                    <td style={{ padding: '11px 22px', fontSize: 13, color: '#ccc', textAlign: 'right' }}>{formatCurrency(p.principal_portion)}</td>
-                    <td style={{ padding: '11px 22px', fontSize: 13, color: '#ccc', textAlign: 'right' }}>{formatCurrency(p.interest_portion)}</td>
-                    <td style={{ padding: '11px 22px', fontSize: 13, color: '#ccc', textAlign: 'right' }}>{formatCurrency(p.principal_balance_after)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
 
-      {/* Bottom row: Docs + Remove */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 40 }}>
         {/* Documents */}
-        <div style={{ background: '#141414', border: '0.5px solid #222', borderRadius: 10, overflow: 'hidden' }}>
-          <div style={{ padding: '16px 22px', borderBottom: '0.5px solid #1e1e1e' }}>
+        <div style={{ background: '#141414', border: '0.5px solid #222', borderRadius: 10, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ padding: '16px 22px', borderBottom: '0.5px solid #1e1e1e', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: 13, fontWeight: 500, color: '#fff' }}>Documents</span>
-            {docSuccess && <span style={{ fontSize: 12, color: '#34d399', marginLeft: 12 }}>✓ {docSuccess}</span>}
+            {docSuccess && <span style={{ fontSize: 11, color: '#34d399' }}>✓ {docSuccess}</span>}
           </div>
-          <div style={{ maxHeight: 220, overflowY: 'auto', scrollbarWidth: 'thin', scrollbarColor: '#333 #141414' }}>
+          <div style={{ flex: 1, overflowY: 'auto', maxHeight: 260, scrollbarWidth: 'thin', scrollbarColor: '#333 #141414' }}>
             {docUrls.length === 0 ? (
               <div style={{ padding: '20px 22px', color: '#333', fontSize: 13 }}>No documents on file.</div>
             ) : docUrls.map((url, i) => {
               const name = decodeURIComponent(url.split('/').pop()).replace(/^\d+_/, '').replace(/[-_]/g, ' ').replace('.pdf', '').trim();
               return (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 22px', borderBottom: '0.5px solid #1a1a1a' }}>
-                  <span style={{ fontSize: 13, color: '#ccc', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name || `Document ${i + 1}`}</span>
+                  <a href={url} target="_blank" rel="noreferrer" style={{ fontSize: 13, color: '#ccc', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: 'none', flex: 1 }}
+                    onMouseEnter={e => e.currentTarget.style.color = '#FFD700'} onMouseLeave={e => e.currentTarget.style.color = '#ccc'}>
+                    {name || `Document ${i + 1}`}
+                  </a>
                   <span style={{ fontSize: 14, color: '#555', cursor: 'pointer', marginLeft: 12, flexShrink: 0 }} onClick={() => onRemoveDoc(url)}
                     onMouseEnter={e => e.currentTarget.style.color = '#f87171'} onMouseLeave={e => e.currentTarget.style.color = '#555'}>✕</span>
                 </div>
@@ -292,26 +282,39 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
             <button onClick={() => docFileRef.current.click()} disabled={uploadingDocs} style={{ width: '100%', background: 'transparent', color: uploadingDocs ? '#555' : '#fff', fontSize: 13, padding: '8px', borderRadius: 6, border: '0.5px solid #FFD700', cursor: uploadingDocs ? 'not-allowed' : 'pointer', transition: 'all 0.15s', opacity: uploadingDocs ? 0.6 : 1 }}
               onMouseEnter={e => { if (!uploadingDocs) { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.color = '#FFD700'; } }}
               onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#fff'; }}>
-              {uploadingDocs ? 'Uploading...' : '+ Upload additional documents'}
+              {uploadingDocs ? 'Uploading...' : '+ Upload documents'}
             </button>
           </div>
         </div>
 
-        {/* Remove loan */}
-        <div style={{ background: '#141414', border: '0.5px solid #222', borderRadius: 10, overflow: 'hidden' }}>
-          <div style={{ padding: '16px 22px', borderBottom: '0.5px solid #1e1e1e' }}>
-            <span style={{ fontSize: 13, fontWeight: 500, color: '#f87171' }}>Remove loan</span>
+        {/* Actions */}
+        <div style={{ background: '#141414', border: '0.5px solid #222', borderRadius: 10, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ padding: '16px 22px', borderBottom: '0.5px solid #1e1e1e', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 13, fontWeight: 500, color: '#fff' }}>Actions</span>
+            {paymentSuccess && <span style={{ fontSize: 11, color: '#34d399' }}>✓ Payment recorded</span>}
           </div>
-          <div style={{ padding: '20px 22px' }}>
-            <p style={{ fontSize: 13, color: '#555', lineHeight: 1.6, marginBottom: 20 }}>
-              Only use this if you uploaded entirely wrong documents and need to start over. This permanently removes the loan and the borrower's portal access.
-            </p>
-            <button onClick={onDeleteLoan} style={{ width: '100%', background: 'transparent', color: '#f87171', fontSize: 13, fontWeight: 500, padding: '10px', borderRadius: 6, border: '0.5px solid #f87171', cursor: 'pointer', transition: 'all 0.15s' }}
-              onMouseEnter={e => e.currentTarget.style.background = '#1a0000'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-              Delete loan permanently
+          <div style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 10, flex: 1 }}>
+            <button onClick={onRecordPayment} style={{ width: '100%', background: 'transparent', color: '#fff', fontSize: 13, fontWeight: 500, padding: '10px', borderRadius: 6, border: '0.5px solid #FFD700', cursor: 'pointer', transition: 'all 0.15s' }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.color = '#FFD700'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#fff'; }}>
+              Record payment
             </button>
+            {selected.payoff_statement_url
+              ? <a href={selected.payoff_statement_url} target="_blank" rel="noreferrer" style={{ width: '100%', background: 'transparent', color: '#fff', fontSize: 13, fontWeight: 500, padding: '10px', borderRadius: 6, border: '0.5px solid #333', cursor: 'pointer', textDecoration: 'none', textAlign: 'center', display: 'block', boxSizing: 'border-box', transition: 'all 0.15s' }}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = '#555'} onMouseLeave={e => e.currentTarget.style.borderColor = '#333'}>Download statement</a>
+              : <button disabled style={{ width: '100%', background: 'transparent', color: '#333', fontSize: 13, padding: '10px', borderRadius: 6, border: '0.5px solid #222', cursor: 'not-allowed' }}>No statement available</button>
+            }
+            <div style={{ flex: 1 }} />
+            <div style={{ borderTop: '0.5px solid #1e1e1e', paddingTop: 16 }}>
+              <p style={{ fontSize: 11, color: '#444', lineHeight: 1.5, marginBottom: 12 }}>Only use if you uploaded entirely wrong documents and need to start over.</p>
+              <button onClick={onDeleteLoan} style={{ width: '100%', background: 'transparent', color: '#f87171', fontSize: 13, fontWeight: 500, padding: '10px', borderRadius: 6, border: '0.5px solid #f87171', cursor: 'pointer', transition: 'all 0.15s' }}
+                onMouseEnter={e => e.currentTarget.style.background = '#1a0000'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                Delete loan permanently
+              </button>
+            </div>
           </div>
         </div>
+
       </div>
     </div>
   );
