@@ -16,13 +16,6 @@ function formatCurrency(val) {
   return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function daysUntil(dateStr) {
-  if (!dateStr) return '—';
-  const diff = Math.ceil((new Date(dateStr) - new Date()) / (1000 * 60 * 60 * 24));
-  if (diff < 0) return 'Overdue';
-  if (diff === 0) return 'Today';
-  return diff + ' days';
-}
 
 const PAGE_SIZE = 15;
 
