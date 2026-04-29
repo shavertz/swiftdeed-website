@@ -22,7 +22,7 @@ const STEPS = [
   'Sending to your inbox',
 ];
 
-function LoadingScreen({ lenderEmail, onSuccess }) {
+function LoadingScreen({ lenderEmail, onSuccess, submitTime }) {
   const [activeStep, setActiveStep] = useState(0);
   const [progress, setProgress] = useState(0);
 
@@ -47,10 +47,9 @@ function LoadingScreen({ lenderEmail, onSuccess }) {
     setTimeout(advanceStep, stepDurations[0]);
 
     // Poll Supabase every 3 seconds for the new payoff_requests row
-    const startTime = Date.now();
     const poll = setInterval(async () => {
       try {
-        const since = new Date(startTime - 5000).toISOString();
+        const since = new Date(submitTime - 2000).toISOString();
         const { data } = await supabase
           .from('payoff_requests')
           .select('id')
@@ -278,6 +277,7 @@ export default function RequestForm() {
   const [files, setFiles] = useState([]);
   const [dragging, setDragging] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [submitTime, setSubmitTime] = useState(null);
   const [submitted, setSubmitted] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', company: '', phone: '', borrowerEmail: '', borrowerName: '', notes: '' });
   const fileInputRef = useRef();
@@ -335,7 +335,12 @@ export default function RequestForm() {
     securityText: { fontSize: 12, color: '#4a7a4a', lineHeight: 1.6 },
   };
 
-  if (submitting) return <LoadingScreen lenderEmail={form.email} onSuccess={() => setSubmitted(true)} />;
+  const handleSetSubmitting = (val) => {
+    if (val) setSubmitTime(Date.now());
+    setSubmitting(val);
+  };
+
+  if (submitting) return <LoadingScreen lenderEmail={form.email} onSuccess={() => setSubmitted(true)} submitTime={submitTime} />;
   if (submitted) return <SuccessScreen form={form} files={files} turnaround={turnaround} onReset={handleReset} />;
 
   return (
@@ -398,7 +403,7 @@ export default function RequestForm() {
         <hr style={s.divider} />
         <div style={s.sectionLabel}>Payment</div>
         <Elements stripe={stripePromise}>
-          <PaymentForm turnaround={turnaround} form={form} files={files} onSubmitting={setSubmitting} onSuccess={() => setSubmitted(true)} />
+          <PaymentForm turnaround={turnaround} form={form} files={files} onSubmitting={handleSetSubmitting} onSuccess={() => setSubmitted(true)} />
         </Elements>
       </div>
     </div>
