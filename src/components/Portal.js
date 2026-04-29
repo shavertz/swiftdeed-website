@@ -490,7 +490,7 @@ export default function Portal({ onSubmitRequest }) {
   const avgLoanSize = requests.length > 0 ? totalBalance / requests.length : 0;
   const activeBorrowers = new Set(requests.map(r => borrowerEmails[r.loan_id_internal]).filter(Boolean)).size;
 
-  const TABLE_COLS = '100px 130px 1fr 1fr 120px 120px 110px 110px';
+  const TABLE_COLS = '100px 130px 200px 280px 120px 120px 110px 110px';
 
   const loanStatusStyle = (status) => {
     if (!status) return { color: '#555' };
