@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useUser } from '@clerk/clerk-react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { createClient } from '@supabase/supabase-js';
@@ -268,6 +269,34 @@ export default function RequestForm() {
   };
   const removeFile = (i) => setFiles(files.filter((_, idx) => idx !== i));
   const handleDrop = (e) => { e.preventDefault(); setDragging(false); addFiles(e.dataTransfer.files); };
+
+  const { user } = useUser();
+
+  useEffect(() => {
+    if (!user) return;
+    const userEmail = user?.primaryEmailAddress?.emailAddress;
+    if (!userEmail) return;
+    async function fetchLenderInfo() {
+      try {
+        const res = await fetch(
+          `${process.env.REACT_APP_SUPABASE_URL}/rest/v1/lenders?email=eq.${encodeURIComponent(userEmail)}&select=full_name,company_name,phone,email&limit=1`,
+          { headers: { apikey: process.env.REACT_APP_SUPABASE_ANON_KEY, Authorization: `Bearer ${process.env.REACT_APP_SUPABASE_ANON_KEY}` } }
+        );
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          const l = data[0];
+          setForm(prev => ({
+            ...prev,
+            name: l.full_name || prev.name,
+            email: l.email || userEmail || prev.email,
+            company: l.company_name || prev.company,
+            phone: l.phone || prev.phone,
+          }));
+        }
+      } catch (e) { console.error(e); }
+    }
+    fetchLenderInfo();
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleReset = () => {
     setSubmitted(false);

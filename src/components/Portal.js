@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { calculatePayment } from '../utils/calculatePayment';
 import { useUser } from '@clerk/clerk-react';
 
@@ -44,55 +44,20 @@ const s = {
   statLabel: { fontSize: 11, color: '#555', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 },
   statValue: { fontSize: 26, fontWeight: 600, color: '#fff' },
   controlRow: { display: 'flex', gap: 10, marginBottom: 16, alignItems: 'center' },
-  searchInput: {
-    background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: 7,
-    padding: '8px 14px', fontSize: 13, color: '#fff', fontFamily: 'inherit',
-    outline: 'none', flex: 1, maxWidth: 340,
-  },
-  select: {
-    background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: 7,
-    padding: '8px 14px', fontSize: 13, color: '#fff', fontFamily: 'inherit',
-    outline: 'none', cursor: 'pointer',
-  },
-  serviceBtn: {
-    background: '#FFD700', color: '#0f0f0f', fontSize: 13, fontWeight: 500,
-    padding: '8px 18px', borderRadius: 7, border: 'none', cursor: 'pointer',
-    whiteSpace: 'nowrap', marginLeft: 'auto', transition: 'box-shadow 0.15s',
-  },
+  searchInput: { background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: 7, padding: '8px 14px', fontSize: 13, color: '#fff', fontFamily: 'inherit', outline: 'none', flex: 1, maxWidth: 340 },
+  select: { background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: 7, padding: '8px 14px', fontSize: 13, color: '#fff', fontFamily: 'inherit', outline: 'none', cursor: 'pointer' },
+  serviceBtn: { background: '#FFD700', color: '#0f0f0f', fontSize: 13, fontWeight: 500, padding: '8px 18px', borderRadius: 7, border: 'none', cursor: 'pointer', whiteSpace: 'nowrap', marginLeft: 'auto', transition: 'box-shadow 0.15s' },
   splitWrap: { display: 'grid', gridTemplateColumns: '70% 30%', gap: 0, border: '0.5px solid #222', borderRadius: 10, overflow: 'hidden' },
   leftPane: { borderRight: '0.5px solid #222', overflow: 'hidden' },
-  thead: {
-    display: 'grid', gridTemplateColumns: LEFT_COLS,
-    padding: '10px 20px', borderBottom: '0.5px solid #222',
-    fontSize: 10, color: '#FFD700', textTransform: 'uppercase', letterSpacing: 0.8,
-    background: '#141414',
-  },
-  trow: (selected) => ({
-    display: 'grid', gridTemplateColumns: LEFT_COLS,
-    padding: '14px 20px', borderBottom: '0.5px solid #1a1a1a',
-    alignItems: 'center', fontSize: 12, cursor: 'pointer',
-    background: selected ? '#1e1a00' : '#141414',
-    borderLeft: selected ? '3px solid #FFD700' : '3px solid transparent',
-    transition: 'background 0.1s',
-  }),
+  thead: { display: 'grid', gridTemplateColumns: LEFT_COLS, padding: '10px 20px', borderBottom: '0.5px solid #222', fontSize: 10, color: '#FFD700', textTransform: 'uppercase', letterSpacing: 0.8, background: '#141414' },
+  trow: (selected) => ({ display: 'grid', gridTemplateColumns: LEFT_COLS, padding: '14px 20px', borderBottom: '0.5px solid #1a1a1a', alignItems: 'center', fontSize: 12, cursor: 'pointer', background: selected ? '#1e1a00' : '#141414', borderLeft: selected ? '3px solid #FFD700' : '3px solid transparent', transition: 'background 0.1s' }),
   grey: { color: '#555' },
-  badge: (color) => ({
-    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-    fontSize: 11, fontWeight: 500, padding: '4px 10px', borderRadius: 4,
-    background: color === 'green' ? '#0a2416' : '#1f1800',
-    color: color === 'green' ? '#34d399' : '#FFD700',
-    border: `0.5px solid ${color === 'green' ? '#065f46' : '#78350f'}`,
-    whiteSpace: 'nowrap',
-  }),
+  badge: (color) => ({ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 500, padding: '4px 10px', borderRadius: 4, background: color === 'green' ? '#0a2416' : '#1f1800', color: color === 'green' ? '#34d399' : '#FFD700', border: `0.5px solid ${color === 'green' ? '#065f46' : '#78350f'}`, whiteSpace: 'nowrap' }),
   empty: { padding: '60px 20px', textAlign: 'center', color: '#444', fontSize: 14, background: '#141414' },
   pagination: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', borderTop: '0.5px solid #1a1a1a', background: '#141414' },
-  pageBtn: (disabled) => ({
-    background: 'transparent', border: `0.5px solid ${disabled ? '#2a2a2a' : '#FFD700'}`, borderRadius: 5,
-    color: disabled ? '#333' : '#fff', fontSize: 12, padding: '6px 14px',
-    cursor: disabled ? 'not-allowed' : 'pointer', transition: 'all 0.15s',
-  }),
+  pageBtn: (disabled) => ({ background: 'transparent', border: `0.5px solid ${disabled ? '#2a2a2a' : '#FFD700'}`, borderRadius: 5, color: disabled ? '#333' : '#fff', fontSize: 12, padding: '6px 14px', cursor: disabled ? 'not-allowed' : 'pointer', transition: 'all 0.15s' }),
   pageInfo: { fontSize: 12, color: '#555' },
-  rightPane: { background: '#111', display: 'flex', flexDirection: 'column' },
+  rightPane: { background: '#111', display: 'flex', flexDirection: 'column', overflowY: 'auto' },
   panelHeader: { padding: '20px 20px 16px', borderBottom: '0.5px solid #1e1e1e' },
   panelRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   panelKey: { fontSize: 12, color: '#555' },
@@ -104,13 +69,7 @@ const s = {
   headerLabel: { fontSize: 10, color: '#444', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 2 },
   headerVal: { fontSize: 13, color: '#fff', fontWeight: 500, marginBottom: 10 },
   headerValSub: { fontSize: 12, color: '#888', marginBottom: 10 },
-  dlBtn: {
-    display: 'block', width: 'calc(100% - 0px)', boxSizing: 'border-box', fontSize: 12, fontWeight: 500,
-    padding: '7px', borderRadius: 6, textAlign: 'center',
-    background: 'transparent', color: '#fff',
-    border: '0.5px solid #FFD700', cursor: 'pointer',
-    textDecoration: 'none', transition: 'all 0.15s', marginTop: 4,
-  },
+  dlBtn: { display: 'block', width: 'calc(100% - 0px)', boxSizing: 'border-box', fontSize: 12, fontWeight: 500, padding: '7px', borderRadius: 6, textAlign: 'center', background: 'transparent', color: '#fff', border: '0.5px solid #FFD700', cursor: 'pointer', textDecoration: 'none', transition: 'all 0.15s', marginTop: 4 },
   noPanel: { display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#333', fontSize: 13 },
   liveLoading: { fontSize: 11, color: '#444', fontStyle: 'italic' },
 };
@@ -123,101 +82,36 @@ function RecordPaymentModal({ borrower, lenderEmail, lenderName, onClose, onSucc
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  const inputStyle = {
-    background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 6,
-    padding: '9px 12px', fontSize: 13, color: '#fff', fontFamily: 'inherit',
-    outline: 'none', width: '100%', boxSizing: 'border-box',
-  };
+  const inputStyle = { background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 6, padding: '9px 12px', fontSize: 13, color: '#fff', fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box' };
   const labelStyle = { fontSize: 11, color: '#555', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 5, display: 'block' };
 
   async function handleConfirm() {
     if (!amount || !date) { setError('Please enter an amount and date.'); return; }
-    setSaving(true);
-    setError('');
+    setSaving(true); setError('');
     try {
-      // Validate we have required fields
       const lastDate = borrower.last_payment_date || borrower.loan_start_date;
-      if (!lastDate) { setError('Missing loan start date — please update the borrower record in Supabase.'); setSaving(false); return; }
+      if (!lastDate) { setError('Missing loan start date.'); setSaving(false); return; }
       if (new Date(date) <= new Date(lastDate)) { setError('Payment date must be after the last payment date.'); setSaving(false); return; }
-      console.log('borrower id:', borrower.id, 'liveData:', borrower);
-      console.log('calculatePayment input:', { loan_type: borrower.loan_type, principal_balance: borrower.principal_balance, interest_rate: borrower.interest_rate, last_payment_date: borrower.last_payment_date || borrower.loan_start_date, maturity_date: borrower.maturity_date, date });
-      const result = calculatePayment(
-        {
-          loan_type: borrower.loan_type || 'interest_only',
-          principal_balance: parseFloat(borrower.principal_balance),
-          interest_rate: parseFloat(borrower.interest_rate),
-          monthly_payment: parseFloat(borrower.monthly_payment) || 0,
-          total_interest_paid: parseFloat(borrower.total_interest_paid) || 0,
-          total_payments_made: parseInt(borrower.total_payments_made) || 0,
-          last_payment_date: borrower.last_payment_date || borrower.loan_start_date || borrower.next_payment_date,
-          next_payment_date: borrower.next_payment_date,
-          maturity_date: borrower.maturity_date,
-          day_count_convention: borrower.day_count_convention || 360,
-        },
-        date,
-        parseFloat(amount)
-      );
-
+      const result = calculatePayment({ loan_type: borrower.loan_type || 'interest_only', principal_balance: parseFloat(borrower.principal_balance), interest_rate: parseFloat(borrower.interest_rate), monthly_payment: parseFloat(borrower.monthly_payment) || 0, total_interest_paid: parseFloat(borrower.total_interest_paid) || 0, total_payments_made: parseInt(borrower.total_payments_made) || 0, last_payment_date: borrower.last_payment_date || borrower.loan_start_date || borrower.next_payment_date, next_payment_date: borrower.next_payment_date, maturity_date: borrower.maturity_date, day_count_convention: borrower.day_count_convention || 360 }, date, parseFloat(amount));
       if (result.error) { setError('Calculation error: ' + result.error); setSaving(false); return; }
-
-      const updates = {
-        ...result.updates,
-        last_payment_amount: parseFloat(amount),
-        last_payment_method: method,
-        last_payment_interest: result.breakdown.interestPortion,
-        last_payment_principal: result.breakdown.principalPortion,
-      };
-
-      const res = await fetch('/api/record-payment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          borrowerId: borrower.id,
-          loanIdInternal: borrower.loan_id_internal,
-          updates,
-          borrowerEmail: borrower.borrower_email || null,
-          lenderEmail: lenderEmail || null,
-          lenderName: lenderName || null,
-          borrowerName: borrower.legal_name || null,
-          propertyAddress: borrower.property_address || null,
-          perDiem: borrower.per_diem || null,
-          nextPaymentDate: result.updates.next_payment_date || null,
-          paymentLog: {
-            loan_id_internal: borrower.loan_id_internal,
-            payment_date: date,
-            amount: parseFloat(amount),
-            method,
-            interest_portion: result.breakdown.interestPortion,
-            principal_portion: result.breakdown.principalPortion,
-            principal_balance_after: result.updates.principal_balance,
-            payment_status: result.updates.payment_status,
-            recorded_by: 'lender',
-          },
-        }),
-      });
-
+      const updates = { ...result.updates, last_payment_amount: parseFloat(amount), last_payment_method: method, last_payment_interest: result.breakdown.interestPortion, last_payment_principal: result.breakdown.principalPortion };
+      const res = await fetch('/api/record-payment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ borrowerId: borrower.id, loanIdInternal: borrower.loan_id_internal, updates, borrowerEmail: borrower.borrower_email || null, lenderEmail: lenderEmail || null, lenderName: lenderName || null, borrowerName: borrower.legal_name || null, propertyAddress: borrower.property_address || null, perDiem: borrower.per_diem || null, nextPaymentDate: result.updates.next_payment_date || null, paymentLog: { loan_id_internal: borrower.loan_id_internal, payment_date: date, amount: parseFloat(amount), method, interest_portion: result.breakdown.interestPortion, principal_portion: result.breakdown.principalPortion, principal_balance_after: result.updates.principal_balance, payment_status: result.updates.payment_status, recorded_by: 'lender' } }) });
       if (!res.ok) throw new Error('Failed to save payment');
-
       onSuccess(updates);
     } catch (e) {
       setError('Failed to record payment. Please try again.');
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   }
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-      <div style={{ background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: 12, padding: '32px', width: '100%', maxWidth: 400, fontFamily: 'system-ui, sans-serif' }}>
+      <div style={{ background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: 12, padding: '32px', width: '100%', maxWidth: 400 }}>
         <div style={{ fontSize: 16, fontWeight: 500, color: '#fff', marginBottom: 6 }}>Record payment</div>
         <div style={{ fontSize: 12, color: '#555', marginBottom: 24 }}>{borrower.legal_name} · {borrower.loan_id_internal}</div>
-
         <label style={labelStyle}>Payment amount</label>
         <input style={{ ...inputStyle, marginBottom: 16 }} type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" />
-
         <label style={labelStyle}>Payment date</label>
         <input style={{ ...inputStyle, marginBottom: 16 }} type="date" value={date} onChange={e => setDate(e.target.value)} />
-
         <label style={labelStyle}>Payment method</label>
         <select style={{ ...inputStyle, marginBottom: 24, cursor: 'pointer' }} value={method} onChange={e => setMethod(e.target.value)}>
           <option value="Wire">Wire transfer</option>
@@ -225,30 +119,15 @@ function RecordPaymentModal({ borrower, lenderEmail, lenderName, onClose, onSucc
           <option value="ACH">ACH</option>
           <option value="Other">Other</option>
         </select>
-
         {error && <div style={{ fontSize: 12, color: '#f87171', marginBottom: 16 }}>{error}</div>}
-
         <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            onClick={handleConfirm}
-            disabled={saving}
-            style={{ flex: 1, background: '#FFD700', color: '#0f0f0f', fontSize: 13, fontWeight: 600, padding: '10px', borderRadius: 6, border: 'none', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1, transition: 'box-shadow 0.15s' }}
-            onMouseEnter={e => { if (!saving) e.currentTarget.style.boxShadow = '0 0 12px rgba(255,215,0,0.4)'; }}
-            onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
-          >{saving ? 'Recording...' : 'Confirm payment'}</button>
-          <button
-            onClick={onClose}
-            disabled={saving}
-            style={{ flex: 1, background: 'transparent', color: '#fff', fontSize: 13, padding: '10px', borderRadius: 6, border: '0.5px solid #2a2a2a', cursor: 'pointer', transition: 'border-color 0.15s' }}
-            onMouseEnter={e => e.currentTarget.style.borderColor = '#555'}
-            onMouseLeave={e => e.currentTarget.style.borderColor = '#2a2a2a'}
-          >Cancel</button>
+          <button onClick={handleConfirm} disabled={saving} style={{ flex: 1, background: '#FFD700', color: '#0f0f0f', fontSize: 13, fontWeight: 600, padding: '10px', borderRadius: 6, border: 'none', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }} onMouseEnter={e => { if (!saving) e.currentTarget.style.boxShadow = '0 0 12px rgba(255,215,0,0.4)'; }} onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}>{saving ? 'Recording...' : 'Confirm payment'}</button>
+          <button onClick={onClose} disabled={saving} style={{ flex: 1, background: 'transparent', color: '#fff', fontSize: 13, padding: '10px', borderRadius: 6, border: '0.5px solid #2a2a2a', cursor: 'pointer' }} onMouseEnter={e => e.currentTarget.style.borderColor = '#555'} onMouseLeave={e => e.currentTarget.style.borderColor = '#2a2a2a'}>Cancel</button>
         </div>
       </div>
     </div>
   );
 }
-
 
 export default function Portal({ onSubmitRequest }) {
   const { user } = useUser();
@@ -266,6 +145,13 @@ export default function Portal({ onSubmitRequest }) {
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [lenderName, setLenderName] = useState('');
   const [loanPayments, setLoanPayments] = useState([]);
+  const [docUrls, setDocUrls] = useState([]);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [uploadingDocs, setUploadingDocs] = useState(false);
+  const [docSuccess, setDocSuccess] = useState('');
+  const docFileRef = useRef();
 
   const email = user?.primaryEmailAddress?.emailAddress;
 
@@ -273,14 +159,9 @@ export default function Portal({ onSubmitRequest }) {
     if (!email) return;
     async function fetchLenderName() {
       try {
-        const res = await fetch(
-          `${SUPABASE_URL}/rest/v1/lenders?email=eq.${encodeURIComponent(email)}&select=company_name&limit=1`,
-          { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
-        );
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/lenders?email=eq.${encodeURIComponent(email)}&select=company_name&limit=1`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
         const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
-          setLenderName(data[0].company_name || '');
-        }
+        if (Array.isArray(data) && data.length > 0) setLenderName(data[0].company_name || '');
       } catch (e) { console.error(e); }
     }
     fetchLenderName();
@@ -290,23 +171,14 @@ export default function Portal({ onSubmitRequest }) {
     if (!email) return;
     async function load() {
       try {
-        const res = await fetch(
-          `${SUPABASE_URL}/rest/v1/payoff_requests?from_email=eq.${encodeURIComponent(email)}&order=created_at.desc`,
-          { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
-        );
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/payoff_requests?from_email=eq.${encodeURIComponent(email)}&order=created_at.desc`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
         const data = await res.json();
         const rows = Array.isArray(data) ? data : [];
         setRequests(rows);
-        if (rows.length > 0) {
-          setSelected(rows[0]);
-        }
-
+        if (rows.length > 0) setSelected(rows[0]);
         const ids = rows.map(r => r.loan_id_internal).filter(Boolean);
         if (ids.length > 0) {
-          const bRes = await fetch(
-            `${SUPABASE_URL}/rest/v1/borrowers?loan_id_internal=in.(${ids.map(id => `"${id}"`).join(',')})&select=loan_id_internal,borrower_email`,
-            { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
-          );
+          const bRes = await fetch(`${SUPABASE_URL}/rest/v1/borrowers?loan_id_internal=in.(${ids.map(id => `"${id}"`).join(',')})&select=loan_id_internal,borrower_email`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
           const bData = await bRes.json();
           if (Array.isArray(bData)) {
             const map = {};
@@ -314,26 +186,30 @@ export default function Portal({ onSubmitRequest }) {
             setBorrowerEmails(map);
           }
         }
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
-      }
+      } catch (e) { console.error(e); } finally { setLoading(false); }
     }
     load();
-  }, [email]);
+  }, [email]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (!selected?.loan_id_internal) {
-      setLoanPayments([]);
-      return;
+    if (!selected?.loan_id_internal) { setDocUrls([]); return; }
+    async function fetchDocs() {
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/borrowers?loan_id_internal=eq.${encodeURIComponent(selected.loan_id_internal)}&select=loan_document_urls&limit=1`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0 && data[0].loan_document_urls) {
+          setDocUrls(data[0].loan_document_urls.split(',').map(u => u.trim()).filter(Boolean));
+        } else { setDocUrls([]); }
+      } catch (e) { console.error(e); }
     }
+    fetchDocs();
+  }, [selected]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!selected?.loan_id_internal) { setLoanPayments([]); return; }
     async function fetchPayments() {
       try {
-        const res = await fetch(
-          `${SUPABASE_URL}/rest/v1/payments?loan_id_internal=eq.${encodeURIComponent(selected.loan_id_internal)}&order=payment_date.desc`,
-          { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
-        );
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/payments?loan_id_internal=eq.${encodeURIComponent(selected.loan_id_internal)}&order=payment_date.desc`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
         const data = await res.json();
         setLoanPayments(Array.isArray(data) ? data : []);
       } catch (e) { console.error(e); }
@@ -342,39 +218,68 @@ export default function Portal({ onSubmitRequest }) {
   }, [selected]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (!selected?.loan_id_internal) {
-      setLiveData(null);
-      return;
-    }
+    if (!selected?.loan_id_internal) { setLiveData(null); return; }
     async function fetchLive() {
       setLiveLoading(true);
       try {
-        const res = await fetch(
-          `${SUPABASE_URL}/rest/v1/borrowers?loan_id_internal=eq.${encodeURIComponent(selected.loan_id_internal)}&limit=1&select=*`,
-          { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
-        );
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/borrowers?loan_id_internal=eq.${encodeURIComponent(selected.loan_id_internal)}&limit=1&select=*`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
         const data = await res.json();
         setLiveData(Array.isArray(data) && data.length > 0 ? data[0] : null);
-      } catch (e) {
-        console.error(e);
-        setLiveData(null);
-      } finally {
-        setLiveLoading(false);
-      }
+      } catch (e) { console.error(e); setLiveData(null); } finally { setLiveLoading(false); }
     }
     fetchLive();
-  }, [selected]);
+  }, [selected]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function handleRemoveDoc(urlToRemove) {
+    const newUrls = docUrls.filter(u => u !== urlToRemove);
+    setDocUrls(newUrls);
+    const borrowerEmail = borrowerEmails[selected.loan_id_internal] || liveData?.borrower_email;
+    await fetch('/api/update-loan-docs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ loanIdInternal: selected.loan_id_internal, newDocUrls: newUrls, lenderEmail: email, lenderName, borrowerEmail, borrowerName: selected.borrower_name, docsAdded: false }) });
+    setDocSuccess('Document removed.');
+    setTimeout(() => setDocSuccess(''), 4000);
+  }
+
+  async function handleUploadDocs(files) {
+    if (!files || files.length === 0) return;
+    setUploadingDocs(true);
+    try {
+      const { createClient: sc } = await import('@supabase/supabase-js');
+      const sb = sc(process.env.REACT_APP_SUPABASE_URL, process.env.REACT_APP_SUPABASE_ANON_KEY);
+      const newUrls = [];
+      for (const file of Array.from(files)) {
+        if (file.type !== 'application/pdf') continue;
+        const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+        const { error: uploadError } = await sb.storage.from('loan-documents').upload(fileName, file, { contentType: 'application/pdf' });
+        if (!uploadError) {
+          const { data: urlData } = sb.storage.from('loan-documents').getPublicUrl(fileName);
+          if (urlData?.publicUrl) newUrls.push(urlData.publicUrl);
+        }
+      }
+      const combined = [...docUrls, ...newUrls];
+      setDocUrls(combined);
+      const borrowerEmail = borrowerEmails[selected.loan_id_internal] || liveData?.borrower_email;
+      await fetch('/api/update-loan-docs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ loanIdInternal: selected.loan_id_internal, newDocUrls: combined, lenderEmail: email, lenderName, borrowerEmail, borrowerName: selected.borrower_name, docsAdded: newUrls.length > 0 }) });
+      setDocSuccess(`${newUrls.length} document${newUrls.length !== 1 ? 's' : ''} uploaded.`);
+      setTimeout(() => setDocSuccess(''), 4000);
+    } catch (e) { console.error('Upload error:', e); } finally { setUploadingDocs(false); }
+  }
+
+  async function handleDeleteLoan() {
+    if (deleteConfirmText !== 'DELETE') return;
+    setDeleting(true);
+    try {
+      await fetch('/api/delete-loan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ loanIdInternal: selected.loan_id_internal, lenderEmail: email, lenderName, borrowerName: selected.borrower_name, propertyAddress: selected.property_address }) });
+      setShowDeleteModal(false);
+      setDeleteConfirmText('');
+      setRequests(prev => prev.filter(r => r.loan_id_internal !== selected.loan_id_internal));
+      setSelected(null);
+    } catch (e) { console.error('Delete error:', e); } finally { setDeleting(false); }
+  }
 
   const filtered = requests.filter(r => {
     const q = search.toLowerCase();
-    const matchSearch = !q ||
-      r.loan_id_internal?.toLowerCase().includes(q) ||
-      r.loan_id?.toLowerCase().includes(q) ||
-      r.borrower_name?.toLowerCase().includes(q) ||
-      r.property_address?.toLowerCase().includes(q);
-    const matchStatus =
-      sort === 'completed' ? r.status?.toLowerCase() === 'completed' :
-      sort === 'pending' ? r.status?.toLowerCase() !== 'completed' : true;
+    const matchSearch = !q || r.loan_id_internal?.toLowerCase().includes(q) || r.loan_id?.toLowerCase().includes(q) || r.borrower_name?.toLowerCase().includes(q) || r.property_address?.toLowerCase().includes(q);
+    const matchStatus = sort === 'completed' ? r.status?.toLowerCase() === 'completed' : sort === 'pending' ? r.status?.toLowerCase() !== 'completed' : true;
     return matchSearch && matchStatus;
   });
 
@@ -399,17 +304,11 @@ export default function Portal({ onSubmitRequest }) {
     return s.panelVal;
   };
 
-  const panelBorrowerEmail = selected
-    ? (borrowerEmails[selected.loan_id_internal] || selected.borrower_email || '—')
-    : '—';
-
+  const panelBorrowerEmail = selected ? (borrowerEmails[selected.loan_id_internal] || selected.borrower_email || '—') : '—';
   const getRowStyle = (r) => {
     const isSelected = selected?.id === r.id;
     const isHovered = hoveredId === r.id && !isSelected;
-    return {
-      ...s.trow(isSelected),
-      background: isSelected ? '#1e1a00' : isHovered ? '#191500' : '#141414',
-    };
+    return { ...s.trow(isSelected), background: isSelected ? '#1e1a00' : isHovered ? '#191500' : '#141414' };
   };
 
   const live = liveData || {};
@@ -429,31 +328,14 @@ export default function Portal({ onSubmitRequest }) {
       <div style={{ fontSize: 13, color: '#555', marginTop: -18, marginBottom: 24 }}>{email}</div>
 
       <div style={s.statRow}>
-        <div style={s.statCard}>
-          <div style={s.statLabel}>Total Loans</div>
-          <div style={s.statValue}>{requests.length}</div>
-        </div>
-        <div style={s.statCard}>
-          <div style={s.statLabel}>Total Amount Processed</div>
-          <div style={{ ...s.statValue, fontSize: 22 }}>{formatCurrency(totalAmount)}</div>
-        </div>
-        <div style={s.statCard}>
-          <div style={s.statLabel}>Avg. Loan Size</div>
-          <div style={{ ...s.statValue, fontSize: 22 }}>{requests.length > 0 ? formatCurrency(avgLoanSize) : '—'}</div>
-        </div>
-        <div style={s.statCard}>
-          <div style={s.statLabel}>Active Borrowers</div>
-          <div style={s.statValue}>{activeBorrowers}</div>
-        </div>
+        <div style={s.statCard}><div style={s.statLabel}>Total Loans</div><div style={s.statValue}>{requests.length}</div></div>
+        <div style={s.statCard}><div style={s.statLabel}>Total Amount Processed</div><div style={{ ...s.statValue, fontSize: 22 }}>{formatCurrency(totalAmount)}</div></div>
+        <div style={s.statCard}><div style={s.statLabel}>Avg. Loan Size</div><div style={{ ...s.statValue, fontSize: 22 }}>{requests.length > 0 ? formatCurrency(avgLoanSize) : '—'}</div></div>
+        <div style={s.statCard}><div style={s.statLabel}>Active Borrowers</div><div style={s.statValue}>{activeBorrowers}</div></div>
       </div>
 
       <div style={s.controlRow}>
-        <input
-          style={s.searchInput}
-          placeholder="Search by loan ID, borrower, or property..."
-          value={search}
-          onChange={e => { setSearch(e.target.value); setPage(1); }}
-        />
+        <input style={s.searchInput} placeholder="Search by loan ID, borrower, or property..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
         <select style={s.select} value={sort} onChange={e => { setSort(e.target.value); setPage(1); }}>
           <option value="newest">Sort: Newest first</option>
           <option value="oldest">Sort: Oldest first</option>
@@ -462,57 +344,32 @@ export default function Portal({ onSubmitRequest }) {
           <option value="completed">Filter: Completed</option>
           <option value="pending">Filter: Pending</option>
         </select>
-        {(search || sort !== 'newest') && (
-          <span style={{ fontSize: 12, color: '#555' }}>{sorted.length} result{sorted.length !== 1 ? 's' : ''}</span>
-        )}
+        {(search || sort !== 'newest') && <span style={{ fontSize: 12, color: '#555' }}>{sorted.length} result{sorted.length !== 1 ? 's' : ''}</span>}
         <button style={s.serviceBtn} onClick={onSubmitRequest} {...hovSolid}>+ Service a loan</button>
       </div>
 
       <div style={s.splitWrap}>
         <div style={s.leftPane}>
-          <div style={s.thead}>
-            <span>Date Serviced</span>
-            <span>Loan ID</span>
-            <span>Amount</span>
-            <span>Property</span>
-            <span>Status</span>
-          </div>
-
+          <div style={s.thead}><span>Date Serviced</span><span>Loan ID</span><span>Amount</span><span>Property</span><span>Status</span></div>
           {loading && <div style={s.empty}>Loading your loans...</div>}
-          {!loading && sorted.length === 0 && (
-            <div style={s.empty}>{search ? 'No results found.' : 'No loans yet — service your first loan above.'}</div>
-          )}
-
+          {!loading && sorted.length === 0 && <div style={s.empty}>{search ? 'No results found.' : 'No loans yet — service your first loan above.'}</div>}
           {!loading && paginated.map(r => {
             const isCompleted = r.status?.toLowerCase() === 'completed';
             return (
-              <div
-                key={r.id}
-                style={getRowStyle(r)}
-                onClick={() => setSelected(r)}
-                onMouseEnter={() => setHoveredId(r.id)}
-                onMouseLeave={() => setHoveredId(null)}
-              >
+              <div key={r.id} style={getRowStyle(r)} onClick={() => setSelected(r)} onMouseEnter={() => setHoveredId(r.id)} onMouseLeave={() => setHoveredId(null)}>
                 <span style={s.grey}>{formatDate(r.created_at)}</span>
                 <span style={s.grey}>{r.loan_id_internal || r.loan_id || '—'}</span>
                 <span style={{ fontWeight: 600, color: '#fff' }}>{formatCurrency(r.total_due)}</span>
                 <span style={s.grey}>{r.property_address || '—'}</span>
-                <span>
-                  <span style={s.badge(isCompleted ? 'green' : 'yellow')}>
-                    {isCompleted ? 'Completed' : 'Pending'}
-                  </span>
-                </span>
+                <span><span style={s.badge(isCompleted ? 'green' : 'yellow')}>{isCompleted ? 'Completed' : 'Pending'}</span></span>
               </div>
             );
           })}
-
           {!loading && sorted.length > PAGE_SIZE && (
             <div style={s.pagination}>
-              <button style={s.pageBtn(page === 1)} disabled={page === 1} onClick={() => setPage(p => p - 1)}
-                {...(page !== 1 ? hovOutline : {})}>← Prev</button>
+              <button style={s.pageBtn(page === 1)} disabled={page === 1} onClick={() => setPage(p => p - 1)} {...(page !== 1 ? hovOutline : {})}>← Prev</button>
               <span style={s.pageInfo}>Page {page} of {totalPages} · {sorted.length} total</span>
-              <button style={s.pageBtn(page === totalPages)} disabled={page === totalPages} onClick={() => setPage(p => p + 1)}
-                {...(page !== totalPages ? hovOutline : {})}>Next →</button>
+              <button style={s.pageBtn(page === totalPages)} disabled={page === totalPages} onClick={() => setPage(p => p + 1)} {...(page !== totalPages ? hovOutline : {})}>Next →</button>
             </div>
           )}
         </div>
@@ -525,64 +382,27 @@ export default function Portal({ onSubmitRequest }) {
               <div style={s.panelHeader}>
                 <div style={s.headerLabel}>Borrower</div>
                 <div style={s.headerVal}>{selected.borrower_name || '—'}</div>
-                {selected.guarantor_name && (
-                  <>
-                    <div style={s.headerLabel}>Guarantor</div>
-                    <div style={s.headerValSub}>{selected.guarantor_name}</div>
-                  </>
-                )}
+                {selected.guarantor_name && (<><div style={s.headerLabel}>Guarantor</div><div style={s.headerValSub}>{selected.guarantor_name}</div></>)}
                 <div style={s.headerLabel}>Email</div>
                 <div style={{ ...s.headerValSub, marginBottom: 0 }}>{panelBorrowerEmail}</div>
               </div>
 
               <div style={s.panelSection}>
-                <div style={s.panelSectionLabel}>
-                  Loan Details {liveLoading && <span style={s.liveLoading}>updating...</span>}
-                </div>
-                <div style={s.panelRow}>
-                  <span style={s.panelKey}>Balance</span>
-                  <span style={s.panelVal}>{formatCurrency(balance)}</span>
-                </div>
-                <div style={s.panelRow}>
-                  <span style={s.panelKey}>Rate</span>
-                  <span style={s.panelVal}>{rate ? rate + '%' : '—'}</span>
-                </div>
-                <div style={s.panelRow}>
-                  <span style={s.panelKey}>Per diem</span>
-                  <span style={s.panelVal}>{perDiem ? formatCurrency(perDiem) : '—'}</span>
-                </div>
-                <div style={s.panelRow}>
-                  <span style={s.panelKey}>Loan start date</span>
-                  <span style={s.panelVal}>{formatDate(loanStart)}</span>
-                </div>
-                <div style={s.panelRow}>
-                  <span style={s.panelKey}>Maturity date</span>
-                  <span style={s.panelVal}>{formatDate(maturity)}</span>
-                </div>
+                <div style={s.panelSectionLabel}>Loan Details {liveLoading && <span style={s.liveLoading}>updating...</span>}</div>
+                <div style={s.panelRow}><span style={s.panelKey}>Balance</span><span style={s.panelVal}>{formatCurrency(balance)}</span></div>
+                <div style={s.panelRow}><span style={s.panelKey}>Rate</span><span style={s.panelVal}>{rate ? rate + '%' : '—'}</span></div>
+                <div style={s.panelRow}><span style={s.panelKey}>Per diem</span><span style={s.panelVal}>{perDiem ? formatCurrency(perDiem) : '—'}</span></div>
+                <div style={s.panelRow}><span style={s.panelKey}>Loan start date</span><span style={s.panelVal}>{formatDate(loanStart)}</span></div>
+                <div style={s.panelRow}><span style={s.panelKey}>Maturity date</span><span style={s.panelVal}>{formatDate(maturity)}</span></div>
               </div>
 
               <div style={s.panelSection}>
                 <div style={s.panelSectionLabel}>Payment Info</div>
-                <div style={s.panelRow}>
-                  <span style={s.panelKey}>Payment status</span>
-                  <span style={paymentStatusStyle(paymentStatus)}>{paymentStatus || '—'}</span>
-                </div>
-                <div style={s.panelRow}>
-                  <span style={s.panelKey}>Last payment</span>
-                  <span style={s.panelVal}>{formatDate(lastPaymentDate)}</span>
-                </div>
-                <div style={s.panelRow}>
-                  <span style={s.panelKey}>Next payment</span>
-                  <span style={s.panelVal}>{formatDate(nextPaymentDate)}</span>
-                </div>
-                <div style={s.panelRow}>
-                  <span style={s.panelKey}>Days until next</span>
-                  <span style={s.panelVal}>{daysUntil(nextPaymentDate)}</span>
-                </div>
-                <div style={s.panelRow}>
-                  <span style={s.panelKey}>Total payments made</span>
-                  <span style={s.panelVal}>{totalPaymentsMade ?? '—'}</span>
-                </div>
+                <div style={s.panelRow}><span style={s.panelKey}>Payment status</span><span style={paymentStatusStyle(paymentStatus)}>{paymentStatus || '—'}</span></div>
+                <div style={s.panelRow}><span style={s.panelKey}>Last payment</span><span style={s.panelVal}>{formatDate(lastPaymentDate)}</span></div>
+                <div style={s.panelRow}><span style={s.panelKey}>Next payment</span><span style={s.panelVal}>{formatDate(nextPaymentDate)}</span></div>
+                <div style={s.panelRow}><span style={s.panelKey}>Days until next</span><span style={s.panelVal}>{daysUntil(nextPaymentDate)}</span></div>
+                <div style={s.panelRow}><span style={s.panelKey}>Total payments made</span><span style={s.panelVal}>{totalPaymentsMade ?? '—'}</span></div>
               </div>
 
               <div style={s.panelSection}>
@@ -592,9 +412,7 @@ export default function Portal({ onSubmitRequest }) {
                 ) : (
                   <>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 50px', gap: 4, marginBottom: 4 }}>
-                      {['Date','Amount','Method'].map(h => (
-                        <span key={h} style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: 0.5, textAlign: h === 'Date' ? 'left' : 'right' }}>{h}</span>
-                      ))}
+                      {['Date','Amount','Method'].map(h => <span key={h} style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: 0.5, textAlign: h === 'Date' ? 'left' : 'right' }}>{h}</span>)}
                     </div>
                     <div style={{ maxHeight: 136, overflowY: 'auto', overflowX: 'hidden', scrollbarWidth: 'thin', scrollbarColor: '#FFD700 #0f0f0f', marginRight: -8, paddingRight: 8 }}>
                       {loanPayments.map((p, i) => (
@@ -612,43 +430,67 @@ export default function Portal({ onSubmitRequest }) {
               <div style={s.panelSection}>
                 <div style={s.panelSectionLabel}>Manual Payment</div>
                 {paymentSuccess && <div style={{ fontSize: 11, color: '#34d399', marginBottom: 8 }}>✓ Payment recorded successfully</div>}
-                <button
-                  onClick={() => { setPaymentSuccess(false); setShowPaymentModal(true); }}
-                  style={{ display: 'block', width: '100%', background: 'transparent', color: '#fff', fontSize: 12, fontWeight: 500, padding: '7px', borderRadius: 6, border: '0.5px solid #FFD700', cursor: 'pointer', textAlign: 'center', transition: 'all 0.15s', marginBottom: 4 }}
-                  onMouseEnter={e => { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.color = '#FFD700'; e.currentTarget.style.boxShadow = '0 0 16px rgba(255, 215, 0, 0.3)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#fff'; e.currentTarget.style.boxShadow = 'none'; }}
-                >Record payment (wire / check)</button>
+                <button onClick={() => { setPaymentSuccess(false); setShowPaymentModal(true); }} style={{ display: 'block', width: '100%', background: 'transparent', color: '#fff', fontSize: 12, fontWeight: 500, padding: '7px', borderRadius: 6, border: '0.5px solid #FFD700', cursor: 'pointer', textAlign: 'center', transition: 'all 0.15s', marginBottom: 4 }} onMouseEnter={e => { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.color = '#FFD700'; e.currentTarget.style.boxShadow = '0 0 16px rgba(255, 215, 0, 0.3)'; }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#fff'; e.currentTarget.style.boxShadow = 'none'; }}>Record payment (wire / check)</button>
+              </div>
+
+              <div style={s.panelSection}>
+                <div style={s.panelSectionLabel}>Loan Documents</div>
+                {docSuccess && <div style={{ fontSize: 11, color: '#34d399', marginBottom: 8 }}>✓ {docSuccess}</div>}
+                {docUrls.length === 0 ? (
+                  <div style={{ fontSize: 11, color: '#333', marginBottom: 8 }}>No documents on file.</div>
+                ) : docUrls.map((url, i) => {
+                  const name = decodeURIComponent(url.split('/').pop()).replace(/^\d+_/, '').replace(/[-_]/g, ' ').replace('.pdf', '').trim();
+                  return (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#1a1a1a', borderRadius: 6, padding: '7px 10px', marginBottom: 5 }}>
+                      <span style={{ fontSize: 11, color: '#ccc', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name || `Document ${i + 1}`}</span>
+                      <span style={{ fontSize: 12, color: '#555', cursor: 'pointer', marginLeft: 8, flexShrink: 0 }} onClick={() => handleRemoveDoc(url)}>✕</span>
+                    </div>
+                  );
+                })}
+                <input ref={docFileRef} type="file" accept="application/pdf" multiple style={{ display: 'none' }} onChange={e => handleUploadDocs(e.target.files)} />
+                <button onClick={() => docFileRef.current.click()} disabled={uploadingDocs} style={{ display: 'block', width: '100%', background: 'transparent', color: '#fff', fontSize: 12, fontWeight: 500, padding: '7px', borderRadius: 6, border: '0.5px solid #FFD700', cursor: uploadingDocs ? 'not-allowed' : 'pointer', textAlign: 'center', marginTop: 4, opacity: uploadingDocs ? 0.6 : 1 }} onMouseEnter={e => { if (!uploadingDocs) { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.color = '#FFD700'; } }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#fff'; }}>{uploadingDocs ? 'Uploading...' : '+ Upload additional documents'}</button>
               </div>
 
               <div style={s.panelSection}>
                 <div style={s.panelSectionLabel}>Statement</div>
                 {selected.payoff_statement_url
-                  ? <a href={selected.payoff_statement_url} target="_blank" rel="noreferrer" style={s.dlBtn}
-                      onMouseEnter={e => { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.color = '#FFD700'; e.currentTarget.style.boxShadow = '0 0 16px rgba(255, 215, 0, 0.3)'; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#fff'; e.currentTarget.style.boxShadow = 'none'; }}
-                    >Download Statement</a>
+                  ? <a href={selected.payoff_statement_url} target="_blank" rel="noreferrer" style={s.dlBtn} onMouseEnter={e => { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.color = '#FFD700'; e.currentTarget.style.boxShadow = '0 0 16px rgba(255, 215, 0, 0.3)'; }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#fff'; e.currentTarget.style.boxShadow = 'none'; }}>Download Statement</a>
                   : <div style={{ fontSize: 12, color: '#333' }}>No statement available</div>
                 }
               </div>
 
-              
+              <div style={{ padding: '16px 20px' }}>
+                <div style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Danger Zone</div>
+                <button onClick={() => { setShowDeleteModal(true); setDeleteConfirmText(''); }} style={{ display: 'block', width: '100%', background: 'transparent', color: '#f87171', fontSize: 12, fontWeight: 500, padding: '7px', borderRadius: 6, border: '0.5px solid #f87171', cursor: 'pointer', textAlign: 'center' }} onMouseEnter={e => { e.currentTarget.style.background = '#1a0000'; }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>Delete loan</button>
+                <div style={{ fontSize: 10, color: '#444', marginTop: 6, textAlign: 'center', lineHeight: 1.5 }}>Permanently deletes this loan and the borrower's portal access.</div>
+              </div>
             </>
           )}
         </div>
       </div>
+
       {showPaymentModal && liveData && (
-        <RecordPaymentModal
-          borrower={liveData}
-          lenderEmail={email}
-          lenderName={lenderName}
-          onClose={() => setShowPaymentModal(false)}
-          onSuccess={(updates) => {
-            setShowPaymentModal(false);
-            setPaymentSuccess(true);
-            setLiveData(prev => ({ ...prev, ...updates }));
-            setTimeout(() => setPaymentSuccess(false), 5000);
-          }}
-        />
+        <RecordPaymentModal borrower={liveData} lenderEmail={email} lenderName={lenderName} onClose={() => setShowPaymentModal(false)} onSuccess={(updates) => { setShowPaymentModal(false); setPaymentSuccess(true); setLiveData(prev => ({ ...prev, ...updates })); setTimeout(() => setPaymentSuccess(false), 5000); }} />
+      )}
+
+      {showDeleteModal && selected && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: 12, padding: 28, width: '100%', maxWidth: 400 }}>
+            <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#1a0000', border: '0.5px solid #3a0000', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+              <span style={{ color: '#f87171', fontSize: 18 }}>!</span>
+            </div>
+            <div style={{ fontSize: 15, fontWeight: 500, color: '#fff', marginBottom: 8 }}>Delete this loan?</div>
+            <div style={{ fontSize: 12, color: '#555', lineHeight: 1.6, marginBottom: 20 }}>
+              This will permanently delete <span style={{ color: '#ccc' }}>{selected.loan_id_internal}</span> and remove <span style={{ color: '#ccc' }}>{selected.borrower_name}</span>'s borrower portal access. This cannot be undone.
+            </div>
+            <div style={{ fontSize: 11, color: '#555', marginBottom: 6 }}>Type DELETE to confirm</div>
+            <input style={{ width: '100%', background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 6, padding: '9px 12px', fontSize: 13, color: '#fff', fontFamily: 'monospace', outline: 'none', boxSizing: 'border-box', marginBottom: 16 }} value={deleteConfirmText} onChange={e => setDeleteConfirmText(e.target.value)} placeholder="DELETE" />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={handleDeleteLoan} disabled={deleteConfirmText !== 'DELETE' || deleting} style={{ flex: 1, background: deleteConfirmText === 'DELETE' ? '#7f1d1d' : '#1a1a1a', color: deleteConfirmText === 'DELETE' ? '#f87171' : '#444', fontSize: 13, fontWeight: 500, padding: 10, borderRadius: 6, border: '0.5px solid #f87171', cursor: deleteConfirmText === 'DELETE' ? 'pointer' : 'not-allowed', transition: 'all 0.15s' }}>{deleting ? 'Deleting...' : 'Delete permanently'}</button>
+              <button onClick={() => { setShowDeleteModal(false); setDeleteConfirmText(''); }} style={{ flex: 1, background: 'transparent', color: '#fff', fontSize: 13, padding: 10, borderRadius: 6, border: '0.5px solid #2a2a2a', cursor: 'pointer' }}>Cancel</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
