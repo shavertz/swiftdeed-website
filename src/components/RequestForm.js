@@ -264,7 +264,6 @@ export default function RequestForm() {
   const [files, setFiles] = useState([]);
   const [dragging, setDragging] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [baseCount, setBaseCount] = useState(0);
   const [submitted, setSubmitted] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', company: '', phone: '', borrowerEmail: '', borrowerName: '', notes: '' });
   const fileInputRef = useRef();
@@ -322,19 +321,7 @@ export default function RequestForm() {
     securityText: { fontSize: 12, color: '#4a7a4a', lineHeight: 1.6 },
   };
 
-  const handleSetSubmitting = async (val) => {
-    if (val) {
-      const res = await fetch('/api/check-submission', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: form.email, baseCount: 0 }),
-      });
-      const data = await res.json();
-      const currentCount = data.count || 0;
-      setBaseCount(currentCount);
-      // Small delay to ensure state is set before loading screen mounts
-      await new Promise(resolve => setTimeout(resolve, 50));
-    }
+  const handleSetSubmitting = (val) => {
     setSubmitting(val);
   };
 
