@@ -46,14 +46,16 @@ function LoadingScreen({ lenderEmail, onSuccess, baseCount }) {
     };
     setTimeout(advanceStep, stepDurations[0]);
 
-    // Poll every 3 seconds — succeed when row count exceeds baseCount
+    // Poll our own API every 3 seconds — uses service key, reliable count check
     const poll = setInterval(async () => {
       try {
-        const { count } = await supabase
-          .from('payoff_requests')
-          .select('id', { count: 'exact', head: true })
-          .eq('from_email', lenderEmail);
-        if (count !== null && count > baseCount) {
+        const res = await fetch('/api/check-submission', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: lenderEmail, baseCount }),
+        });
+        const data = await res.json();
+        if (data.done) {
           clearInterval(poll);
           clearInterval(tick);
           setProgress(100);
