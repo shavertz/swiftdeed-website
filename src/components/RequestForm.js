@@ -322,7 +322,7 @@ export default function RequestForm() {
     }
   };
 
-  const handleSuccess = useCallback(() => setSubmitted(true), []);
+
 
   if (submitting && !submitted) return <LoadingScreen />;
   if (submitted) return <SuccessScreen form={form} files={files} turnaround={turnaround} onReset={handleReset} />;
