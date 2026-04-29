@@ -490,7 +490,7 @@ export default function Portal({ onSubmitRequest }) {
   const avgLoanSize = requests.length > 0 ? totalBalance / requests.length : 0;
   const activeBorrowers = new Set(requests.map(r => borrowerEmails[r.loan_id_internal]).filter(Boolean)).size;
 
-  const TABLE_COLS = '100px 130px 200px 280px 120px 120px 110px 110px';
+  const TABLE_COLS = '100px 130px 200px 1fr 120px 130px 110px 110px';
 
   const loanStatusStyle = (status) => {
     if (!status) return { color: '#555' };
@@ -592,7 +592,7 @@ export default function Portal({ onSubmitRequest }) {
           const nextPmtColor = daysLeft !== null && daysLeft <= 7 ? '#E9A800' : '#555';
           return (
             <div key={r.id}
-              style={{ display: 'grid', gridTemplateColumns: TABLE_COLS, padding: '11px 20px', borderBottom: '0.5px solid #1a1a1a', alignItems: 'center', fontSize: 12, cursor: 'pointer', background: isHov ? '#191500' : '#141414', transition: 'background 0.1s' }}
+              style={{ display: 'grid', gridTemplateColumns: TABLE_COLS, padding: '11px 20px', borderBottom: '0.5px solid #1a1a1a', alignItems: 'center', fontSize: 12, cursor: 'pointer', background: isHov ? '#1e1a00' : '#141414', transition: 'background 0.1s' }}
               onClick={() => setSelected(r)}
               onMouseEnter={() => setHoveredId(r.id)}
               onMouseLeave={() => setHoveredId(null)}>
