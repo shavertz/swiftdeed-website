@@ -25,6 +25,7 @@ const STEPS = [
 function LoadingScreen({ lenderEmail, onSuccess, baseCount }) {
   const [activeStep, setActiveStep] = useState(0);
   const [progress, setProgress] = useState(0);
+  const baseCountRef = useRef(baseCount);
 
   useEffect(() => {
     const stepDurations = [3000, 5000, 8000, 3000];
@@ -52,7 +53,7 @@ function LoadingScreen({ lenderEmail, onSuccess, baseCount }) {
         const res = await fetch('/api/check-submission', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: lenderEmail, baseCount }),
+          body: JSON.stringify({ email: lenderEmail, baseCount: baseCountRef.current }),
         });
         const data = await res.json();
         if (data.done) {
@@ -68,7 +69,7 @@ function LoadingScreen({ lenderEmail, onSuccess, baseCount }) {
     }, 3000);
 
     return () => { clearInterval(tick); clearInterval(poll); };
-  }, [lenderEmail, onSuccess, baseCount]);
+  }, [lenderEmail, onSuccess]);
 
   return (
     <div style={{ background: '#0f0f0f', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 40 }}>
@@ -350,7 +351,9 @@ export default function RequestForm() {
     setSubmitting(val);
   };
 
-  if (submitting) return <LoadingScreen lenderEmail={form.email} onSuccess={() => setSubmitted(true)} baseCount={baseCount} />;
+  const handleSuccess = useCallback(() => setSubmitted(true), []);
+
+  if (submitting) return <LoadingScreen lenderEmail={form.email} onSuccess={handleSuccess} baseCount={baseCount} />;
   if (submitted) return <SuccessScreen form={form} files={files} turnaround={turnaround} onReset={handleReset} />;
 
   return (
