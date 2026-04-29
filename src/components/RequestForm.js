@@ -69,7 +69,7 @@ function LoadingScreen({ lenderEmail, onSuccess, submitTime }) {
     }, 3000);
 
     return () => { clearInterval(tick); clearInterval(poll); };
-  }, [lenderEmail, onSuccess]);
+  }, [lenderEmail, onSuccess, submitTime]);
 
   return (
     <div style={{ background: '#0f0f0f', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 40 }}>
