@@ -165,7 +165,7 @@ function PaymentForm({ turnaround, form, files, onSubmitting, onSuccess }) {
       let paymentIntentId = null;
 
       if (!skipPayment) {
-        const intentRes = await fetch('https://swiftdeed.vercel.app/api/create-payment-intent', {
+        const intentRes = await fetch('/api/create-payment-intent', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ amount: PRICES[turnaround], borrowerName: form.name, propertyAddress: '' }),
@@ -201,7 +201,7 @@ function PaymentForm({ turnaround, form, files, onSubmitting, onSuccess }) {
       data.append('fileUrls', JSON.stringify(uploadedUrls));
 
       // Fire and forget — polling handles completion detection
-      fetch('https://swiftdeed.vercel.app/api/submit', { method: 'POST', body: data }).catch(() => {});
+      fetch('/api/submit', { method: 'POST', body: data }).catch(() => {});
     } catch (e) {
       setError('Something went wrong. Please try again.');
       console.error(e);
