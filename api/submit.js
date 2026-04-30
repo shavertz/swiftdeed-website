@@ -2,6 +2,8 @@ import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@supabase/supabase-js';
 import formidable from 'formidable';
 import fs from 'fs';
+import { upsertBorrower } from './lib/borrowers.js';
+import { assertEmailSent } from './lib/email.js';
 
 export const config = { api: { bodyParser: false, responseLimit: false } };
 
@@ -584,128 +586,6 @@ function mergeExtractions(results) {
   return merged;
 }
 
-function generateToken() {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let token = '';
-  for (let i = 0; i < 48; i++) token += chars.charAt(Math.floor(Math.random() * chars.length));
-  return token;
-}
-
-async function assertEmailSent(response, label) {
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`${label} email failed: ${response.status} ${body}`);
-  }
-}
-
-async function upsertBorrower({ loanData, internalLoanId, loanDocumentUrls, dailyRateForPDF, principal, rate, borrowerEmail, borrowerName, activationBaseUrl }) {
-  try {
-    const legalName = borrowerName || loanData.borrower_name || null;
-    if (!legalName) return;
-
-    const perDiem = parseFloat(dailyRateForPDF.toFixed(2));
-    const nextPaymentDate = loanData.next_payment_due_date || null;
-    const loanStartDate = loanData.loan_origination_date || loanData.interest_paid_to_date || loanData.statement_date || null;
-    const token = generateToken();
-    const activationUrl = `${activationBaseUrl || 'https://www.theswiftdeed.com'}#activate=${token}`;
-    const greeting = borrowerName ? `Hi ${borrowerName},` : '';
-
-    const { data: existingRows } = await supabase
-      .from('borrowers')
-      .select('id')
-      .eq('loan_id_internal', internalLoanId)
-      .limit(1);
-
-    const existing = existingRows && existingRows.length > 0 ? existingRows[0] : null;
-
-    if (existing) {
-      await supabase
-        .from('borrowers')
-        .update({
-          loan_id_internal: internalLoanId,
-          principal_balance: principal,
-          interest_rate: rate,
-          per_diem: perDiem,
-          property_address: loanData.property_address || null,
-          next_payment_date: nextPaymentDate,
-          loan_start_date: loanStartDate,
-          loan_document_urls: loanDocumentUrls,
-          status: 'active',
-          ...(borrowerEmail ? { borrower_email: borrowerEmail, verification_token: token } : {}),
-        })
-        .eq('loan_id_internal', internalLoanId);
-    } else {
-      await supabase
-        .from('borrowers')
-        .insert({
-          legal_name: legalName,
-          loan_id_internal: internalLoanId,
-          principal_balance: principal,
-          interest_rate: rate,
-          per_diem: perDiem,
-          property_address: loanData.property_address || null,
-          next_payment_date: nextPaymentDate,
-          loan_start_date: loanStartDate,
-          loan_document_urls: loanDocumentUrls,
-          status: 'active',
-          borrower_email: borrowerEmail || null,
-          verification_token: token,
-        });
-    }
-
-    if (borrowerEmail) {
-      const borrowerEmailRes = await fetch('https://api.postmarkapp.com/email', {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'X-Postmark-Server-Token': process.env.POSTMARK_SERVER_TOKEN,
-        },
-        body: JSON.stringify({
-          From: 'scott@theswiftdeed.com',
-          To: borrowerEmail,
-          Subject: 'Your loan is now being serviced by SwiftDeed',
-          HtmlBody: `
-            <div style="font-family: sans-serif; max-width: 520px; margin: 0 auto; padding: 40px 24px; color: #111;">
-              <div style="font-size: 22px; font-weight: 600; margin-bottom: 6px;">
-                Swift<span style="color: #D4A017;">Deed</span>
-              </div>
-              <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-              ${greeting ? `<p style="font-size: 15px; line-height: 1.6;">${greeting}</p>` : ''}
-              <p style="font-size: 15px; line-height: 1.6;">
-                Your loan is now being serviced by SwiftDeed. Click the link below to activate your borrower portal.
-              </p>
-              <p style="font-size: 15px; margin: 24px 0;">
-                <strong>Activate your portal:</strong><br/>
-                <a href="${activationUrl}" style="color: #D4A017; font-size: 14px; word-break: break-all;">${activationUrl}</a>
-              </p>
-              <div style="background: #fffbea; border: 1.5px solid #D4A017; border-radius: 8px; padding: 20px 24px; margin: 28px 0;">
-                <p style="font-size: 12px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 8px;">Your Loan ID</p>
-                <p style="font-size: 28px; font-weight: 700; color: #111; letter-spacing: 1px; margin: 0 0 10px;">${internalLoanId}</p>
-                <p style="font-size: 13px; color: #666; margin: 0; line-height: 1.5;">
-                  <strong>Keep this safe.</strong> You'll need this Loan ID to verify your identity when you activate your portal. Do not share it with anyone.
-                </p>
-              </div>
-              <p style="font-size: 13px; color: #888; line-height: 1.6;">
-                If you have any questions, reply to this email or contact your lender directly.
-              </p>
-              <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-              <p style="font-size: 12px; color: #aaa;">SwiftDeed LLC · www.theswiftdeed.com</p>
-            </div>
-          `,
-          TextBody: `${greeting ? greeting + '\n\n' : ''}Your loan is now being serviced by SwiftDeed.\n\nYOUR LOAN ID: ${internalLoanId}\nKeep this safe — you'll need it to verify your identity when activating your portal.\n\nActivate your borrower portal here: ${activationUrl}\n\nIf you have any questions, reply to this email or contact your lender directly.\n\nSwiftDeed LLC`,
-        }),
-      });
-      await assertEmailSent(borrowerEmailRes, 'Borrower activation');
-      console.log('Borrower activation email sent to:', borrowerEmail);
-    }
-
-    console.log('Borrower record upserted for:', legalName);
-  } catch (err) {
-    throw new Error(`Borrower setup failed: ${err.message}`);
-  }
-}
-
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -955,6 +835,7 @@ Borrower ID provided by submitter: ${borrowerId || 'none'}`;
     });
 
     await upsertBorrower({
+      supabase,
       loanData,
       internalLoanId,
       loanDocumentUrls: loanDocumentUrls.join(','),
