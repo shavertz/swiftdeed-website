@@ -428,11 +428,20 @@ export default function Portal({ onSubmitRequest }) {
 
   async function handleRemoveDoc(urlToRemove) {
     const newUrls = docUrls.filter(u => u !== urlToRemove);
+    const previousUrls = docUrls;
     setDocUrls(newUrls);
-    const borrowerEmail = borrowerEmails[selected.loan_id_internal] || liveData?.borrower_email;
-    await fetch('/api/update-loan-docs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ loanIdInternal: selected.loan_id_internal, newDocUrls: newUrls, lenderEmail: email, lenderName, borrowerEmail, borrowerName: selected.borrower_name, docsAdded: false }) });
-    setDocSuccess('Document removed.');
-    setTimeout(() => setDocSuccess(''), 4000);
+    try {
+      const borrowerEmail = borrowerEmails[selected.loan_id_internal] || liveData?.borrower_email;
+      const res = await fetch('/api/update-loan-docs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ loanIdInternal: selected.loan_id_internal, newDocUrls: newUrls, lenderEmail: email, lenderName, borrowerEmail, borrowerName: selected.borrower_name, docsAdded: false }) });
+      if (!res.ok) throw new Error('Document removal failed');
+      setDocSuccess('Document removed.');
+      setTimeout(() => setDocSuccess(''), 4000);
+    } catch (e) {
+      console.error('Remove document error:', e);
+      setDocUrls(previousUrls);
+      setDocSuccess('Could not remove document. Try again.');
+      setTimeout(() => setDocSuccess(''), 5000);
+    }
   }
 
   async function handleUploadDocs(files) {
@@ -452,12 +461,17 @@ export default function Portal({ onSubmitRequest }) {
         }
       }
       const combined = [...docUrls, ...newUrls];
-      setDocUrls(combined);
       const borrowerEmail = borrowerEmails[selected.loan_id_internal] || liveData?.borrower_email;
-      await fetch('/api/update-loan-docs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ loanIdInternal: selected.loan_id_internal, newDocUrls: combined, lenderEmail: email, lenderName, borrowerEmail, borrowerName: selected.borrower_name, docsAdded: newUrls.length > 0 }) });
+      const res = await fetch('/api/update-loan-docs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ loanIdInternal: selected.loan_id_internal, newDocUrls: combined, lenderEmail: email, lenderName, borrowerEmail, borrowerName: selected.borrower_name, docsAdded: newUrls.length > 0 }) });
+      if (!res.ok) throw new Error('Document update failed');
+      setDocUrls(combined);
       setDocSuccess(`${newUrls.length} document${newUrls.length !== 1 ? 's' : ''} uploaded.`);
       setTimeout(() => setDocSuccess(''), 4000);
-    } catch (e) { console.error('Upload error:', e); } finally { setUploadingDocs(false); }
+    } catch (e) {
+      console.error('Upload error:', e);
+      setDocSuccess('Could not upload documents. Try again.');
+      setTimeout(() => setDocSuccess(''), 5000);
+    } finally { setUploadingDocs(false); }
   }
 
   async function handleDeleteLoan() {

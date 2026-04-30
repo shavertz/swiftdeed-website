@@ -62,6 +62,43 @@ export async function sendInternalSubmissionEmail({
   }, 'Internal notification');
 }
 
+export async function sendLenderDocsUpdatedEmail({
+  lenderEmail,
+  lenderName,
+  loanIdInternal,
+  documentCount,
+  docsAdded,
+}) {
+  if (!lenderEmail) return;
+
+  const actionText = docsAdded ? 'New documents were added' : 'Loan documents were updated';
+
+  await sendPostmarkEmail({
+    From: 'scott@theswiftdeed.com',
+    To: lenderEmail,
+    Subject: `Loan documents updated - ${loanIdInternal}`,
+    HtmlBody: `<p>Hi ${lenderName || 'there'},</p><p>${actionText} for <strong>${loanIdInternal}</strong>. There ${documentCount === 1 ? 'is' : 'are'} now <strong>${documentCount}</strong> document${documentCount !== 1 ? 's' : ''} on file.</p><p>- SwiftDeed</p>`,
+    TextBody: `${actionText} for ${loanIdInternal}. ${documentCount} document(s) on file.`,
+    MessageStream: 'outbound',
+  }, 'Lender document update');
+}
+
+export async function sendBorrowerDocsAddedEmail({
+  borrowerEmail,
+  borrowerName,
+}) {
+  if (!borrowerEmail) return;
+
+  await sendPostmarkEmail({
+    From: 'scott@theswiftdeed.com',
+    To: borrowerEmail,
+    Subject: 'New document added to your loan',
+    HtmlBody: `<p>Hi ${borrowerName || 'there'},</p><p>A new document has been added to your loan. You can view and download it anytime from your borrower portal.</p><p>- SwiftDeed</p>`,
+    TextBody: 'A new document has been added to your loan. Log into your borrower portal to view it.',
+    MessageStream: 'outbound',
+  }, 'Borrower document update');
+}
+
 export async function sendBorrowerActivationEmail({ borrowerEmail, borrowerName, internalLoanId, activationUrl }) {
   const greeting = borrowerName ? `Hi ${borrowerName},` : '';
 
