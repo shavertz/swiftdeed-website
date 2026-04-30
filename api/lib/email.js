@@ -118,6 +118,56 @@ export async function sendLenderLoanDeletedEmail({
   }, 'Lender loan delete');
 }
 
+export async function sendBorrowerPaymentReceiptEmail({
+  borrowerEmail,
+  borrowerName,
+  loanIdInternal,
+  amount,
+  pdfBuffer,
+}) {
+  if (!borrowerEmail) return;
+
+  const formattedAmount = parseFloat(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
+
+  await sendPostmarkEmail({
+    From: 'scott@theswiftdeed.com',
+    To: borrowerEmail,
+    Subject: `Payment Receipt - ${loanIdInternal}`,
+    HtmlBody: `<p>Hi ${borrowerName || 'there'},</p><p>Your payment of <strong>$${formattedAmount}</strong> has been received for loan <strong>${loanIdInternal}</strong>.</p><p>Please find your payment receipt attached.</p><p>Thank you,<br>SwiftDeed LLC</p>`,
+    TextBody: `Hi ${borrowerName || 'there'},\n\nYour payment of $${formattedAmount} has been received for loan ${loanIdInternal}.\n\nPlease find your payment receipt attached.\n\nThank you,\nSwiftDeed LLC`,
+    Attachments: [{
+      Name: `${loanIdInternal}-payment-receipt.pdf`,
+      Content: pdfBuffer.toString('base64'),
+      ContentType: 'application/pdf',
+    }],
+  }, 'Borrower payment receipt');
+}
+
+export async function sendLenderPaymentReceivedEmail({
+  lenderEmail,
+  borrowerName,
+  loanIdInternal,
+  amount,
+  method,
+  paymentDate,
+  principalBalanceAfter,
+}) {
+  if (!lenderEmail) return;
+
+  const formattedAmount = parseFloat(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
+  const formattedBalance = parseFloat(principalBalanceAfter || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
+  const paymentMethod = method || 'not provided';
+  const paidOn = paymentDate || 'not provided';
+
+  await sendPostmarkEmail({
+    From: 'scott@theswiftdeed.com',
+    To: lenderEmail,
+    Subject: `Payment Received - ${borrowerName || 'Borrower'} - ${loanIdInternal}`,
+    HtmlBody: `<p>A payment of <strong>$${formattedAmount}</strong> has been recorded for borrower <strong>${borrowerName || 'not provided'}</strong> on loan <strong>${loanIdInternal}</strong>.</p><p>Method: ${paymentMethod}<br>Date: ${paidOn}<br>Remaining balance: $${formattedBalance}</p><p>SwiftDeed LLC</p>`,
+    TextBody: `Payment recorded for ${borrowerName || 'not provided'} - ${loanIdInternal}\n\nAmount: $${formattedAmount}\nMethod: ${paymentMethod}\nDate: ${paidOn}\nRemaining balance: $${formattedBalance}\n\nSwiftDeed LLC`,
+  }, 'Lender payment notification');
+}
+
 export async function sendBorrowerActivationEmail({ borrowerEmail, borrowerName, internalLoanId, activationUrl }) {
   const greeting = borrowerName ? `Hi ${borrowerName},` : '';
 

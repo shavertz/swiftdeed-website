@@ -1,4 +1,5 @@
 import { supabase } from './lib/supabase.js';
+import { sendBorrowerPaymentReceiptEmail, sendLenderPaymentReceivedEmail } from './lib/email.js';
 
 async function generatePaymentInvoicePDF({ borrowerName, loanIdInternal, propertyAddress, paymentDate, amount, interestPortion, principalPortion, principalBalanceAfter, nextPaymentDate, paymentMethod, perDiem, lenderName }) {
   const PDFDocument = (await import('pdfkit')).default;
@@ -260,47 +261,26 @@ export default async function handler(req, res) {
           .eq('id', paymentId);
       }
 
-      // Email borrower
       if (borrowerEmail) {
-        await fetch('https://api.postmarkapp.com/email', {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            'X-Postmark-Server-Token': process.env.POSTMARK_SERVER_TOKEN,
-          },
-          body: JSON.stringify({
-            From: 'scott@theswiftdeed.com',
-            To: borrowerEmail,
-            Subject: `Payment Receipt — ${loanIdInternal}`,
-            HtmlBody: `<p>Hi ${borrowerName},</p><p>Your payment of <strong>$${parseFloat(paymentLog?.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong> has been received for loan <strong>${loanIdInternal}</strong>.</p><p>Please find your payment receipt attached.</p><p>Thank you,<br>SwiftDeed LLC</p>`,
-            TextBody: `Hi ${borrowerName},\n\nYour payment of $${parseFloat(paymentLog?.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} has been received for loan ${loanIdInternal}.\n\nPlease find your payment receipt attached.\n\nThank you,\nSwiftDeed LLC`,
-            Attachments: [{
-              Name: `${loanIdInternal}-payment-receipt.pdf`,
-              Content: pdfBuffer.toString('base64'),
-              ContentType: 'application/pdf',
-            }],
-          }),
+        await sendBorrowerPaymentReceiptEmail({
+          borrowerEmail,
+          borrowerName,
+          loanIdInternal,
+          amount: paymentLog?.amount,
+          pdfBuffer,
         });
         console.log('Payment receipt sent to borrower:', borrowerEmail);
       }
 
-      // Email lender
       if (lenderEmail) {
-        await fetch('https://api.postmarkapp.com/email', {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            'X-Postmark-Server-Token': process.env.POSTMARK_SERVER_TOKEN,
-          },
-          body: JSON.stringify({
-            From: 'scott@theswiftdeed.com',
-            To: lenderEmail,
-            Subject: `Payment Received — ${borrowerName} · ${loanIdInternal}`,
-            HtmlBody: `<p>A payment of <strong>$${parseFloat(paymentLog?.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong> has been recorded for borrower <strong>${borrowerName}</strong> on loan <strong>${loanIdInternal}</strong>.</p><p>Method: ${paymentLog?.method || '—'}<br>Date: ${paymentLog?.payment_date || '—'}<br>Remaining balance: $${parseFloat(paymentLog?.principal_balance_after || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</p><p>SwiftDeed LLC</p>`,
-            TextBody: `Payment recorded for ${borrowerName} — ${loanIdInternal}\n\nAmount: $${parseFloat(paymentLog?.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}\nMethod: ${paymentLog?.method || '—'}\nDate: ${paymentLog?.payment_date || '—'}\nRemaining balance: $${parseFloat(paymentLog?.principal_balance_after || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}\n\nSwiftDeed LLC`,
-          }),
+        await sendLenderPaymentReceivedEmail({
+          lenderEmail,
+          borrowerName,
+          loanIdInternal,
+          amount: paymentLog?.amount,
+          method: paymentLog?.method,
+          paymentDate: paymentLog?.payment_date,
+          principalBalanceAfter: paymentLog?.principal_balance_after,
         });
         console.log('Payment notification sent to lender:', lenderEmail);
       }
