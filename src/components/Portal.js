@@ -478,12 +478,17 @@ export default function Portal({ onSubmitRequest }) {
     if (deleteConfirmText !== 'DELETE') return;
     setDeleting(true);
     try {
-      await fetch('/api/delete-loan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ loanIdInternal: selected.loan_id_internal, lenderEmail: email, lenderName, borrowerName: selected.borrower_name, propertyAddress: selected.property_address }) });
+      const res = await fetch('/api/delete-loan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ loanIdInternal: selected.loan_id_internal, lenderEmail: email, lenderName, borrowerName: selected.borrower_name, propertyAddress: selected.property_address }) });
+      if (!res.ok) throw new Error('Loan delete failed');
       setShowDeleteModal(false);
       setDeleteConfirmText('');
       setRequests(prev => prev.filter(r => r.loan_id_internal !== selected.loan_id_internal));
       setSelected(null);
-    } catch (e) { console.error('Delete error:', e); } finally { setDeleting(false); }
+    } catch (e) {
+      console.error('Delete error:', e);
+      setDocSuccess('Could not delete loan. Try again.');
+      setTimeout(() => setDocSuccess(''), 5000);
+    } finally { setDeleting(false); }
   }
 
   const filtered = requests.filter(r => {

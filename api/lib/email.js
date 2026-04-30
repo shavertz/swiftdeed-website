@@ -99,6 +99,25 @@ export async function sendBorrowerDocsAddedEmail({
   }, 'Borrower document update');
 }
 
+export async function sendLenderLoanDeletedEmail({
+  lenderEmail,
+  lenderName,
+  loanIdInternal,
+  borrowerName,
+  propertyAddress,
+}) {
+  if (!lenderEmail) return;
+
+  await sendPostmarkEmail({
+    From: 'scott@theswiftdeed.com',
+    To: lenderEmail,
+    Subject: `Loan deleted - ${loanIdInternal}`,
+    HtmlBody: `<p>Hi ${lenderName || 'there'},</p><p>The loan <strong>${loanIdInternal}</strong> for borrower <strong>${borrowerName || 'not provided'}</strong> at <strong>${propertyAddress || 'not provided'}</strong> has been permanently deleted from SwiftDeed. The borrower's portal access has been removed.</p><p>If this was a mistake, please resubmit the loan through the portal.</p><p>- SwiftDeed</p>`,
+    TextBody: `Loan ${loanIdInternal} for ${borrowerName || 'not provided'} has been permanently deleted. The borrower's portal access has been removed.`,
+    MessageStream: 'outbound',
+  }, 'Lender loan delete');
+}
+
 export async function sendBorrowerActivationEmail({ borrowerEmail, borrowerName, internalLoanId, activationUrl }) {
   const greeting = borrowerName ? `Hi ${borrowerName},` : '';
 
