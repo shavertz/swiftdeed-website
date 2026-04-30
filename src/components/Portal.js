@@ -552,20 +552,59 @@ export default function Portal({ onSubmitRequest }) {
   }
 
   // Loans list
+  const now = new Date();
+  const thisMonth = now.getMonth();
+  const thisYear = now.getFullYear();
+  const allBorrowers = Object.values(borrowerData);
+  const principalOutstanding = allBorrowers.reduce((sum, b) => sum + (parseFloat(b.principal_balance) || 0), 0);
+  const dueThisMonth = allBorrowers.filter(b => { if (!b.next_payment_date) return false; const d = new Date(b.next_payment_date); return d.getMonth() === thisMonth && d.getFullYear() === thisYear; });
+  const dueThisMonthTotal = dueThisMonth.reduce((sum, b) => sum + (parseFloat(b.monthly_payment) || 0), 0);
+  const avgRate = allBorrowers.length > 0 ? allBorrowers.reduce((sum, b) => sum + (parseFloat(b.interest_rate) || 0), 0) / allBorrowers.length : 0;
+  const notActivated = requests.filter(r => !borrowerData[r.loan_id_internal]).length;
+  const missingPayment = allBorrowers.filter(b => !b.monthly_payment).length;
+  const dueSoon = allBorrowers.filter(b => { if (!b.next_payment_date) return false; const diff = Math.ceil((new Date(b.next_payment_date) - now) / (1000 * 60 * 60 * 24)); return diff >= 0 && diff <= 7; }).length;
+  const inDefault = allBorrowers.filter(b => b.payment_status?.toLowerCase() === 'default').length;
+  const needsAttention = notActivated + missingPayment + dueSoon + inDefault;
+
+  const sc = { background: '#141414', border: '0.5px solid #222', borderRadius: 10, padding: '18px 22px' };
+  const sl = { fontSize: 10, color: '#555', textTransform: 'uppercase', letterSpacing: 0.9, marginBottom: 10 };
+  const sv = { fontSize: 24, fontWeight: 600, color: '#fff', marginBottom: 4 };
+  const ss = { fontSize: 12, color: '#444' };
+
   return (
     <div style={s.page}>
-      <div style={s.heading}>My Loans</div>
-      <div style={{ fontSize: 13, color: '#555', marginTop: -18, marginBottom: 24 }}>{email}</div>
-
-      <div style={s.statRow}>
-        <div style={s.statCard}><div style={s.statLabel}>Total Loans</div><div style={s.statValue}>{requests.length}</div></div>
-        <div style={s.statCard}><div style={s.statLabel}>Total Balance</div><div style={{ ...s.statValue, fontSize: 22 }}>{formatCurrency(totalBalance)}</div></div>
-        <div style={s.statCard}><div style={s.statLabel}>Avg. Loan Size</div><div style={{ ...s.statValue, fontSize: 22 }}>{requests.length > 0 ? formatCurrency(avgLoanSize) : '—'}</div></div>
-        <div style={s.statCard}><div style={s.statLabel}>Active Borrowers</div><div style={s.statValue}>{activeBorrowers}</div></div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
+        <div>
+          <div style={{ fontSize: 26, fontWeight: 500, color: '#fff' }}>Loan Portfolio</div>
+          <div style={{ fontSize: 13, color: '#555', marginTop: 4 }}>{email}</div>
+        </div>
+        <button style={s.serviceBtn} onClick={onSubmitRequest} {...hovSolid}>+ Service a loan</button>
       </div>
 
-      <div style={s.controlRow}>
-        <input style={s.searchInput} placeholder="Search by loan ID, borrower, or property..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 14 }}>
+        <div style={sc}><div style={sl}>Principal Outstanding</div><div style={sv}>{formatCurrency(principalOutstanding)}</div><div style={ss}>{requests.length} serviced loans</div></div>
+        <div style={sc}><div style={sl}>Due This Month</div><div style={sv}>{formatCurrency(dueThisMonthTotal)}</div><div style={ss}>{dueThisMonth.length} scheduled payments</div></div>
+        <div style={sc}><div style={sl}>Needs Attention</div><div style={{ ...sv, color: needsAttention > 0 ? '#E9A800' : '#34d399' }}>{needsAttention}</div><div style={ss}>Missing or overdue data</div></div>
+        <div style={sc}><div style={sl}>Avg. Note Rate</div><div style={sv}>{avgRate > 0 ? avgRate.toFixed(1) + '%' : '—'}</div><div style={ss}>Across all active loans</div></div>
+      </div>
+
+      <div style={{ background: '#141414', border: '0.5px solid #222', borderRadius: 10, padding: '16px 22px', display: 'flex', alignItems: 'center', gap: 0, marginBottom: 20 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: '#fff', whiteSpace: 'nowrap', minWidth: 130, marginRight: 24 }}>Needs Attention</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', flex: 1, gap: 1, background: '#222', borderRadius: 7, overflow: 'hidden' }}>
+          {[
+            { num: notActivated, label: 'Borrowers not activated' },
+            { num: missingPayment, label: 'Missing payment amount' },
+            { num: dueSoon, label: 'Payment due within 7 days' },
+            { num: inDefault, label: 'Loans currently in default', danger: true },
+          ].map(({ num, label, danger }) => (
+            <div key={label} style={{ background: '#1a1a1a', padding: '12px 16px' }}>
+              <div style={{ fontSize: 22, fontWeight: 600, color: danger ? (num > 0 ? '#f87171' : '#555') : (num > 0 ? '#E9A800' : '#555'), marginBottom: 2 }}>{num}</div>
+              <div style={{ fontSize: 11, color: '#555' }}>{label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div style={s.controlRow}> placeholder="Search by loan ID, borrower, or property..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
         <select style={s.select} value={sort} onChange={e => { setSort(e.target.value); setPage(1); }}>
           <option value="newest">Sort: Newest first</option>
           <option value="oldest">Sort: Oldest first</option>
@@ -573,7 +612,6 @@ export default function Portal({ onSubmitRequest }) {
           <option value="amount_asc">Sort: Balance ↑</option>
         </select>
         {(search || sort !== 'newest') && <span style={{ fontSize: 12, color: '#555' }}>{sorted.length} result{sorted.length !== 1 ? 's' : ''}</span>}
-        <button style={s.serviceBtn} onClick={onSubmitRequest} {...hovSolid}>+ Service a loan</button>
       </div>
 
       <div style={{ border: '0.5px solid #222', borderRadius: 10, overflow: 'hidden' }}>
@@ -600,7 +638,7 @@ export default function Portal({ onSubmitRequest }) {
               <span style={{ color: '#888' }}>{r.loan_id_internal || r.loan_id || '—'}</span>
               <span style={{ color: '#fff', fontWeight: 500 }}>{r.borrower_name || '—'}</span>
               <span style={{ color: '#888', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: 8 }}>{r.property_address || '—'}</span>
-              <span style={{ color: '#E9A800', fontWeight: 500, textAlign: 'right' }}>{formatCurrency(b.principal_balance || r.total_due)}</span>
+              <span style={{ color: '#E9A800', textAlign: 'right' }}>{formatCurrency(b.principal_balance || r.total_due)}</span>
               <span style={{ color: nextPmtColor, textAlign: 'right' }}>{nextPmt ? formatDate(nextPmt) : '—'}</span>
               <span style={{ color: '#888', textAlign: 'right' }}>{b.monthly_payment ? formatCurrency(b.monthly_payment) : '—'}</span>
               <span style={{ textAlign: 'right', ...loanStatusStyle(b.payment_status) }}>{b.payment_status || '—'}</span>
