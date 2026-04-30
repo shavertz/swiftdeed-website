@@ -487,8 +487,7 @@ export default function Portal({ onSubmitRequest }) {
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const paginated = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const totalBalance = requests.reduce((sum, r) => sum + (parseFloat(borrowerData[r.loan_id_internal]?.principal_balance || r.total_due) || 0), 0);
-  const avgLoanSize = requests.length > 0 ? totalBalance / requests.length : 0;
-  const activeBorrowers = new Set(requests.map(r => borrowerEmails[r.loan_id_internal]).filter(Boolean)).size;
+
 
   const TABLE_COLS = '100px 140px 180px minmax(150px, 300px) 120px 130px 110px 110px';
 
