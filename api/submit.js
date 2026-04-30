@@ -591,6 +591,13 @@ function generateToken() {
   return token;
 }
 
+async function assertEmailSent(response, label) {
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`${label} email failed: ${response.status} ${body}`);
+  }
+}
+
 async function upsertBorrower({ loanData, internalLoanId, loanDocumentUrls, dailyRateForPDF, principal, rate, borrowerEmail, borrowerName }) {
   try {
     const legalName = borrowerName || loanData.borrower_name || null;
@@ -647,7 +654,7 @@ async function upsertBorrower({ loanData, internalLoanId, loanDocumentUrls, dail
     }
 
     if (borrowerEmail) {
-      await fetch('https://api.postmarkapp.com/email', {
+      const borrowerEmailRes = await fetch('https://api.postmarkapp.com/email', {
         method: 'POST',
         headers: {
           'Accept': 'application/json',
@@ -689,12 +696,13 @@ async function upsertBorrower({ loanData, internalLoanId, loanDocumentUrls, dail
           TextBody: `${greeting ? greeting + '\n\n' : ''}Your loan is now being serviced by SwiftDeed.\n\nYOUR LOAN ID: ${internalLoanId}\nKeep this safe — you'll need it to verify your identity when activating your portal.\n\nActivate your borrower portal here: ${activationUrl}\n\nIf you have any questions, reply to this email or contact your lender directly.\n\nSwiftDeed LLC`,
         }),
       });
+      await assertEmailSent(borrowerEmailRes, 'Borrower activation');
       console.log('Borrower activation email sent to:', borrowerEmail);
     }
 
     console.log('Borrower record upserted for:', legalName);
   } catch (err) {
-    console.warn('Borrower upsert failed (non-blocking):', err.message);
+    throw new Error(`Borrower setup failed: ${err.message}`);
   }
 }
 
@@ -956,7 +964,7 @@ Borrower ID provided by submitter: ${borrowerId || 'none'}`;
       borrowerName: borrowerName || null,
     });
 
-    await fetch('https://api.postmarkapp.com/email', {
+    const lenderEmailRes = await fetch('https://api.postmarkapp.com/email', {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
@@ -980,6 +988,7 @@ Borrower ID provided by submitter: ${borrowerId || 'none'}`;
         }]
       })
     });
+    await assertEmailSent(lenderEmailRes, 'Lender payoff');
 
     const paymentIntentId = Array.isArray(fields.paymentIntentId) ? fields.paymentIntentId[0] : fields.paymentIntentId;
     const skipPayment = Array.isArray(fields.skipPayment) ? fields.skipPayment[0] : fields.skipPayment;
@@ -989,7 +998,7 @@ Borrower ID provided by submitter: ${borrowerId || 'none'}`;
       await stripe.paymentIntents.capture(paymentIntentId);
     }
 
-    await fetch('https://api.postmarkapp.com/email', {
+    const internalEmailRes = await fetch('https://api.postmarkapp.com/email', {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
@@ -1003,6 +1012,7 @@ Borrower ID provided by submitter: ${borrowerId || 'none'}`;
         TextBody: `New payoff request from the website.\n\nName: ${name}\nEmail: ${email}\nCompany: ${company}\nPhone: ${phone}\nBorrower ID: ${borrowerId || 'Not provided'}\nTurnaround: ${turnaround}\nNotes: ${notes || 'None'}\n\nInternal ID: ${internalLoanId}\nInterest method: ${loanData.interest_calculation_method || 'not stated'}\nAccrual basis: ${loanData.accrual_basis || 'not stated (defaulted to Actual/365)'}\nCompounding: ${loanData.compounding_frequency || 'none detected'}\nDocuments: ${fileUrls.length} file(s) uploaded`
       })
     });
+    await assertEmailSent(internalEmailRes, 'Internal notification');
 
     return res.status(200).json({ success: true, loanId: internalLoanId });
 
