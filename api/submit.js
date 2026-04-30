@@ -3,6 +3,7 @@ import formidable from 'formidable';
 import fs from 'fs';
 import { upsertBorrower } from './lib/borrowers.js';
 import { sendInternalSubmissionEmail, sendLenderPayoffEmail } from './lib/email.js';
+import { preparePostRequest } from './lib/http.js';
 import { supabase } from './lib/supabase.js';
 
 export const config = { api: { bodyParser: false, responseLimit: false } };
@@ -586,15 +587,7 @@ function mergeExtractions(results) {
 }
 
 export default async function handler(req, res) {
-  if (req.method === 'OPTIONS') {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-    return res.status(200).end();
-  }
-
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (preparePostRequest(req, res)) return;
 
   try {
     const form = formidable({ multiples: true, maxFileSize: 25 * 1024 * 1024 });
