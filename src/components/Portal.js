@@ -602,7 +602,8 @@ export default function Portal({ onSubmitRequest }) {
           ))}
         </div>
       </div>
-      <div style={s.controlRow}> placeholder="Search by loan ID, borrower, or property..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
+      <div style={s.controlRow}>
+        <input style={s.searchInput} placeholder="Search by loan ID, borrower, or property..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
         <select style={s.select} value={sort} onChange={e => { setSort(e.target.value); setPage(1); }}>
           <option value="newest">Sort: Newest first</option>
           <option value="oldest">Sort: Oldest first</option>
