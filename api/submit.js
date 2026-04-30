@@ -598,7 +598,7 @@ async function assertEmailSent(response, label) {
   }
 }
 
-async function upsertBorrower({ loanData, internalLoanId, loanDocumentUrls, dailyRateForPDF, principal, rate, borrowerEmail, borrowerName }) {
+async function upsertBorrower({ loanData, internalLoanId, loanDocumentUrls, dailyRateForPDF, principal, rate, borrowerEmail, borrowerName, activationBaseUrl }) {
   try {
     const legalName = borrowerName || loanData.borrower_name || null;
     if (!legalName) return;
@@ -607,7 +607,7 @@ async function upsertBorrower({ loanData, internalLoanId, loanDocumentUrls, dail
     const nextPaymentDate = loanData.next_payment_due_date || null;
     const loanStartDate = loanData.loan_origination_date || loanData.interest_paid_to_date || loanData.statement_date || null;
     const token = generateToken();
-    const activationUrl = `https://www.theswiftdeed.com#activate=${token}`;
+    const activationUrl = `${activationBaseUrl || 'https://www.theswiftdeed.com'}#activate=${token}`;
     const greeting = borrowerName ? `Hi ${borrowerName},` : '';
 
     const { data: existingRows } = await supabase
@@ -890,6 +890,7 @@ Borrower ID provided by submitter: ${borrowerId || 'none'}`;
         })();
 
     const internalLoanId = 'SD-' + new Date().getFullYear() + '-' + String(Date.now()).slice(-6);
+    const activationBaseUrl = `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers.host || 'www.theswiftdeed.com'}`;
 
     const pdfBuffer = await generatePayoffPDF({
       ...loanData,
@@ -962,6 +963,7 @@ Borrower ID provided by submitter: ${borrowerId || 'none'}`;
       rate,
       borrowerEmail: borrowerEmail || null,
       borrowerName: borrowerName || null,
+      activationBaseUrl,
     });
 
     const lenderEmailRes = await fetch('https://api.postmarkapp.com/email', {

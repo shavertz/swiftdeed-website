@@ -29,6 +29,14 @@ function formatPhone(val) {
   return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
 }
 
+function normalizeLoanId(value) {
+  return (value || '')
+    .trim()
+    .toUpperCase()
+    .replace(/[‐‑‒–—−]/g, '-')
+    .replace(/\s+/g, '');
+}
+
 export default function BorrowerOnboarding({ borrowerId, onComplete }) {
   useUser();
   const [fullName, setFullName] = useState('');
@@ -79,7 +87,7 @@ export default function BorrowerOnboarding({ borrowerId, onComplete }) {
       }
 
       const storedLoanId = verifyData[0].loan_id_internal;
-      if (loanId.trim().toUpperCase() !== (storedLoanId || '').toUpperCase()) {
+      if (normalizeLoanId(loanId) !== normalizeLoanId(storedLoanId)) {
         setLoanIdError('Loan ID doesn\'t match our records. Check your activation email and try again.');
         setLoading(false);
         return;
