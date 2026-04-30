@@ -257,10 +257,11 @@ export default function App() {
 
   const nav = (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 60px', borderBottom: '0.5px solid #2a2a2a', background: '#0f0f0f', position: 'sticky', top: 0, zIndex: 100 }}>
-      <div onClick={() => setPage('home')} style={{ cursor: 'pointer' }}>
+      <div onClick={() => setPage('home')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14 }}>
         <span style={{ fontSize: 20, fontWeight: 500, letterSpacing: -0.3 }}>
           <span style={{ color: '#fff' }}>Swift</span><span style={{ color: '#FFD700' }}>Deed</span>
         </span>
+        <span style={{ fontSize: 12, color: '#4a90b8', letterSpacing: '1.5px', textTransform: 'uppercase' }}>Private Loan Servicing</span>
       </div>
 
       {page === 'home' && (
