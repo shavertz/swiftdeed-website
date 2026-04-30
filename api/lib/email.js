@@ -15,11 +15,51 @@ export async function sendPostmarkEmail(payload, label) {
   }
 }
 
-export async function assertEmailSent(response, label) {
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`${label} email failed: ${response.status} ${body}`);
-  }
+export async function sendLenderPayoffEmail({
+  lenderEmail,
+  lenderName,
+  borrowerName,
+  totalDue,
+  internalLoanId,
+  pdfBuffer,
+  invoiceBuffer,
+}) {
+  await sendPostmarkEmail({
+    From: 'scott@theswiftdeed.com',
+    To: lenderEmail,
+    Subject: `Payoff Statement - ${borrowerName || 'Your Loan'}`,
+    TextBody: `Hi ${lenderName},\n\nYour payoff statement is ready. Please see the attached PDFs.\n\nTotal payoff amount: $${totalDue.toLocaleString('en-US', { minimumFractionDigits: 2 })}\nReference ID: ${internalLoanId}\n\nThank you,\nSwiftDeed`,
+    HtmlBody: `<p>Hi ${lenderName},</p><p>Your payoff statement is ready. Please see the attached PDFs.</p><p><strong>Total payoff amount:</strong> $${totalDue.toLocaleString('en-US', { minimumFractionDigits: 2 })}<br><strong>Reference ID:</strong> ${internalLoanId}</p><p>Thank you,<br>SwiftDeed</p>`,
+    Attachments: [{
+      Name: `${internalLoanId}_payoff-statement.pdf`,
+      Content: pdfBuffer.toString('base64'),
+      ContentType: 'application/pdf',
+    }, {
+      Name: `${internalLoanId}_invoice.pdf`,
+      Content: invoiceBuffer.toString('base64'),
+      ContentType: 'application/pdf',
+    }],
+  }, 'Lender payoff');
+}
+
+export async function sendInternalSubmissionEmail({
+  name,
+  email,
+  company,
+  phone,
+  borrowerId,
+  turnaround,
+  notes,
+  internalLoanId,
+  loanData,
+  fileCount,
+}) {
+  await sendPostmarkEmail({
+    From: 'scott@theswiftdeed.com',
+    To: 'requests@theswiftdeed.com',
+    Subject: `New web submission - ${name} (${company})`,
+    TextBody: `New payoff request from the website.\n\nName: ${name}\nEmail: ${email}\nCompany: ${company}\nPhone: ${phone}\nBorrower ID: ${borrowerId || 'Not provided'}\nTurnaround: ${turnaround}\nNotes: ${notes || 'None'}\n\nInternal ID: ${internalLoanId}\nInterest method: ${loanData.interest_calculation_method || 'not stated'}\nAccrual basis: ${loanData.accrual_basis || 'not stated (defaulted to Actual/365)'}\nCompounding: ${loanData.compounding_frequency || 'none detected'}\nDocuments: ${fileCount} file(s) uploaded`,
+  }, 'Internal notification');
 }
 
 export async function sendBorrowerActivationEmail({ borrowerEmail, borrowerName, internalLoanId, activationUrl }) {
@@ -54,9 +94,9 @@ export async function sendBorrowerActivationEmail({ borrowerEmail, borrowerName,
           If you have any questions, reply to this email or contact your lender directly.
         </p>
         <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-        <p style="font-size: 12px; color: #aaa;">SwiftDeed LLC · www.theswiftdeed.com</p>
+        <p style="font-size: 12px; color: #aaa;">SwiftDeed LLC - www.theswiftdeed.com</p>
       </div>
     `,
-    TextBody: `${greeting ? greeting + '\n\n' : ''}Your loan is now being serviced by SwiftDeed.\n\nYOUR LOAN ID: ${internalLoanId}\nKeep this safe — you'll need it to verify your identity when activating your portal.\n\nActivate your borrower portal here: ${activationUrl}\n\nIf you have any questions, reply to this email or contact your lender directly.\n\nSwiftDeed LLC`,
+    TextBody: `${greeting ? greeting + '\n\n' : ''}Your loan is now being serviced by SwiftDeed.\n\nYOUR LOAN ID: ${internalLoanId}\nKeep this safe - you'll need it to verify your identity when activating your portal.\n\nActivate your borrower portal here: ${activationUrl}\n\nIf you have any questions, reply to this email or contact your lender directly.\n\nSwiftDeed LLC`,
   }, 'Borrower activation');
 }

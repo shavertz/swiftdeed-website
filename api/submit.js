@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import formidable from 'formidable';
 import fs from 'fs';
 import { upsertBorrower } from './lib/borrowers.js';
-import { assertEmailSent } from './lib/email.js';
+import { sendInternalSubmissionEmail, sendLenderPayoffEmail } from './lib/email.js';
 
 export const config = { api: { bodyParser: false, responseLimit: false } };
 
@@ -847,31 +847,15 @@ Borrower ID provided by submitter: ${borrowerId || 'none'}`;
       activationBaseUrl,
     });
 
-    const lenderEmailRes = await fetch('https://api.postmarkapp.com/email', {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'X-Postmark-Server-Token': process.env.POSTMARK_SERVER_TOKEN
-      },
-      body: JSON.stringify({
-        From: 'scott@theswiftdeed.com',
-        To: email,
-        Subject: `Payoff Statement — ${loanData.borrower_name || 'Your Loan'}`,
-        TextBody: `Hi ${name},\n\nYour payoff statement is ready. Please see the attached PDFs.\n\nTotal payoff amount: $${totalDue.toLocaleString('en-US', { minimumFractionDigits: 2 })}\nReference ID: ${internalLoanId}\n\nThank you,\nSwiftDeed`,
-        HtmlBody: `<p>Hi ${name},</p><p>Your payoff statement is ready. Please see the attached PDFs.</p><p><strong>Total payoff amount:</strong> $${totalDue.toLocaleString('en-US', { minimumFractionDigits: 2 })}<br><strong>Reference ID:</strong> ${internalLoanId}</p><p>Thank you,<br>SwiftDeed</p>`,
-        Attachments: [{
-          Name: `${internalLoanId}_payoff-statement.pdf`,
-          Content: pdfBuffer.toString('base64'),
-          ContentType: 'application/pdf',
-        }, {
-          Name: `${internalLoanId}_invoice.pdf`,
-          Content: invoiceBuffer.toString('base64'),
-          ContentType: 'application/pdf',
-        }]
-      })
+    await sendLenderPayoffEmail({
+      lenderEmail: email,
+      lenderName: name,
+      borrowerName: loanData.borrower_name,
+      totalDue,
+      internalLoanId,
+      pdfBuffer,
+      invoiceBuffer,
     });
-    await assertEmailSent(lenderEmailRes, 'Lender payoff');
 
     const paymentIntentId = Array.isArray(fields.paymentIntentId) ? fields.paymentIntentId[0] : fields.paymentIntentId;
     const skipPayment = Array.isArray(fields.skipPayment) ? fields.skipPayment[0] : fields.skipPayment;
@@ -881,21 +865,18 @@ Borrower ID provided by submitter: ${borrowerId || 'none'}`;
       await stripe.paymentIntents.capture(paymentIntentId);
     }
 
-    const internalEmailRes = await fetch('https://api.postmarkapp.com/email', {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'X-Postmark-Server-Token': process.env.POSTMARK_SERVER_TOKEN
-      },
-      body: JSON.stringify({
-        From: 'scott@theswiftdeed.com',
-        To: 'requests@theswiftdeed.com',
-        Subject: `New web submission — ${name} (${company})`,
-        TextBody: `New payoff request from the website.\n\nName: ${name}\nEmail: ${email}\nCompany: ${company}\nPhone: ${phone}\nBorrower ID: ${borrowerId || 'Not provided'}\nTurnaround: ${turnaround}\nNotes: ${notes || 'None'}\n\nInternal ID: ${internalLoanId}\nInterest method: ${loanData.interest_calculation_method || 'not stated'}\nAccrual basis: ${loanData.accrual_basis || 'not stated (defaulted to Actual/365)'}\nCompounding: ${loanData.compounding_frequency || 'none detected'}\nDocuments: ${fileUrls.length} file(s) uploaded`
-      })
+    await sendInternalSubmissionEmail({
+      name,
+      email,
+      company,
+      phone,
+      borrowerId,
+      turnaround,
+      notes,
+      internalLoanId,
+      loanData,
+      fileCount: fileUrls.length,
     });
-    await assertEmailSent(internalEmailRes, 'Internal notification');
 
     return res.status(200).json({ success: true, loanId: internalLoanId });
 
