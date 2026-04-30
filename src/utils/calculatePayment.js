@@ -1,7 +1,7 @@
 /**
  * calculatePayment.js
  * Pure math function — no UI, no Supabase calls.
- * Called by PaymentTest.js (manual testing) and eventually the Stripe webhook.
+ * Shared payment math for lender-recorded payments.
  *
  * Supports: interest_only, amortizing
  * Future: partial_amortization, interest_reserve, pik, step_rate

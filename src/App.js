@@ -8,7 +8,6 @@ import BorrowerOnboarding from './components/BorrowerOnboarding';
 import LenderOnboarding from './components/LenderOnboarding';
 import TermsPage from './components/TermsPage';
 import PrivacyPage from './components/PrivacyPage';
-import PaymentTest from './components/PaymentTest';
 import ProfilePage from './components/ProfilePage';
 import BorrowerProfilePage from './components/BorrowerProfilePage';
 
@@ -277,10 +276,6 @@ export default function App() {
                   style={{ background: '#FFD700', color: '#0f0f0f', fontSize: 14, fontWeight: 500, padding: '8px 18px', borderRadius: 6, border: 'none', cursor: 'pointer', transition: 'background 0.15s' }}
                   {...hov.solid}
                 >My loans</button>
-                <button
-                  onClick={() => setPage('payment-test')}
-                  style={{ background: 'transparent', color: '#555', fontSize: 12, padding: '6px 12px', borderRadius: 6, border: '0.5px solid #2a2a2a', cursor: 'pointer' }}
-                >⚡ Test</button>
               </>
             )}
             <button
@@ -493,7 +488,6 @@ export default function App() {
       {page === 'onboarding' && <LenderOnboarding onComplete={() => { setPortalType('lender'); setPage('choice'); }} />}
       {page === 'terms' && <TermsPage onHome={() => setPage('home')} />}
       {page === 'privacy' && <PrivacyPage onHome={() => setPage('home')} />}
-      {page === 'payment-test' && <PaymentTest />}
     </div>
   );
 }
