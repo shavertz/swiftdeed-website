@@ -23,32 +23,21 @@ const STEPS = [
   'Sending to your inbox',
 ];
 
-function LoadingScreen() {
-  const [activeStep, setActiveStep] = useState(0);
+function LoadingScreen({ activeStep }) {
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    const stepDurations = [3000, 8000, 12000, 7000];
-    let stepIndex = 0;
-    let elapsed = 0;
-    const total = stepDurations.reduce((a, b) => a + b, 0);
-
     const tick = setInterval(() => {
-      elapsed += 100;
-      setProgress(Math.min(98, (elapsed / total) * 100));
+      setProgress(prev => Math.min(92, prev + 0.35));
     }, 100);
 
-    const advanceStep = () => {
-      if (stepIndex < STEPS.length - 1) {
-        stepIndex++;
-        setActiveStep(stepIndex);
-        setTimeout(advanceStep, stepDurations[stepIndex]);
-      }
-    };
-    setTimeout(advanceStep, stepDurations[0]);
-
-    return () => { clearInterval(tick); };
+    return () => clearInterval(tick);
   }, []);
+
+  useEffect(() => {
+    const stepProgress = [18, 45, 72, 92];
+    setProgress(prev => Math.max(prev, stepProgress[activeStep] || 0));
+  }, [activeStep]);
 
   return (
     <div style={{ background: '#0f0f0f', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 40 }}>
@@ -142,7 +131,7 @@ function SuccessScreen({ form, files, turnaround, onReset }) {
   );
 }
 
-function PaymentForm({ turnaround, form, files, onSubmitting, onSuccess }) {
+function PaymentForm({ turnaround, form, files, onSubmitting, onProcessingStep, onSuccess }) {
   const stripe = useStripe();
   const elements = useElements();
   const [submitting, setSubmitting] = useState(false);
@@ -160,6 +149,7 @@ function PaymentForm({ turnaround, form, files, onSubmitting, onSuccess }) {
     setError('');
     setSubmitting(true);
     onSubmitting(true);
+    onProcessingStep(0);
 
     try {
       let paymentIntentId = null;
@@ -185,6 +175,7 @@ function PaymentForm({ turnaround, form, files, onSubmitting, onSuccess }) {
       }
 
       const uploadedUrls = [];
+      onProcessingStep(0);
       for (const file of files) {
         const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
         const { error: uploadError } = await supabase.storage.from('loan-documents').upload(fileName, file, { contentType: 'application/pdf' });
@@ -200,8 +191,10 @@ function PaymentForm({ turnaround, form, files, onSubmitting, onSuccess }) {
       data.append('skipPayment', skipPayment ? 'true' : 'false');
       data.append('fileUrls', JSON.stringify(uploadedUrls));
 
-      // Wait for processing so failures show up during testing.
+      onProcessingStep(2);
       const submitRes = await fetch('/api/submit', { method: 'POST', body: data });
+      onProcessingStep(3);
+
       let submitData = {};
       try {
         submitData = await submitRes.json();
@@ -213,6 +206,7 @@ function PaymentForm({ turnaround, form, files, onSubmitting, onSuccess }) {
         throw new Error(submitData.details || submitData.error || 'Submission failed.');
       }
 
+      onProcessingStep(3);
       onSuccess();
     } catch (e) {
       setError(e.message || 'Something went wrong. Please try again.');
@@ -269,6 +263,7 @@ export default function RequestForm() {
   const [dragging, setDragging] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [processingStep, setProcessingStep] = useState(0);
   const [form, setForm] = useState({ name: '', email: '', company: '', phone: '', borrowerEmail: '', borrowerName: '', notes: '' });
   const fileInputRef = useRef();
 
@@ -313,6 +308,7 @@ export default function RequestForm() {
   const handleReset = () => {
     setSubmitted(false);
     setSubmitting(false);
+    setProcessingStep(0);
     setFiles([]);
     setForm({ name: '', email: '', company: '', phone: '', borrowerEmail: '', borrowerName: '', notes: '' });
   };
@@ -359,7 +355,7 @@ export default function RequestForm() {
 
 
 
-  if (submitting && !submitted) return <LoadingScreen />;
+  if (submitting && !submitted) return <LoadingScreen activeStep={processingStep} />;
   if (submitted) return <SuccessScreen form={form} files={files} turnaround={turnaround} onReset={handleReset} />;
 
   return (
@@ -422,7 +418,7 @@ export default function RequestForm() {
         <hr style={s.divider} />
         <div style={s.sectionLabel}>Payment</div>
         <Elements stripe={stripePromise}>
-          <PaymentForm turnaround={turnaround} form={form} files={files} onSubmitting={handleSetSubmitting} onSuccess={() => setSubmitted(true)} />
+          <PaymentForm turnaround={turnaround} form={form} files={files} onSubmitting={handleSetSubmitting} onProcessingStep={setProcessingStep} onSuccess={() => setSubmitted(true)} />
         </Elements>
       </div>
     </div>
