@@ -200,10 +200,22 @@ function PaymentForm({ turnaround, form, files, onSubmitting, onSuccess }) {
       data.append('skipPayment', skipPayment ? 'true' : 'false');
       data.append('fileUrls', JSON.stringify(uploadedUrls));
 
-      // Fire and forget — polling handles completion detection
-      fetch('/api/submit', { method: 'POST', body: data }).catch(() => {});
+      // Wait for processing so failures show up during testing.
+      const submitRes = await fetch('/api/submit', { method: 'POST', body: data });
+      let submitData = {};
+      try {
+        submitData = await submitRes.json();
+      } catch {
+        submitData = {};
+      }
+
+      if (!submitRes.ok) {
+        throw new Error(submitData.details || submitData.error || 'Submission failed.');
+      }
+
+      onSuccess();
     } catch (e) {
-      setError('Something went wrong. Please try again.');
+      setError(e.message || 'Something went wrong. Please try again.');
       console.error(e);
       setSubmitting(false);
       onSubmitting(false);
@@ -343,12 +355,6 @@ export default function RequestForm() {
 
   const handleSetSubmitting = (val) => {
     setSubmitting(val);
-    if (val) {
-      window.setTimeout(() => {
-        setSubmitting(false);
-        setSubmitted(true);
-      }, 30000);
-    }
   };
 
 
