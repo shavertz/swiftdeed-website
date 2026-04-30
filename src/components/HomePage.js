@@ -90,6 +90,7 @@ export default function HomePage({ onLenderLogin, onBorrowerLogin, onTerms, onPr
 
       {/* HERO */}
       <div style={s.hero}>
+        <div style={{ ...s.sectionLabel, marginBottom: 16 }}>Private Loan Servicing</div>
         <h1 style={s.h1}>Swift. Serviced. <span style={s.yellow}>Secure.</span></h1>
         <p style={s.heroP}>We handle the servicing so you can focus on lending. Your borrowers stay informed, your statements are always on time.</p>
         <div style={s.ctas}>
