@@ -1,14 +1,13 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { createClient } from '@supabase/supabase-js';
 import formidable from 'formidable';
 import fs from 'fs';
 import { upsertBorrower } from './lib/borrowers.js';
 import { sendInternalSubmissionEmail, sendLenderPayoffEmail } from './lib/email.js';
+import { supabase } from './lib/supabase.js';
 
 export const config = { api: { bodyParser: false, responseLimit: false } };
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
 async function generatePayoffPDF(data) {
   const PDFDocument = (await import('pdfkit')).default;
