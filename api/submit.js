@@ -612,8 +612,8 @@ async function upsertBorrower({ loanData, internalLoanId, loanDocumentUrls, dail
 
     const { data: existingRows } = await supabase
       .from('borrowers')
-      .select('legal_name, borrower_email')
-      .ilike('legal_name', legalName)
+      .select('id')
+      .eq('loan_id_internal', internalLoanId)
       .limit(1);
 
     const existing = existingRows && existingRows.length > 0 ? existingRows[0] : null;
@@ -633,7 +633,7 @@ async function upsertBorrower({ loanData, internalLoanId, loanDocumentUrls, dail
           status: 'active',
           ...(borrowerEmail ? { borrower_email: borrowerEmail, verification_token: token } : {}),
         })
-        .ilike('legal_name', legalName);
+        .eq('loan_id_internal', internalLoanId);
     } else {
       await supabase
         .from('borrowers')

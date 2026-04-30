@@ -15,6 +15,11 @@ const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY;
 const ACTIVATION_TOKEN = window.location.hash.startsWith('#activate=') ? window.location.hash.slice('#activate='.length) : null;
 
+function chooseBorrowerForPortal(rows) {
+  if (!Array.isArray(rows) || rows.length === 0) return null;
+  return rows.find(b => b.phone && b.mailing_address) || rows[0];
+}
+
 const loadingScreen = (
   <div style={{ background: '#0f0f0f', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 28 }}>
     <div style={{ fontSize: 32, fontWeight: 600, letterSpacing: -0.5 }}>
@@ -101,15 +106,15 @@ export default function App() {
   async function routeByEmail(email) {
     try {
       const borrowerRes = await fetch(
-        `${SUPABASE_URL}/rest/v1/borrowers?borrower_email=eq.${encodeURIComponent(email)}&select=id,phone,mailing_address&limit=1`,
+        `${SUPABASE_URL}/rest/v1/borrowers?borrower_email=eq.${encodeURIComponent(email)}&select=id,phone,mailing_address,created_at&order=created_at.desc`,
         { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
       );
 
       if (!borrowerRes.ok) throw new Error('Borrower fetch failed');
       const borrowerData = await borrowerRes.json();
 
-      if (Array.isArray(borrowerData) && borrowerData.length > 0) {
-        const borrower = borrowerData[0];
+      const borrower = chooseBorrowerForPortal(borrowerData);
+      if (borrower) {
         setPortalType('borrower');
         if (!borrower.phone || !borrower.mailing_address) {
           setBorrowerOnboardingId(borrower.id);
@@ -163,6 +168,36 @@ export default function App() {
 
         setPortalType('borrower');
         if (!borrower.phone || !borrower.mailing_address) {
+          if (signedInEmail) {
+            const existingRes = await fetch(
+              `${SUPABASE_URL}/rest/v1/borrowers?borrower_email=eq.${encodeURIComponent(signedInEmail)}&select=id,phone,mailing_address&order=created_at.desc`,
+              { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
+            );
+            const existingData = await existingRes.json();
+            const activatedBorrower = Array.isArray(existingData)
+              ? existingData.find(b => b.id !== borrower.id && b.phone && b.mailing_address)
+              : null;
+
+            if (activatedBorrower) {
+              await fetch(`${SUPABASE_URL}/rest/v1/borrowers?id=eq.${borrower.id}`, {
+                method: 'PATCH',
+                headers: {
+                  apikey: SUPABASE_ANON_KEY,
+                  Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+                  'Content-Type': 'application/json',
+                  Prefer: 'return=minimal',
+                },
+                body: JSON.stringify({
+                  phone: activatedBorrower.phone,
+                  mailing_address: activatedBorrower.mailing_address,
+                }),
+              });
+              setPage('borrower-portal');
+              setLoading(false);
+              return;
+            }
+          }
+
           setBorrowerOnboardingId(borrower.id);
           setPage('borrower-onboarding');
         } else {
