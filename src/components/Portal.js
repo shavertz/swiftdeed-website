@@ -354,7 +354,6 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const [uploadingDocs, setUploadingDocs] = useState(false);
   const [docSuccess, setDocSuccess] = useState('');
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1600);
-  const [snapshotOpen, setSnapshotOpen] = useState(true);
   const docFileRef = useRef();
 
   const email = user?.primaryEmailAddress?.emailAddress;
@@ -377,10 +376,6 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-
-  useEffect(() => {
-    if (windowWidth >= 1350) setSnapshotOpen(true);
-  }, [windowWidth]);
 
   useEffect(() => {
     if (!email) return;
@@ -585,17 +580,13 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const paginated = sorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
 
-  const isNarrowPortfolio = windowWidth < 1350;
-  const showSnapshot = !isNarrowPortfolio || snapshotOpen;
-  const allowTableScroll = isNarrowPortfolio && showSnapshot;
+  const isNarrowPortfolio = windowWidth < 1280;
   const pagePad = isNarrowPortfolio ? '34px 42px' : '40px 60px';
-  const tableSnapshotGrid = showSnapshot ? (isNarrowPortfolio ? 'minmax(0, 1fr) 280px' : 'minmax(0, 1fr) 340px') : '1fr';
-  const TABLE_COLS = isNarrowPortfolio && !showSnapshot
-    ? '135px 175px minmax(190px, 1fr) 120px 100px 112px'
-    : isNarrowPortfolio
-    ? '112px 135px minmax(120px, 1fr) 105px 82px 98px'
+  const tableSnapshotGrid = isNarrowPortfolio ? '1fr' : 'minmax(0, 1fr) 340px';
+  const TABLE_COLS = isNarrowPortfolio
+    ? '130px 165px minmax(220px, 1fr) 120px 105px 115px'
     : '150px 190px minmax(220px, 1fr) 135px 120px 120px';
-  const tableInnerMinWidth = allowTableScroll ? 720 : 'auto';
+  const tableInnerMinWidth = isNarrowPortfolio ? 900 : 'auto';
 
   const loanStatusBadge = (status) => {
     const isDefault = status === 'Default';
@@ -750,7 +741,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: tableSnapshotGrid, gap: isNarrowPortfolio ? 14 : 18, alignItems: 'start' }}>
-        <div style={{ border: '0.5px solid #252525', borderRadius: 9, overflow: allowTableScroll ? 'auto' : 'hidden', background: '#111', minWidth: 0 }}>
+        <div style={{ border: '0.5px solid #252525', borderRadius: 9, overflowX: isNarrowPortfolio ? 'auto' : 'hidden', overflowY: 'hidden', background: '#111', minWidth: 0 }}>
           <div style={{ minWidth: tableInnerMinWidth }}>
           <div style={{ display: 'flex', gap: 10, padding: 14, borderBottom: '0.5px solid #222', alignItems: 'stretch' }}>
             <input style={{ ...s.searchInput, maxWidth: 'none', height: 52, boxSizing: 'border-box' }} placeholder={activeFilter === 'all' ? 'Search by loan ID, borrower, or property...' : `Showing: ${filterLabels[activeFilter]}`} value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
@@ -760,15 +751,6 @@ export default function Portal({ onSubmitRequest, resetToken }) {
               <option value="amount_desc">Sort: Balance high to low</option>
               <option value="amount_asc">Sort: Balance low to high</option>
             </select>
-            {isNarrowPortfolio && !snapshotOpen && (
-              <button
-                onClick={() => setSnapshotOpen(true)}
-                title="Show snapshot"
-                style={{ width: 52, height: 52, flexShrink: 0, background: 'transparent', color: '#fff', border: '0.5px solid #FFD700', borderRadius: 7, fontSize: 20, lineHeight: 1, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}
-                onMouseEnter={e => { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.color = '#FFD700'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#fff'; }}
-              >+</button>
-            )}
           </div>
 
           <div style={{ padding: '0 20px 12px', color: '#555', fontSize: 12, borderBottom: '0.5px solid #222' }}>
@@ -829,7 +811,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
           </div>
         </div>
 
-        {showSnapshot && <aside style={{ background: '#111', border: '0.5px solid #252525', borderRadius: 9, overflow: 'hidden', position: 'sticky', top: 84 }}>
+        <aside style={{ background: '#111', border: '0.5px solid #252525', borderRadius: 9, overflow: 'hidden', position: isNarrowPortfolio ? 'static' : 'sticky', top: 84, minWidth: 0 }}>
           {previewLoan ? (
             <>
               <div style={{ padding: '20px 22px', borderBottom: '0.5px solid #222' }}>
@@ -838,15 +820,6 @@ export default function Portal({ onSubmitRequest, resetToken }) {
                     <div style={{ fontSize: 18, lineHeight: 1.3, fontWeight: 600, color: '#fff' }}>{previewLoan.property_address || '-'}</div>
                     <div style={{ color: '#565656', marginTop: 7, fontSize: 13 }}>{previewLoan.loan_id_internal || previewLoan.loan_id} - {previewLoan.borrower_name || '-'}</div>
                   </div>
-                  {isNarrowPortfolio && (
-                    <button
-                      onClick={() => setSnapshotOpen(false)}
-                      title="Hide snapshot"
-                      style={{ width: 30, height: 30, flexShrink: 0, background: 'transparent', color: '#fff', border: '0.5px solid #FFD700', borderRadius: 5, fontSize: 18, lineHeight: 1, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}
-                      onMouseEnter={e => { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.color = '#FFD700'; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#fff'; }}
-                    >-</button>
-                  )}
                   <button
                     onClick={() => setSelected(previewLoan)}
                     style={{ background: '#FFD700', border: 'none', color: '#0f0f0f', cursor: 'pointer', fontSize: 12, fontWeight: 700, padding: '8px 12px', borderRadius: 6, whiteSpace: 'nowrap', fontFamily: 'inherit', transition: 'all 0.15s' }}
@@ -889,7 +862,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
           ) : (
             <div style={{ padding: 24, color: '#555', fontSize: 13 }}>Select a loan to see the snapshot.</div>
           )}
-        </aside>}
+        </aside>
       </div>
     </div>
   );
