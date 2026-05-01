@@ -16,6 +16,15 @@ function formatCurrency(val) {
   return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function parseDocUrls(value) {
+  if (!value) return [];
+  return String(value).split(',').map(u => u.trim()).filter(Boolean);
+}
+
+function uniqueDocUrls(...values) {
+  return [...new Set(values.flatMap(parseDocUrls))];
+}
+
 
 const PAGE_SIZE = 15;
 
@@ -325,7 +334,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const [borrowerData, setBorrowerData] = useState({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [sort, setSort] = useState('oldest');
+  const [sort, setSort] = useState('newest');
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState(null);
   const [previewId, setPreviewId] = useState(null);
@@ -395,6 +404,13 @@ export default function Portal({ onSubmitRequest, resetToken }) {
                 dataMap[b.loan_id_internal] = b;
               }
             });
+            rows.forEach(r => {
+              if (!r.loan_id_internal) return;
+              dataMap[r.loan_id_internal] = {
+                ...(dataMap[r.loan_id_internal] || {}),
+                loan_document_urls: dataMap[r.loan_id_internal]?.loan_document_urls || r.loan_document_urls || '',
+              };
+            });
             setBorrowerEmails(emailMap);
             setBorrowerData(dataMap);
           }
@@ -410,9 +426,11 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       try {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/borrowers?loan_id_internal=eq.${encodeURIComponent(selected.loan_id_internal)}&select=loan_document_urls&limit=1`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
         const data = await res.json();
-        if (Array.isArray(data) && data.length > 0 && data[0].loan_document_urls) {
-          setDocUrls(data[0].loan_document_urls.split(',').map(u => u.trim()).filter(Boolean));
-        } else { setDocUrls([]); }
+        const borrowerDocs = Array.isArray(data) && data.length > 0 ? data[0].loan_document_urls : '';
+        const reqRes = await fetch(`${SUPABASE_URL}/rest/v1/payoff_requests?loan_id_internal=eq.${encodeURIComponent(selected.loan_id_internal)}&select=loan_document_urls&limit=1`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
+        const reqData = await reqRes.json();
+        const requestDocs = Array.isArray(reqData) && reqData.length > 0 ? reqData[0].loan_document_urls : '';
+        setDocUrls(uniqueDocUrls(borrowerDocs, selected.loan_document_urls, requestDocs));
       } catch (e) { console.error(e); }
     }
     fetchDocs();
@@ -647,7 +665,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const previewOriginal = previewBorrower.original_loan_amount || previewLoan?.total_due;
   const previewPrincipalPaid = previewOriginal && previewBalance ? (parseFloat(previewOriginal) - parseFloat(previewBalance)) : 0;
   const previewTotalPaid = previewPrincipalPaid + (parseFloat(previewBorrower.total_interest_paid || 0) || 0);
-  const previewDocs = previewBorrower.loan_document_urls ? previewBorrower.loan_document_urls.split(',').filter(Boolean).length : 0;
+  const previewDocs = uniqueDocUrls(previewBorrower.loan_document_urls, previewLoan?.loan_document_urls).length;
   const filterLabels = {
     all: 'All loans',
     not_activated: 'Borrowers not activated',
@@ -712,8 +730,8 @@ export default function Portal({ onSubmitRequest, resetToken }) {
           <div style={{ display: 'flex', gap: 10, padding: 14, borderBottom: '0.5px solid #222', alignItems: 'stretch' }}>
             <input style={{ ...s.searchInput, maxWidth: 'none', height: 52, boxSizing: 'border-box' }} placeholder={activeFilter === 'all' ? 'Search by loan ID, borrower, or property...' : `Showing: ${filterLabels[activeFilter]}`} value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
             <select style={{ ...s.select, height: 52, width: 260, boxSizing: 'border-box' }} value={sort} onChange={e => { setSort(e.target.value); setPage(1); }}>
-              <option value="oldest">Sort: Oldest first</option>
               <option value="newest">Sort: Newest first</option>
+              <option value="oldest">Sort: Oldest first</option>
               <option value="amount_desc">Sort: Balance high to low</option>
               <option value="amount_asc">Sort: Balance low to high</option>
             </select>
