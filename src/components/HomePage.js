@@ -10,7 +10,7 @@ export default function HomePage({ onLenderLogin, onBorrowerLogin, onTerms, onPr
     heroP: { fontSize: 18, color: '#888', lineHeight: 1.7, marginBottom: 36, maxWidth: 560, margin: '0 auto 36px' },
     ctas: { display: 'flex', gap: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
     btnPrimary: { background: '#FFD700', color: '#0f0f0f', fontSize: 15, fontWeight: 500, padding: '13px 28px', borderRadius: 7, border: 'none', cursor: 'pointer', transition: 'background 0.15s' },
-    btnSecondary: { background: 'transparent', color: '#fff', fontSize: 15, padding: '13px 28px', borderRadius: 7, border: '1px solid #FFD700', cursor: 'pointer', transition: 'all 0.15s' },
+    btnSecondary: { background: '#FFD700', color: '#0f0f0f', fontSize: 15, fontWeight: 500, padding: '13px 28px', borderRadius: 7, border: 'none', cursor: 'pointer', transition: 'background 0.15s' },
     portalNote: { fontSize: 12, color: '#444', marginBottom: 40 },
     statsRow: { display: 'flex', gap: 48, justifyContent: 'center', marginBottom: 0 },
     statNum: { fontSize: 28, fontWeight: 500, color: '#FFD700' },
@@ -98,7 +98,7 @@ export default function HomePage({ onLenderLogin, onBorrowerLogin, onTerms, onPr
         <p style={s.heroP}>We handle the servicing so you can focus on lending. Your borrowers stay informed, your statements are always on time.</p>
         <div style={s.ctas}>
           <button disabled={borrowerDisabled} style={{ ...s.btnPrimary, ...(borrowerDisabled ? s.disabledBtn : {}) }} onClick={onBorrowerLogin} {...(!borrowerDisabled ? hovSolid : {})}>I'm a borrower</button>
-          <button disabled={lenderDisabled} style={{ ...s.btnSecondary, ...(lenderDisabled ? s.disabledBtn : {}) }} onClick={onLenderLogin} {...(!lenderDisabled ? hovOutline : {})}>I'm a lender</button>
+          <button disabled={lenderDisabled} style={{ ...s.btnSecondary, ...(lenderDisabled ? s.disabledBtn : {}) }} onClick={onLenderLogin} {...(!lenderDisabled ? hovSolid : {})}>I'm a lender</button>
         </div>
         <div style={s.portalNote}>New here? Create an account in seconds.</div>
         <div style={s.statsRow}>
