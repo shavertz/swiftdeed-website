@@ -35,7 +35,7 @@ const hovSolid = {
 
 
 const s = {
-  page: { padding: '40px 60px', maxWidth: 1600, margin: '0 auto' },
+  page: { padding: '40px 60px', width: '100%', maxWidth: 1600, margin: '0 auto', boxSizing: 'border-box', overflowX: 'hidden' },
   heading: { fontSize: 24, fontWeight: 400, color: '#fff', marginBottom: 24 },
   statRow: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 20 },
   statCard: { background: '#141414', border: '0.5px solid #222', borderRadius: 10, padding: '20px 26px' },
@@ -740,8 +740,8 @@ export default function Portal({ onSubmitRequest, resetToken }) {
         ))}
       </div>
 
-      <div style={{ display: 'flex', flexDirection: isNarrowPortfolio ? 'column' : 'row', gap: isNarrowPortfolio ? 14 : 18, alignItems: 'flex-start', width: '100%', overflow: 'hidden' }}>
-        <div style={{ flex: 1, minWidth: 0, border: '0.5px solid #252525', borderRadius: 9, overflowX: 'auto', overflowY: 'hidden', background: '#111' }}>
+      <div style={{ display: 'flex', flexDirection: isNarrowPortfolio ? 'column' : 'row', gap: isNarrowPortfolio ? 14 : 18, alignItems: 'flex-start', width: '100%', maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
+        <div style={{ flex: '1 1 auto', width: '100%', minWidth: 0, maxWidth: '100%', border: '0.5px solid #252525', borderRadius: 9, overflowX: 'auto', overflowY: 'hidden', WebkitOverflowScrolling: 'touch', background: '#111', boxSizing: 'border-box' }}>
           <div style={{ minWidth: tableInnerMinWidth }}>
           <div style={{ display: 'flex', gap: 10, padding: 14, borderBottom: '0.5px solid #222', alignItems: 'stretch' }}>
             <input style={{ ...s.searchInput, maxWidth: 'none', height: 52, boxSizing: 'border-box' }} placeholder={activeFilter === 'all' ? 'Search by loan ID, borrower, or property...' : `Showing: ${filterLabels[activeFilter]}`} value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
