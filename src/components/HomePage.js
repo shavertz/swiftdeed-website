@@ -54,7 +54,7 @@ export default function HomePage({ onLenderLogin, onBorrowerLogin, onTerms, onPr
     paySub: { fontSize: 11, color: '#444', marginTop: 2 },
     portalBtns: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 48 },
     pbBorrower: { background: '#FFD700', color: '#0f0f0f', border: 'none', borderRadius: 7, padding: 13, fontSize: 14, fontWeight: 500, cursor: 'pointer', transition: 'background 0.15s' },
-    pbLender: { background: 'transparent', color: '#fff', border: '1px solid #FFD700', borderRadius: 7, padding: 13, fontSize: 14, fontWeight: 500, cursor: 'pointer', transition: 'all 0.15s' },
+    pbLender: { background: '#FFD700', color: '#0f0f0f', border: 'none', borderRadius: 7, padding: 13, fontSize: 14, fontWeight: 500, cursor: 'pointer', transition: 'background 0.15s' },
     disabledBtn: { opacity: 0.35, cursor: 'not-allowed', boxShadow: 'none' },
     pricingSection: { borderTop: '0.5px solid #1e1e1e', padding: '80px 60px', maxWidth: 1000, margin: '0 auto' },
     pricingCards: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 48 },
@@ -84,11 +84,6 @@ export default function HomePage({ onLenderLogin, onBorrowerLogin, onTerms, onPr
     onMouseEnter: e => { e.currentTarget.style.background = '#FFD700'; e.currentTarget.style.boxShadow = '0 0 16px rgba(255, 215, 0, 0.45)'; },
     onMouseLeave: e => { e.currentTarget.style.background = '#FFD700'; e.currentTarget.style.boxShadow = 'none'; },
   };
-  const hovOutline = {
-    onMouseEnter: e => { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.color = '#FFD700'; e.currentTarget.style.boxShadow = '0 0 16px rgba(255, 215, 0, 0.3)'; },
-    onMouseLeave: e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#fff'; e.currentTarget.style.boxShadow = 'none'; },
-  };
-
   return (
     <div style={s.page}>
 
@@ -242,7 +237,7 @@ export default function HomePage({ onLenderLogin, onBorrowerLogin, onTerms, onPr
 
         <div style={s.portalBtns}>
           <button disabled={borrowerDisabled} style={{ ...s.pbBorrower, ...(borrowerDisabled ? s.disabledBtn : {}) }} onClick={onBorrowerLogin} {...(!borrowerDisabled ? hovSolid : {})}>I'm a borrower</button>
-          <button disabled={lenderDisabled} style={{ ...s.pbLender, ...(lenderDisabled ? s.disabledBtn : {}) }} onClick={onLenderLogin} {...(!lenderDisabled ? hovOutline : {})}>I'm a lender</button>
+          <button disabled={lenderDisabled} style={{ ...s.pbLender, ...(lenderDisabled ? s.disabledBtn : {}) }} onClick={onLenderLogin} {...(!lenderDisabled ? hovSolid : {})}>I'm a lender</button>
         </div>
       </div>
 
