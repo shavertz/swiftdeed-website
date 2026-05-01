@@ -529,10 +529,16 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     return true;
   };
 
+  const activeFilter = ['not_activated', 'missing_payment', 'past_due', 'default'].includes(attentionFilter) ? attentionFilter : 'all';
+  const searchTerm = search.trim().toLowerCase();
+
   const filtered = requests.filter(r => {
-    const q = search.toLowerCase();
-    const matchesSearch = !q || r.loan_id_internal?.toLowerCase().includes(q) || r.loan_id?.toLowerCase().includes(q) || r.borrower_name?.toLowerCase().includes(q) || r.property_address?.toLowerCase().includes(q);
-    return matchesSearch && getAttentionMatch(r, attentionFilter);
+    const matchesSearch = !searchTerm
+      || String(r.loan_id_internal || '').toLowerCase().includes(searchTerm)
+      || String(r.loan_id || '').toLowerCase().includes(searchTerm)
+      || String(r.borrower_name || '').toLowerCase().includes(searchTerm)
+      || String(r.property_address || '').toLowerCase().includes(searchTerm);
+    return matchesSearch && (activeFilter === 'all' || getAttentionMatch(r, activeFilter));
   });
 
   const sorted = [...filtered].sort((a, b) => {
@@ -543,7 +549,8 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   });
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
-  const paginated = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const safePage = Math.min(page, totalPages);
+  const paginated = sorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
 
   const TABLE_COLS = '150px 190px minmax(220px, 1fr) 135px 120px 120px';
@@ -657,7 +664,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     background: hoveredAttention === filter ? '#1e1a00' : '#151515',
     padding: '16px 22px',
     borderLeft: '0.5px solid #242424',
-    boxShadow: attentionFilter === filter ? 'inset 0 0 0 1px #FFD700' : 'none',
+    boxShadow: activeFilter === filter ? 'inset 0 0 0 1px #FFD700' : 'none',
     cursor: 'pointer',
     transition: 'background 0.12s, box-shadow 0.12s',
   });
@@ -689,7 +696,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
         ].map(({ filter, num, label }) => (
           <button
             key={filter}
-            onClick={() => { setAttentionFilter(attentionFilter === filter ? 'all' : filter); setPage(1); }}
+            onClick={() => { setAttentionFilter(activeFilter === filter ? 'all' : filter); setPage(1); }}
             onMouseEnter={() => setHoveredAttention(filter)}
             onMouseLeave={() => setHoveredAttention(null)}
             style={{ ...attentionItem(filter, num, label), borderTop: 'none', borderRight: 'none', textAlign: 'left', fontFamily: 'inherit' }}
@@ -703,7 +710,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(780px, 1fr) 340px', gap: 18, alignItems: 'start' }}>
         <div style={{ border: '0.5px solid #252525', borderRadius: 9, overflow: 'hidden', background: '#111' }}>
           <div style={{ display: 'flex', gap: 10, padding: 14, borderBottom: '0.5px solid #222', alignItems: 'stretch' }}>
-            <input style={{ ...s.searchInput, maxWidth: 'none', height: 52, boxSizing: 'border-box' }} placeholder={attentionFilter === 'all' ? 'Search by loan ID, borrower, or property...' : `Showing: ${filterLabels[attentionFilter]}`} value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
+            <input style={{ ...s.searchInput, maxWidth: 'none', height: 52, boxSizing: 'border-box' }} placeholder={activeFilter === 'all' ? 'Search by loan ID, borrower, or property...' : `Showing: ${filterLabels[activeFilter]}`} value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
             <select style={{ ...s.select, height: 52, width: 260, boxSizing: 'border-box' }} value={sort} onChange={e => { setSort(e.target.value); setPage(1); }}>
               <option value="oldest">Sort: Oldest first</option>
               <option value="newest">Sort: Newest first</option>
@@ -721,7 +728,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
           </div>
 
           {loading && <div style={s.empty}>Loading your loans...</div>}
-          {!loading && sorted.length === 0 && <div style={s.empty}>{search ? 'No results found.' : attentionFilter !== 'all' ? `No loans match ${filterLabels[attentionFilter].toLowerCase()}. Click the active attention item again to show all loans.` : 'No loans yet. Upload your first loan documents above.'}</div>}
+          {!loading && sorted.length === 0 && <div style={s.empty}>{searchTerm ? 'No results found.' : activeFilter !== 'all' ? `No loans match ${filterLabels[activeFilter].toLowerCase()}. Click the active attention item again to show all loans.` : 'No loans yet. Upload your first loan documents above.'}</div>}
 
           {!loading && paginated.map(r => {
             const b = borrowerData[r.loan_id_internal] || {};
@@ -757,7 +764,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
                 onMouseEnter={e => { if (page !== 1) { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.color = '#FFD700'; } }}
                 onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = page === 1 ? '#333' : '#fff'; }}
               >Prev</button>
-              <span style={{ fontSize: 12, color: '#555' }}>Page {page} of {totalPages} - {sorted.length} total</span>
+              <span style={{ fontSize: 12, color: '#555' }}>Page {safePage} of {totalPages} - {sorted.length} total</span>
               <button
                 style={{ background: 'transparent', border: `0.5px solid ${page === totalPages ? '#2a2a2a' : '#FFD700'}`, borderRadius: 5, color: page === totalPages ? '#333' : '#fff', fontSize: 12, padding: '6px 14px', cursor: page === totalPages ? 'not-allowed' : 'pointer', transition: 'all 0.15s' }}
                 disabled={page === totalPages}
