@@ -354,6 +354,9 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     setLoanPayments([]);
     setDocUrls([]);
     setPaymentSuccess(false);
+    setAttentionFilter('all');
+    setSearch('');
+    setPage(1);
   }, [resetToken]);
 
   useEffect(() => {
@@ -370,6 +373,9 @@ export default function Portal({ onSubmitRequest, resetToken }) {
 
   useEffect(() => {
     if (!email) return;
+    setAttentionFilter('all');
+    setSearch('');
+    setPage(1);
     async function load() {
       try {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/payoff_requests?from_email=eq.${encodeURIComponent(email)}&order=created_at.desc`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
@@ -615,10 +621,14 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const thisMonth = now.getMonth();
   const thisYear = now.getFullYear();
   const allBorrowers = Object.values(borrowerData);
-  const principalOutstanding = allBorrowers.reduce((sum, b) => sum + (parseFloat(b.principal_balance) || 0), 0);
+  const principalOutstanding = requests.reduce((sum, r) => {
+    const b = borrowerData[r.loan_id_internal] || {};
+    return sum + (parseFloat(b.principal_balance || r.total_due) || 0);
+  }, 0);
   const dueThisMonth = allBorrowers.filter(b => { if (!b.next_payment_date) return false; const d = new Date(b.next_payment_date); return d.getMonth() === thisMonth && d.getFullYear() === thisYear; });
   const dueThisMonthTotal = dueThisMonth.reduce((sum, b) => sum + (parseFloat(b.monthly_payment) || 0), 0);
-  const avgRate = allBorrowers.length > 0 ? allBorrowers.reduce((sum, b) => sum + (parseFloat(b.interest_rate) || 0), 0) / allBorrowers.length : 0;
+  const rateValues = requests.map(r => parseFloat((borrowerData[r.loan_id_internal] || {}).interest_rate || r.interest_rate)).filter(n => !isNaN(n) && n > 0);
+  const avgRate = rateValues.length > 0 ? rateValues.reduce((sum, rate) => sum + rate, 0) / rateValues.length : 0;
   const notActivated = requests.filter(r => !borrowerData[r.loan_id_internal]).length;
   const missingPayment = allBorrowers.filter(b => !b.monthly_payment).length;
   const pastDue = requests.filter(r => getLoanStatus(r) === 'Past Due').length;
@@ -644,12 +654,12 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const sv = { fontSize: 27, fontWeight: 600, color: '#fff', marginBottom: 6 };
   const ss = { fontSize: 12, color: '#444' };
   const attentionItem = (filter, num, label) => ({
-    background: attentionFilter === filter ? 'rgba(255, 215, 0, 0.16)' : hoveredAttention === filter ? 'rgba(255, 215, 0, 0.08)' : '#151515',
+    background: hoveredAttention === filter ? '#1e1a00' : '#151515',
     padding: '16px 22px',
     borderLeft: '0.5px solid #242424',
-    borderBottom: attentionFilter === filter ? '3px solid #FFE45C' : '3px solid transparent',
+    boxShadow: attentionFilter === filter ? 'inset 0 0 0 1px #FFD700' : 'none',
     cursor: 'pointer',
-    transition: 'background 0.12s, border-color 0.12s',
+    transition: 'background 0.12s, box-shadow 0.12s',
   });
   const snapLine = { display: 'flex', justifyContent: 'space-between', gap: 16, padding: '8px 0', fontSize: 13, borderBottom: '0.5px solid #1b1b1b' };
 
@@ -711,7 +721,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
           </div>
 
           {loading && <div style={s.empty}>Loading your loans...</div>}
-          {!loading && sorted.length === 0 && <div style={s.empty}>{search ? 'No results found.' : attentionFilter !== 'all' ? `No loans match ${filterLabels[attentionFilter].toLowerCase()}.` : 'No loans yet  upload your first loan documents above.'}</div>}
+          {!loading && sorted.length === 0 && <div style={s.empty}>{search ? 'No results found.' : attentionFilter !== 'all' ? `No loans match ${filterLabels[attentionFilter].toLowerCase()}. Click the active attention item again to show all loans.` : 'No loans yet. Upload your first loan documents above.'}</div>}
 
           {!loading && paginated.map(r => {
             const b = borrowerData[r.loan_id_internal] || {};
@@ -720,8 +730,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
             const loanStatus = getLoanStatus(r);
             return (
               <div key={r.id}
-                title="Click for snapshot. Double-click to open loan file."
-                style={{ display: 'grid', gridTemplateColumns: TABLE_COLS, gap: 12, minHeight: 70, padding: '0 20px', borderBottom: '0.5px solid #1b1b1b', alignItems: 'center', fontSize: 13, cursor: 'pointer', background: isActive ? 'rgba(255, 215, 0, 0.16)' : isHov ? 'rgba(255, 215, 0, 0.08)' : '#111', boxShadow: isActive ? 'inset 4px 0 0 #FFE45C' : 'none', transition: 'background 0.1s, box-shadow 0.1s' }}
+                style={{ display: 'grid', gridTemplateColumns: TABLE_COLS, gap: 12, minHeight: 70, padding: '0 20px', borderBottom: '0.5px solid #1b1b1b', alignItems: 'center', fontSize: 13, cursor: 'pointer', background: isHov ? '#1e1a00' : '#111', boxShadow: isActive ? 'inset 0 0 0 1px #FFD700, inset 4px 0 0 #FFD700' : 'none', transition: 'background 0.1s, box-shadow 0.1s' }}
                 onClick={() => setPreviewId(r.loan_id_internal)}
                 onDoubleClick={() => setSelected(r)}
                 onMouseEnter={() => setHoveredId(r.id)}
