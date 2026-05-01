@@ -571,7 +571,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const paginated = sorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
 
-  const TABLE_COLS = '150px 190px minmax(220px, 1fr) 135px 120px 120px';
+  const TABLE_COLS = '130px 165px minmax(170px, 1fr) 115px 90px 110px';
 
   const loanStatusBadge = (status) => {
     const isDefault = status === 'Default';
@@ -725,7 +725,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(780px, 1fr) 340px', gap: 18, alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(720px, 1fr) 340px', gap: 18, alignItems: 'start' }}>
         <div style={{ border: '0.5px solid #252525', borderRadius: 9, overflow: 'hidden', background: '#111' }}>
           <div style={{ display: 'flex', gap: 10, padding: 14, borderBottom: '0.5px solid #222', alignItems: 'stretch' }}>
             <input style={{ ...s.searchInput, maxWidth: 'none', height: 52, boxSizing: 'border-box' }} placeholder={activeFilter === 'all' ? 'Search by loan ID, borrower, or property...' : `Showing: ${filterLabels[activeFilter]}`} value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
@@ -741,7 +741,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
             Click a row for a snapshot. Double-click a row to open the full loan file.
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: TABLE_COLS, gap: 12, padding: '12px 20px', borderBottom: '0.5px solid #222', fontSize: 10, color: '#FFD700', textTransform: 'uppercase', letterSpacing: 0.8, background: '#111' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: TABLE_COLS, gap: 8, padding: '12px 16px', borderBottom: '0.5px solid #222', fontSize: 10, color: '#FFD700', textTransform: 'uppercase', letterSpacing: 0.8, background: '#111' }}>
             <span>Loan</span><span>Borrower</span><span>Property</span><span>Balance</span><span>Next Due</span><span>Loan Status</span>
           </div>
 
@@ -755,7 +755,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
             const loanStatus = getLoanStatus(r);
             return (
               <div key={r.id}
-                style={{ display: 'grid', gridTemplateColumns: TABLE_COLS, gap: 12, minHeight: 70, padding: '0 20px', borderBottom: '0.5px solid #1b1b1b', alignItems: 'center', fontSize: 13, cursor: 'pointer', background: isHov ? '#1e1a00' : '#111', boxShadow: isActive ? 'inset 0 0 0 1px #FFD700, inset 4px 0 0 #FFD700' : 'none', transition: 'background 0.1s, box-shadow 0.1s' }}
+                style={{ display: 'grid', gridTemplateColumns: TABLE_COLS, gap: 8, minHeight: 70, padding: '0 16px', borderBottom: '0.5px solid #1b1b1b', alignItems: 'center', fontSize: 12, cursor: 'pointer', background: isHov ? '#1e1a00' : '#111', boxShadow: isActive ? 'inset 0 0 0 1px #FFD700, inset 4px 0 0 #FFD700' : 'none', transition: 'background 0.1s, box-shadow 0.1s' }}
                 onClick={() => setPreviewId(r.loan_id_internal)}
                 onDoubleClick={() => setSelected(r)}
                 onMouseEnter={() => setHoveredId(r.id)}
