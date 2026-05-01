@@ -694,10 +694,10 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const sv = { fontSize: 27, fontWeight: 600, color: '#fff', marginBottom: 6 };
   const ss = { fontSize: 12, color: '#444' };
   const attentionItem = (filter, num, label) => ({
-    background: hoveredAttention === filter ? '#1e1a00' : '#151515',
+    background: activeFilter === filter || hoveredAttention === filter ? '#1e1a00' : '#151515',
     padding: '16px 22px',
     borderLeft: '0.5px solid #242424',
-    boxShadow: activeFilter === filter ? 'inset 0 0 0 1px #FFD700' : 'none',
+    boxShadow: activeFilter === filter ? 'inset 4px 0 0 #FFD700' : 'none',
     cursor: 'pointer',
     transition: 'background 0.12s, box-shadow 0.12s',
   });
@@ -757,7 +757,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
             onClick={() => { setAttentionFilter(activeFilter === filter ? 'all' : filter); setPage(1); }}
             onMouseEnter={() => setHoveredAttention(filter)}
             onMouseLeave={() => setHoveredAttention(null)}
-            style={{ ...attentionItem(filter, num, label), borderTop: 'none', borderRight: 'none', textAlign: 'left', fontFamily: 'inherit' }}
+            style={{ ...attentionItem(filter, num, label), borderTop: 'none', borderRight: 'none', borderBottom: 'none', textAlign: 'left', fontFamily: 'inherit' }}
           >
             <div style={{ fontSize: 24, fontWeight: 600, color: num > 0 ? '#FFD700' : '#666', marginBottom: 6 }}>{num}</div>
             <div style={{ fontSize: 13, color: '#555' }}>{label}</div>
@@ -778,10 +778,6 @@ export default function Portal({ onSubmitRequest, resetToken }) {
             </select>
           </div>
 
-          <div style={{ padding: '0 20px 12px', color: '#555', fontSize: 12, borderBottom: '0.5px solid #222' }}>
-            Click a row for a snapshot. Double-click a row to open the full loan file.
-          </div>
-
           <div style={{ display: 'grid', gridTemplateColumns: TABLE_COLS, gap: isNarrowPortfolio ? 6 : 12, padding: isNarrowPortfolio ? '12px 12px' : '12px 20px', borderBottom: '0.5px solid #222', fontSize: 10, color: '#FFD700', textTransform: 'uppercase', letterSpacing: 0.8, background: '#111' }}>
             <span>Loan</span><span>Borrower</span><span>Property</span><span>Balance</span><span>Next Due</span><span>Loan Status</span>
           </div>
@@ -796,7 +792,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
             const loanStatus = getLoanStatus(r);
             return (
               <div key={r.id}
-                style={{ display: 'grid', gridTemplateColumns: TABLE_COLS, gap: isNarrowPortfolio ? 6 : 12, minHeight: 70, padding: isNarrowPortfolio ? '0 12px' : '0 20px', borderBottom: '0.5px solid #1b1b1b', alignItems: 'center', fontSize: isNarrowPortfolio ? 11 : 13, cursor: 'pointer', background: isHov ? '#1e1a00' : '#111', boxShadow: isActive ? 'inset 0 0 0 1px #FFD700, inset 4px 0 0 #FFD700' : 'none', transition: 'background 0.1s, box-shadow 0.1s' }}
+                style={{ display: 'grid', gridTemplateColumns: TABLE_COLS, gap: isNarrowPortfolio ? 6 : 12, minHeight: 70, padding: isNarrowPortfolio ? '0 12px' : '0 20px', borderBottom: '0.5px solid #1b1b1b', alignItems: 'center', fontSize: isNarrowPortfolio ? 11 : 13, cursor: 'pointer', background: isActive || isHov ? '#1e1a00' : '#111', boxShadow: isActive ? 'inset 4px 0 0 #FFD700' : 'none', transition: 'background 0.1s, box-shadow 0.1s' }}
                 onClick={() => setPreviewId(r.loan_id_internal)}
                 onDoubleClick={() => setSelected(r)}
                 onMouseEnter={() => setHoveredId(r.id)}
@@ -804,6 +800,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
                 <span>
                   <span style={{ color: '#777' }}>{r.loan_id_internal || r.loan_id || '-'}</span>
                   <span style={{ display: 'block', color: '#555', fontSize: 12, marginTop: 4 }}>{formatDate(r.created_at)}</span>
+                  {isActive && <span style={{ display: 'block', color: '#FFD700', fontSize: 11, marginTop: 5 }}>Double-click for details -&gt;</span>}
                 </span>
                 <span style={{ color: '#fff', fontWeight: 600 }}>{r.borrower_name || '-'}</span>
                 <span style={{ color: '#777', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: 8 }}>{r.property_address || '-'}</span>
