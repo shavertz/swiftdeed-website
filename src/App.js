@@ -288,9 +288,9 @@ export default function App() {
                 <button
                   onClick={() => setPage('borrower-profile')}
                   title="Profile"
-                  style={{ background: 'transparent', color: '#aaa', fontSize: 14, padding: '7px 10px', borderRadius: 6, border: '0.5px solid #2a2a2a', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}
+                  style={{ background: 'transparent', color: '#fff', fontSize: 14, padding: '7px 10px', borderRadius: 6, border: '0.5px solid #FFD700', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}
                   onMouseEnter={e => { e.currentTarget.style.borderColor = '#FFD700'; e.currentTarget.style.color = '#FFD700'; }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = '#2a2a2a'; e.currentTarget.style.color = '#aaa'; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = '#FFD700'; e.currentTarget.style.color = '#fff'; }}
                 ><ProfileIcon /></button>
                 <button
                   onClick={() => routeByEmail(user.primaryEmailAddress?.emailAddress)}
@@ -303,9 +303,9 @@ export default function App() {
                 <button
                   onClick={() => setPage('profile')}
                   title="Profile"
-                  style={{ background: 'transparent', color: '#aaa', fontSize: 14, padding: '7px 10px', borderRadius: 6, border: '0.5px solid #2a2a2a', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}
+                  style={{ background: 'transparent', color: '#fff', fontSize: 14, padding: '7px 10px', borderRadius: 6, border: '0.5px solid #FFD700', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}
                   onMouseEnter={e => { e.currentTarget.style.borderColor = '#FFD700'; e.currentTarget.style.color = '#FFD700'; }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = '#2a2a2a'; e.currentTarget.style.color = '#aaa'; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = '#FFD700'; e.currentTarget.style.color = '#fff'; }}
                 ><ProfileIcon /></button>
                 <button
                   onClick={() => { setPortalResetToken(t => t + 1); setPage('portal'); }}
@@ -329,8 +329,8 @@ export default function App() {
             >Log in</button>
             <button
               onClick={() => goToAuth('signup')}
-              style={{ background: '#FFD700', color: '#0f0f0f', fontSize: 14, fontWeight: 500, padding: '8px 18px', borderRadius: 6, border: 'none', cursor: 'pointer', transition: 'background 0.15s' }}
-              {...hov.solid}
+              style={{ background: 'transparent', color: '#fff', fontSize: 14, fontWeight: 500, padding: '8px 18px', borderRadius: 6, border: '0.5px solid #FFD700', cursor: 'pointer', transition: 'all 0.15s' }}
+              {...hov.outline}
             >Sign up</button>
           </>
         )}
