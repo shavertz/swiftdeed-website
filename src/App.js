@@ -289,8 +289,7 @@ export default function App() {
                   onClick={() => setPage('borrower-profile')}
                   title="Profile"
                   style={{ background: 'transparent', color: '#fff', fontSize: 14, padding: '7px 10px', borderRadius: 6, border: '0.5px solid #FFD700', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = '#FFD700'; e.currentTarget.style.color = '#FFD700'; }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = '#FFD700'; e.currentTarget.style.color = '#fff'; }}
+                  {...hov.outline}
                 ><ProfileIcon /></button>
                 <button
                   onClick={() => routeByEmail(user.primaryEmailAddress?.emailAddress)}
@@ -304,8 +303,7 @@ export default function App() {
                   onClick={() => setPage('profile')}
                   title="Profile"
                   style={{ background: 'transparent', color: '#fff', fontSize: 14, padding: '7px 10px', borderRadius: 6, border: '0.5px solid #FFD700', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = '#FFD700'; e.currentTarget.style.color = '#FFD700'; }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = '#FFD700'; e.currentTarget.style.color = '#fff'; }}
+                  {...hov.outline}
                 ><ProfileIcon /></button>
                 <button
                   onClick={() => { setPortalResetToken(t => t + 1); setPage('portal'); }}
