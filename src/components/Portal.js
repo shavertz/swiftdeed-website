@@ -571,7 +571,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const paginated = sorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
 
-  const TABLE_COLS = '130px 165px minmax(170px, 1fr) 115px 90px 110px';
+  const TABLE_COLS = '118px 145px minmax(120px, 1fr) 105px 78px 92px';
 
   const loanStatusBadge = (status) => {
     const isDefault = status === 'Default';
@@ -725,8 +725,8 @@ export default function Portal({ onSubmitRequest, resetToken }) {
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(720px, 1fr) 340px', gap: 18, alignItems: 'start' }}>
-        <div style={{ border: '0.5px solid #252525', borderRadius: 9, overflow: 'hidden', background: '#111' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 300px', gap: 16, alignItems: 'start' }}>
+        <div style={{ border: '0.5px solid #252525', borderRadius: 9, overflow: 'hidden', background: '#111', minWidth: 0 }}>
           <div style={{ display: 'flex', gap: 10, padding: 14, borderBottom: '0.5px solid #222', alignItems: 'stretch' }}>
             <input style={{ ...s.searchInput, maxWidth: 'none', height: 52, boxSizing: 'border-box' }} placeholder={activeFilter === 'all' ? 'Search by loan ID, borrower, or property...' : `Showing: ${filterLabels[activeFilter]}`} value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
             <select style={{ ...s.select, height: 52, width: 260, boxSizing: 'border-box' }} value={sort} onChange={e => { setSort(e.target.value); setPage(1); }}>
