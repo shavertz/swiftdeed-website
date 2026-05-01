@@ -705,6 +705,31 @@ export default function Portal({ onSubmitRequest, resetToken }) {
 
   return (
     <div style={{ ...s.page, padding: pagePad }}>
+      <style>{`
+        .swiftdeed-table-scroll {
+          scrollbar-color: #FFD700 #0f0f0f;
+          scrollbar-width: thin;
+        }
+        .swiftdeed-table-scroll::-webkit-scrollbar {
+          height: 14px;
+          background: #0f0f0f;
+        }
+        .swiftdeed-table-scroll::-webkit-scrollbar-track {
+          background: #0f0f0f;
+          border-top: 0.5px solid #FFD700;
+          border-bottom: 0.5px solid #FFD700;
+        }
+        .swiftdeed-table-scroll::-webkit-scrollbar-thumb {
+          background: #111;
+          border: 1px solid #FFD700;
+          border-radius: 999px;
+        }
+        .swiftdeed-table-scroll::-webkit-scrollbar-button {
+          width: 14px;
+          background: #0f0f0f;
+          border: 0.5px solid #FFD700;
+        }
+      `}</style>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
         <div>
           <div style={{ fontSize: 28, fontWeight: 500, color: '#fff' }}>{lenderName || user?.firstName || 'Lender'}'s Loan Portfolio</div>
@@ -741,7 +766,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       </div>
 
       <div style={{ display: 'flex', flexDirection: isNarrowPortfolio ? 'column' : 'row', gap: isNarrowPortfolio ? 14 : 18, alignItems: 'flex-start', width: '100%', maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
-        <div style={{ flex: '1 1 auto', width: '100%', minWidth: 0, maxWidth: '100%', border: '0.5px solid #252525', borderRadius: 9, overflowX: 'auto', overflowY: 'hidden', WebkitOverflowScrolling: 'touch', background: '#111', boxSizing: 'border-box' }}>
+        <div className="swiftdeed-table-scroll" style={{ flex: '1 1 auto', width: '100%', minWidth: 0, maxWidth: '100%', border: '0.5px solid #252525', borderRadius: 9, overflowX: 'auto', overflowY: 'hidden', WebkitOverflowScrolling: 'touch', background: '#111', boxSizing: 'border-box', boxShadow: 'inset 0 0 0 0.5px #1f1f1f' }}>
           <div style={{ minWidth: tableInnerMinWidth }}>
           <div style={{ display: 'flex', gap: 10, padding: 14, borderBottom: '0.5px solid #222', alignItems: 'stretch' }}>
             <input style={{ ...s.searchInput, maxWidth: 'none', height: 52, boxSizing: 'border-box' }} placeholder={activeFilter === 'all' ? 'Search by loan ID, borrower, or property...' : `Showing: ${filterLabels[activeFilter]}`} value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
@@ -811,7 +836,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
           </div>
         </div>
 
-        <aside style={{ width: snapshotWidth, flexShrink: 0, background: '#111', border: '0.5px solid #252525', borderRadius: 9, overflow: 'hidden', position: isNarrowPortfolio ? 'static' : 'sticky', top: 84, minWidth: 0 }}>
+        <aside style={{ width: snapshotWidth, flexShrink: 0, alignSelf: isNarrowPortfolio ? 'stretch' : 'flex-start', background: '#111', border: '0.5px solid #252525', borderRadius: 9, overflow: 'hidden', position: isNarrowPortfolio ? 'static' : 'sticky', top: 84, minWidth: 0, boxSizing: 'border-box', boxShadow: 'inset 0 0 0 0.5px #1f1f1f' }}>
           {previewLoan ? (
             <>
               <div style={{ padding: '20px 22px', borderBottom: '0.5px solid #222' }}>
