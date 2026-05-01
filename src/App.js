@@ -468,6 +468,7 @@ export default function App() {
       {nav}
       {page === 'home' && (
         <HomePage
+          activePortalType={isSignedIn ? portalType : null}
           onLenderLogin={() => { if (isSignedIn) { routeByEmail(user.primaryEmailAddress?.emailAddress); } else { goToAuth('signup', 'lender'); } }}
           onBorrowerLogin={() => { if (isSignedIn) { routeByEmail(user.primaryEmailAddress?.emailAddress); } else { goToAuth('signin', 'borrower'); } }}
           onTerms={() => setPage('terms')}

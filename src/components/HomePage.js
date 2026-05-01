@@ -1,4 +1,7 @@
-export default function HomePage({ onLenderLogin, onBorrowerLogin, onTerms, onPrivacy }) {
+export default function HomePage({ onLenderLogin, onBorrowerLogin, onTerms, onPrivacy, activePortalType }) {
+  const borrowerDisabled = activePortalType === 'lender';
+  const lenderDisabled = activePortalType === 'borrower';
+
   const s = {
     page: { background: '#0f0f0f', minHeight: '100vh', color: '#f0f0f0', fontFamily: 'inherit' },
     hero: { padding: '40px 60px 80px', textAlign: 'center', maxWidth: 800, margin: '0 auto' },
@@ -52,6 +55,7 @@ export default function HomePage({ onLenderLogin, onBorrowerLogin, onTerms, onPr
     portalBtns: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 48 },
     pbBorrower: { background: '#FFD700', color: '#0f0f0f', border: 'none', borderRadius: 7, padding: 13, fontSize: 14, fontWeight: 500, cursor: 'pointer', transition: 'background 0.15s' },
     pbLender: { background: 'transparent', color: '#fff', border: '1px solid #FFD700', borderRadius: 7, padding: 13, fontSize: 14, fontWeight: 500, cursor: 'pointer', transition: 'all 0.15s' },
+    disabledBtn: { opacity: 0.35, cursor: 'not-allowed', boxShadow: 'none' },
     pricingSection: { borderTop: '0.5px solid #1e1e1e', padding: '80px 60px', maxWidth: 1000, margin: '0 auto' },
     pricingCards: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 48 },
     pricingCard: (featured) => ({ background: '#111', border: `0.5px solid ${featured ? '#FFD700' : '#2a2a2a'}`, borderRadius: 12, padding: 32, position: 'relative' }),
@@ -93,8 +97,8 @@ export default function HomePage({ onLenderLogin, onBorrowerLogin, onTerms, onPr
         <h1 style={s.h1}>Swift. Serviced. <span style={s.yellow}>Secure.</span></h1>
         <p style={s.heroP}>We handle the servicing so you can focus on lending. Your borrowers stay informed, your statements are always on time.</p>
         <div style={s.ctas}>
-          <button style={s.btnPrimary} onClick={onBorrowerLogin} {...hovSolid}>I'm a borrower</button>
-          <button style={s.btnSecondary} onClick={onLenderLogin} {...hovOutline}>I'm a lender</button>
+          <button disabled={borrowerDisabled} style={{ ...s.btnPrimary, ...(borrowerDisabled ? s.disabledBtn : {}) }} onClick={onBorrowerLogin} {...(!borrowerDisabled ? hovSolid : {})}>I'm a borrower</button>
+          <button disabled={lenderDisabled} style={{ ...s.btnSecondary, ...(lenderDisabled ? s.disabledBtn : {}) }} onClick={onLenderLogin} {...(!lenderDisabled ? hovOutline : {})}>I'm a lender</button>
         </div>
         <div style={s.portalNote}>New here? Create an account in seconds.</div>
         <div style={s.statsRow}>
@@ -237,8 +241,8 @@ export default function HomePage({ onLenderLogin, onBorrowerLogin, onTerms, onPr
         </div>
 
         <div style={s.portalBtns}>
-          <button style={s.pbBorrower} onClick={onBorrowerLogin} {...hovSolid}>I'm a borrower</button>
-          <button style={s.pbLender} onClick={onLenderLogin} {...hovOutline}>I'm a lender</button>
+          <button disabled={borrowerDisabled} style={{ ...s.pbBorrower, ...(borrowerDisabled ? s.disabledBtn : {}) }} onClick={onBorrowerLogin} {...(!borrowerDisabled ? hovSolid : {})}>I'm a borrower</button>
+          <button disabled={lenderDisabled} style={{ ...s.pbLender, ...(lenderDisabled ? s.disabledBtn : {}) }} onClick={onLenderLogin} {...(!lenderDisabled ? hovOutline : {})}>I'm a lender</button>
         </div>
       </div>
 
