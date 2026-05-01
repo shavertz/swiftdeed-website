@@ -80,6 +80,7 @@ export default function App() {
   const [authMode, setAuthMode] = useState(() => ACTIVATION_TOKEN ? 'signup' : 'signin');
   const [portalType, setPortalType] = useState(() => ACTIVATION_TOKEN ? 'borrower' : null);
   const [borrowerOnboardingId, setBorrowerOnboardingId] = useState(null);
+  const [portalResetToken, setPortalResetToken] = useState(0);
   const [loading, setLoading] = useState(true);
   const { isSignedIn, isLoaded, user } = useUser();
   const { signOut } = useClerk();
@@ -307,7 +308,7 @@ export default function App() {
                   onMouseLeave={e => { e.currentTarget.style.borderColor = '#2a2a2a'; e.currentTarget.style.color = '#aaa'; }}
                 ><ProfileIcon /></button>
                 <button
-                  onClick={() => setPage('portal')}
+                  onClick={() => { setPortalResetToken(t => t + 1); setPage('portal'); }}
                   style={{ background: 'transparent', color: '#fff', fontSize: 14, fontWeight: 500, padding: '8px 18px', borderRadius: 6, border: '0.5px solid #FFD700', cursor: 'pointer', transition: 'all 0.15s' }}
                   {...hov.outline}
                 >My loans</button>
@@ -475,7 +476,7 @@ export default function App() {
       )}
       {page === 'auth' && (ACTIVATION_TOKEN ? activationAuthPage : standardAuthPage)}
       {page === 'request' && <RequestForm />}
-      {page === 'portal' && <Portal onSubmitRequest={() => setPage('request')} />}
+      {page === 'portal' && <Portal onSubmitRequest={() => setPage('request')} resetToken={portalResetToken} />}
       {page === 'profile' && <ProfilePage onBack={() => setPage('portal')} />}
       {page === 'borrower-profile' && <BorrowerProfilePage onBack={() => routeByEmail(user?.primaryEmailAddress?.emailAddress)} />}
       {page === 'borrower-portal' && <BorrowerPortal onHome={() => setPage('home')} />}
