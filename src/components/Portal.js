@@ -325,7 +325,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const [borrowerData, setBorrowerData] = useState({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [sort, setSort] = useState('newest');
+  const [sort, setSort] = useState('oldest');
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState(null);
   const [previewId, setPreviewId] = useState(null);
@@ -644,10 +644,10 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const sv = { fontSize: 27, fontWeight: 600, color: '#fff', marginBottom: 6 };
   const ss = { fontSize: 12, color: '#444' };
   const attentionItem = (filter, num, label) => ({
-    background: attentionFilter === filter ? '#2f2900' : hoveredAttention === filter ? '#242000' : '#151515',
+    background: attentionFilter === filter ? 'rgba(255, 215, 0, 0.16)' : hoveredAttention === filter ? 'rgba(255, 215, 0, 0.08)' : '#151515',
     padding: '16px 22px',
     borderLeft: '0.5px solid #242424',
-    borderBottom: attentionFilter === filter ? '3px solid #FFD700' : '3px solid transparent',
+    borderBottom: attentionFilter === filter ? '3px solid #FFE45C' : '3px solid transparent',
     cursor: 'pointer',
     transition: 'background 0.12s, border-color 0.12s',
   });
@@ -695,11 +695,15 @@ export default function Portal({ onSubmitRequest, resetToken }) {
           <div style={{ display: 'flex', gap: 10, padding: 14, borderBottom: '0.5px solid #222', alignItems: 'stretch' }}>
             <input style={{ ...s.searchInput, maxWidth: 'none', height: 52, boxSizing: 'border-box' }} placeholder={attentionFilter === 'all' ? 'Search by loan ID, borrower, or property...' : `Showing: ${filterLabels[attentionFilter]}`} value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
             <select style={{ ...s.select, height: 52, width: 260, boxSizing: 'border-box' }} value={sort} onChange={e => { setSort(e.target.value); setPage(1); }}>
-              <option value="newest">Sort: Newest first</option>
               <option value="oldest">Sort: Oldest first</option>
+              <option value="newest">Sort: Newest first</option>
               <option value="amount_desc">Sort: Balance high to low</option>
               <option value="amount_asc">Sort: Balance low to high</option>
             </select>
+          </div>
+
+          <div style={{ padding: '0 20px 12px', color: '#555', fontSize: 12, borderBottom: '0.5px solid #222' }}>
+            Click a row for a snapshot. Double-click a row to open the full loan file.
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: TABLE_COLS, gap: 12, padding: '12px 20px', borderBottom: '0.5px solid #222', fontSize: 10, color: '#FFD700', textTransform: 'uppercase', letterSpacing: 0.8, background: '#111' }}>
@@ -716,8 +720,10 @@ export default function Portal({ onSubmitRequest, resetToken }) {
             const loanStatus = getLoanStatus(r);
             return (
               <div key={r.id}
-                style={{ display: 'grid', gridTemplateColumns: TABLE_COLS, gap: 12, minHeight: 70, padding: '0 20px', borderBottom: '0.5px solid #1b1b1b', alignItems: 'center', fontSize: 13, cursor: 'pointer', background: isActive ? '#302900' : isHov ? '#211d00' : '#111', boxShadow: isActive ? 'inset 4px 0 0 #FFD700' : 'none', transition: 'background 0.1s, box-shadow 0.1s' }}
+                title="Click for snapshot. Double-click to open loan file."
+                style={{ display: 'grid', gridTemplateColumns: TABLE_COLS, gap: 12, minHeight: 70, padding: '0 20px', borderBottom: '0.5px solid #1b1b1b', alignItems: 'center', fontSize: 13, cursor: 'pointer', background: isActive ? 'rgba(255, 215, 0, 0.16)' : isHov ? 'rgba(255, 215, 0, 0.08)' : '#111', boxShadow: isActive ? 'inset 4px 0 0 #FFE45C' : 'none', transition: 'background 0.1s, box-shadow 0.1s' }}
                 onClick={() => setPreviewId(r.loan_id_internal)}
+                onDoubleClick={() => setSelected(r)}
                 onMouseEnter={() => setHoveredId(r.id)}
                 onMouseLeave={() => setHoveredId(null)}>
                 <span>
@@ -765,9 +771,9 @@ export default function Portal({ onSubmitRequest, resetToken }) {
                   </div>
                   <button
                     onClick={() => setSelected(previewLoan)}
-                    style={{ background: 'transparent', border: '0.5px solid #FFD700', color: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 600, padding: '7px 10px', borderRadius: 6, whiteSpace: 'nowrap', fontFamily: 'inherit', transition: 'all 0.15s' }}
-                    onMouseEnter={e => { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.color = '#FFD700'; e.currentTarget.style.boxShadow = '0 0 14px rgba(255, 215, 0, 0.28)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#fff'; e.currentTarget.style.boxShadow = 'none'; }}
+                    style={{ background: '#FFD700', border: 'none', color: '#0f0f0f', cursor: 'pointer', fontSize: 12, fontWeight: 700, padding: '8px 12px', borderRadius: 6, whiteSpace: 'nowrap', fontFamily: 'inherit', transition: 'all 0.15s' }}
+                    onMouseEnter={e => { e.currentTarget.style.background = '#FFE45C'; e.currentTarget.style.boxShadow = '0 0 16px rgba(255, 215, 0, 0.45)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = '#FFD700'; e.currentTarget.style.boxShadow = 'none'; }}
                   >Open loan file</button>
                 </div>
               </div>
