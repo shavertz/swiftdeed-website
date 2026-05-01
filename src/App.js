@@ -293,8 +293,8 @@ export default function App() {
                 ><ProfileIcon /></button>
                 <button
                   onClick={() => routeByEmail(user.primaryEmailAddress?.emailAddress)}
-                  style={{ background: '#FFD700', color: '#0f0f0f', fontSize: 14, fontWeight: 500, padding: '8px 18px', borderRadius: 6, border: 'none', cursor: 'pointer', transition: 'background 0.15s' }}
-                  {...hov.solid}
+                  style={{ background: 'transparent', color: '#fff', fontSize: 14, fontWeight: 500, padding: '8px 18px', borderRadius: 6, border: '0.5px solid #FFD700', cursor: 'pointer', transition: 'all 0.15s' }}
+                  {...hov.outline}
                 >My loan</button>
               </>
             ) : (
@@ -308,8 +308,8 @@ export default function App() {
                 ><ProfileIcon /></button>
                 <button
                   onClick={() => setPage('portal')}
-                  style={{ background: '#FFD700', color: '#0f0f0f', fontSize: 14, fontWeight: 500, padding: '8px 18px', borderRadius: 6, border: 'none', cursor: 'pointer', transition: 'background 0.15s' }}
-                  {...hov.solid}
+                  style={{ background: 'transparent', color: '#fff', fontSize: 14, fontWeight: 500, padding: '8px 18px', borderRadius: 6, border: '0.5px solid #FFD700', cursor: 'pointer', transition: 'all 0.15s' }}
+                  {...hov.outline}
                 >My loans</button>
               </>
             )}
