@@ -582,7 +582,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
 
   const isNarrowPortfolio = windowWidth < 1280;
   const pagePad = isNarrowPortfolio ? '34px 42px' : '40px 60px';
-  const tableSnapshotGrid = isNarrowPortfolio ? '1fr' : 'minmax(0, 1fr) 340px';
+  const snapshotWidth = isNarrowPortfolio ? '100%' : 340;
   const TABLE_COLS = isNarrowPortfolio
     ? '130px 165px minmax(220px, 1fr) 120px 105px 115px'
     : '150px 190px minmax(220px, 1fr) 135px 120px 120px';
@@ -740,8 +740,8 @@ export default function Portal({ onSubmitRequest, resetToken }) {
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: tableSnapshotGrid, gap: isNarrowPortfolio ? 14 : 18, alignItems: 'start' }}>
-        <div style={{ border: '0.5px solid #252525', borderRadius: 9, overflowX: isNarrowPortfolio ? 'auto' : 'hidden', overflowY: 'hidden', background: '#111', minWidth: 0 }}>
+      <div style={{ display: 'flex', flexDirection: isNarrowPortfolio ? 'column' : 'row', gap: isNarrowPortfolio ? 14 : 18, alignItems: 'flex-start', width: '100%', overflow: 'hidden' }}>
+        <div style={{ flex: 1, minWidth: 0, border: '0.5px solid #252525', borderRadius: 9, overflowX: 'auto', overflowY: 'hidden', background: '#111' }}>
           <div style={{ minWidth: tableInnerMinWidth }}>
           <div style={{ display: 'flex', gap: 10, padding: 14, borderBottom: '0.5px solid #222', alignItems: 'stretch' }}>
             <input style={{ ...s.searchInput, maxWidth: 'none', height: 52, boxSizing: 'border-box' }} placeholder={activeFilter === 'all' ? 'Search by loan ID, borrower, or property...' : `Showing: ${filterLabels[activeFilter]}`} value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
@@ -811,7 +811,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
           </div>
         </div>
 
-        <aside style={{ background: '#111', border: '0.5px solid #252525', borderRadius: 9, overflow: 'hidden', position: isNarrowPortfolio ? 'static' : 'sticky', top: 84, minWidth: 0 }}>
+        <aside style={{ width: snapshotWidth, flexShrink: 0, background: '#111', border: '0.5px solid #252525', borderRadius: 9, overflow: 'hidden', position: isNarrowPortfolio ? 'static' : 'sticky', top: 84, minWidth: 0 }}>
           {previewLoan ? (
             <>
               <div style={{ padding: '20px 22px', borderBottom: '0.5px solid #222' }}>
