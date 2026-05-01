@@ -800,7 +800,14 @@ export default function Portal({ onSubmitRequest, resetToken }) {
                 <span>
                   <span style={{ color: '#777' }}>{r.loan_id_internal || r.loan_id || '-'}</span>
                   <span style={{ display: 'block', color: '#555', fontSize: 12, marginTop: 4 }}>{formatDate(r.created_at)}</span>
-                  {isActive && <span style={{ display: 'block', color: '#FFD700', fontSize: 11, marginTop: 5 }}>Double-click for details -&gt;</span>}
+                  {isActive && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setSelected(r); }}
+                      style={{ display: 'block', background: 'transparent', border: 'none', padding: 0, color: '#FFD700', fontSize: 11, marginTop: 5, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
+                    >
+                      Open loan file -&gt;
+                    </button>
+                  )}
                 </span>
                 <span style={{ color: '#fff', fontWeight: 600 }}>{r.borrower_name || '-'}</span>
                 <span style={{ color: '#777', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: 8 }}>{r.property_address || '-'}</span>
