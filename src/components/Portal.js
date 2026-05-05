@@ -33,6 +33,57 @@ const hovSolid = {
   onMouseLeave: e => { e.currentTarget.style.boxShadow = 'none'; },
 };
 
+function NavIcon({ type, active }) {
+  const color = active ? '#FFD700' : '#666';
+  const common = { width: 17, height: 17, viewBox: '0 0 24 24', fill: 'none', stroke: color, strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round', style: { flexShrink: 0 } };
+  if (type === 'dashboard') {
+    return (
+      <svg {...common}>
+        <rect x="3" y="3" width="7" height="7" rx="1.5" />
+        <rect x="14" y="3" width="7" height="7" rx="1.5" />
+        <rect x="3" y="14" width="7" height="7" rx="1.5" />
+        <rect x="14" y="14" width="7" height="7" rx="1.5" />
+      </svg>
+    );
+  }
+  if (type === 'loans') {
+    return (
+      <svg {...common}>
+        <path d="M4 7.5h16" />
+        <path d="M6 4.5h12c1.1 0 2 .9 2 2v11c0 1.1-.9 2-2 2H6c-1.1 0-2-.9-2-2v-11c0-1.1.9-2 2-2Z" />
+        <path d="M8 11h8" />
+        <path d="M8 15h5" />
+      </svg>
+    );
+  }
+  if (type === 'documents') {
+    return (
+      <svg {...common}>
+        <path d="M7 3.5h7l4 4v13H7c-1.1 0-2-.9-2-2v-13c0-1.1.9-2 2-2Z" />
+        <path d="M14 3.5v5h5" />
+        <path d="M8 12h8" />
+        <path d="M8 16h6" />
+      </svg>
+    );
+  }
+  if (type === 'invoices') {
+    return (
+      <svg {...common}>
+        <path d="M6 3.5h12v17l-2-1.2-2 1.2-2-1.2-2 1.2-2-1.2-2 1.2v-17Z" />
+        <path d="M9 8h6" />
+        <path d="M9 12h6" />
+        <path d="M9 16h4" />
+      </svg>
+    );
+  }
+  return (
+    <svg {...common}>
+      <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" />
+      <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.05.05a2 2 0 0 1-2.83 2.83l-.05-.05a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 0 1-4 0v-.07a1.7 1.7 0 0 0-1.03-1.56 1.7 1.7 0 0 0-1.88.34l-.05.05a2 2 0 0 1-2.83-2.83l.05-.05A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 0 1 0-4h.07A1.7 1.7 0 0 0 4.6 8.94a1.7 1.7 0 0 0-.34-1.88l-.05-.05a2 2 0 0 1 2.83-2.83l.05.05A1.7 1.7 0 0 0 8.97 4.6 1.7 1.7 0 0 0 10 3.07V3a2 2 0 0 1 4 0v.07a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.88-.34l.05-.05a2 2 0 0 1 2.83 2.83l-.05.05A1.7 1.7 0 0 0 19.4 8.94 1.7 1.7 0 0 0 20.93 10H21a2 2 0 0 1 0 4h-.07A1.7 1.7 0 0 0 19.4 15Z" />
+    </svg>
+  );
+}
+
 
 const s = {
   page: { padding: '40px 60px', width: '100%', maxWidth: 1600, margin: '0 auto', boxSizing: 'border-box', overflowX: 'hidden' },
@@ -732,7 +783,10 @@ export default function Portal({ onSubmitRequest, resetToken }) {
         onClick={() => { setActiveView(id); setSelected(null); if (id === 'loans') setLoansView('all'); }}
         style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: active ? '#151515' : 'transparent', border: 'none', borderLeft: active ? '3px solid #FFD700' : '3px solid transparent', color: active ? '#fff' : '#666', padding: shellNarrow ? '12px 14px' : `12px 18px 12px ${sidebarGutter}px`, fontSize: 14, cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}
       >
-        <span>{label}</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+          <NavIcon type={id} active={active} />
+          <span>{label}</span>
+        </span>
         {count != null && count > 0 && <span style={{ color: '#FFD700', background: '#1e1a00', borderRadius: 999, padding: '1px 8px', fontSize: 11 }}>{count}</span>}
       </button>
     );
