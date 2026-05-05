@@ -137,7 +137,7 @@ export default function App() {
 
       setPortalType('lender');
       if (Array.isArray(lenderData) && lenderData.length > 0) {
-        setPage('choice');
+        setPage('portal');
       } else {
         setPage('onboarding');
       }
@@ -520,7 +520,7 @@ export default function App() {
         </div>
       )}
       {page === 'choice' && choicePage}
-      {page === 'onboarding' && <LenderOnboarding onComplete={() => { setPortalType('lender'); setPage('choice'); }} />}
+      {page === 'onboarding' && <LenderOnboarding onComplete={() => { setPortalType('lender'); setPage('portal'); }} />}
       {page === 'terms' && <TermsPage onHome={() => setPage('home')} />}
       {page === 'privacy' && <PrivacyPage onHome={() => setPage('home')} />}
     </div>

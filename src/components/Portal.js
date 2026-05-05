@@ -336,9 +336,10 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState('newest');
   const [page, setPage] = useState(1);
+  const [activeView, setActiveView] = useState('dashboard');
   const [selected, setSelected] = useState(null);
   const [previewId, setPreviewId] = useState(null);
-  const [attentionFilter, setAttentionFilter] = useState('all');
+  const [loanFilter, setLoanFilter] = useState({ id: 'all', label: 'All active loans', accent: '#FFD700' });
   const [hoveredAttention, setHoveredAttention] = useState(null);
   const [hoveredId, setHoveredId] = useState(null);
   const [liveData, setLiveData] = useState(null);
@@ -364,7 +365,8 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     setLoanPayments([]);
     setDocUrls([]);
     setPaymentSuccess(false);
-    setAttentionFilter('all');
+    setActiveView('dashboard');
+    setLoanFilter({ id: 'all', label: 'All active loans', accent: '#FFD700' });
     setSearch('');
     setPage(1);
   }, [resetToken]);
@@ -391,7 +393,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
 
   useEffect(() => {
     if (!email) return;
-    setAttentionFilter('all');
+    setLoanFilter({ id: 'all', label: 'All active loans', accent: '#FFD700' });
     setSearch('');
     setPage(1);
     async function load() {
@@ -402,7 +404,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
         setRequests(rows);
         const ids = rows.map(r => r.loan_id_internal).filter(Boolean);
         if (ids.length > 0) {
-          const bRes = await fetch(`${SUPABASE_URL}/rest/v1/borrowers?loan_id_internal=in.(${ids.map(id => `"${id}"`).join(',')})&select=loan_id_internal,borrower_email,principal_balance,next_payment_date,monthly_payment,payment_status,interest_rate,per_diem,original_loan_amount,total_interest_paid,total_payments_made,legal_name,guarantor_name,portal_access,loan_document_urls,last_payment_date,maturity_date`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
+          const bRes = await fetch(`${SUPABASE_URL}/rest/v1/borrowers?loan_id_internal=in.(${ids.map(id => `"${id}"`).join(',')})&select=loan_id_internal,borrower_email,principal_balance,next_payment_date,monthly_payment,payment_status,interest_rate,per_diem,original_loan_amount,total_interest_paid,total_payments_made,legal_name,guarantor_name,portal_access,loan_document_urls,last_payment_date,last_payment_amount,maturity_date`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
           const bData = await bRes.json();
           if (Array.isArray(bData)) {
             const emailMap = {};
@@ -546,47 +548,112 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     return 'Active';
   };
 
-  const getAttentionMatch = (request, filter) => {
-    const b = borrowerData[request.loan_id_internal];
-    if (filter === 'not_activated') return !b;
-    if (!b) return false;
-    if (filter === 'missing_payment') return !b.monthly_payment;
-    if (filter === 'past_due') return getLoanStatus(request) === 'Past Due';
-    if (filter === 'default') return getLoanStatus(request) === 'Default';
-    return true;
+  const isNarrowPortfolio = windowWidth < 1280;
+  const snapshotWidth = isNarrowPortfolio ? '100%' : 340;
+  const TABLE_COLS = isNarrowPortfolio
+    ? '130px 165px minmax(220px, 1fr) 120px 105px 115px'
+    : '150px 190px minmax(220px, 1fr) 135px 120px 120px';
+  const tableInnerMinWidth = isNarrowPortfolio ? 900 : 'auto';
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const filterConfig = {
+    all: { id: 'all', label: 'All active loans', accent: '#FFD700' },
+    received_month: { id: 'received_month', label: 'Received this month', accent: '#FFD700' },
+    attention: { id: 'attention', label: 'Loans needing attention', accent: '#FFD700' },
+    maturing_90: { id: 'maturing_90', label: 'Maturing within 90 days', accent: '#FFD700' },
+    maturity: { id: 'maturity', label: 'Maturity', accent: '#FFD700' },
+    overdue: { id: 'overdue', label: 'Overdue', accent: '#f87171' },
+    upcoming: { id: 'upcoming', label: 'Upcoming payments', accent: '#4aa3ff' },
+    current: { id: 'current', label: 'Current loans', accent: '#34d399' },
+    bucket_1_30: { id: 'bucket_1_30', label: '1-30 days delinquent', accent: '#FFD700' },
+    bucket_31_60: { id: 'bucket_31_60', label: '31-60 days delinquent', accent: '#f87171' },
+    bucket_60_plus: { id: 'bucket_60_plus', label: '60+ days delinquent', accent: '#777' },
+    not_activated: { id: 'not_activated', label: 'Borrowers not activated', accent: '#FFD700' },
+    missing_payment: { id: 'missing_payment', label: 'Missing payment amount', accent: '#FFD700' },
+    default: { id: 'default', label: 'Loans currently in default', accent: '#f87171' },
   };
 
-  const activeFilter = ['not_activated', 'missing_payment', 'past_due', 'default'].includes(attentionFilter) ? attentionFilter : 'all';
-  const searchTerm = search.trim().toLowerCase();
+  const setLoansView = (filterId = 'all') => {
+    setLoanFilter(filterConfig[filterId] || filterConfig.all);
+    setActiveView('loans');
+    setSelected(null);
+    setSearch('');
+    setPage(1);
+  };
 
+  const getBorrower = (request) => borrowerData[request.loan_id_internal] || {};
+  const dateValue = (iso) => {
+    if (!iso) return null;
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return null;
+    d.setHours(0, 0, 0, 0);
+    return d;
+  };
+  const daysFromToday = (iso) => {
+    const d = dateValue(iso);
+    if (!d) return null;
+    return Math.ceil((d - today) / 86400000);
+  };
+  const daysPastDue = (request) => {
+    const b = getBorrower(request);
+    const diff = daysFromToday(b.next_payment_date);
+    return diff == null || diff >= 0 ? 0 : Math.abs(diff);
+  };
+  const isThisMonth = (iso) => {
+    const d = dateValue(iso);
+    return !!d && d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
+  };
+  const isActiveLoan = (request) => getLoanStatus(request) !== 'Paid Off';
+  const isOverdueLoan = (request) => getLoanStatus(request) === 'Past Due' || daysPastDue(request) > 0;
+  const isAttentionLoan = (request) => {
+    const b = borrowerData[request.loan_id_internal];
+    return !b || !b.monthly_payment || isOverdueLoan(request) || getLoanStatus(request) === 'Default';
+  };
+  const matchesLoanFilter = (request, filterId) => {
+    const b = getBorrower(request);
+    const maturityDays = daysFromToday(b.maturity_date || request.maturity_date);
+    const nextPaymentDays = daysFromToday(b.next_payment_date);
+    const pastDueDays = daysPastDue(request);
+    switch (filterId) {
+      case 'received_month': return isThisMonth(b.last_payment_date);
+      case 'attention': return isAttentionLoan(request);
+      case 'maturing_90':
+      case 'maturity': return maturityDays != null && maturityDays >= 0 && maturityDays <= 90;
+      case 'overdue': return isOverdueLoan(request);
+      case 'upcoming': return nextPaymentDays != null && nextPaymentDays >= 0 && nextPaymentDays <= 7;
+      case 'current': return isActiveLoan(request) && !isOverdueLoan(request);
+      case 'bucket_1_30': return pastDueDays >= 1 && pastDueDays <= 30;
+      case 'bucket_31_60': return pastDueDays >= 31 && pastDueDays <= 60;
+      case 'bucket_60_plus': return pastDueDays > 60;
+      case 'not_activated': return !borrowerData[request.loan_id_internal];
+      case 'missing_payment': return !!borrowerData[request.loan_id_internal] && !b.monthly_payment;
+      case 'default': return getLoanStatus(request) === 'Default';
+      case 'all':
+      default: return isActiveLoan(request);
+    }
+  };
+
+  const searchTerm = search.trim().toLowerCase();
   const filtered = requests.filter(r => {
     const matchesSearch = !searchTerm
       || String(r.loan_id_internal || '').toLowerCase().includes(searchTerm)
       || String(r.loan_id || '').toLowerCase().includes(searchTerm)
       || String(r.borrower_name || '').toLowerCase().includes(searchTerm)
       || String(r.property_address || '').toLowerCase().includes(searchTerm);
-    return matchesSearch && (activeFilter === 'all' || getAttentionMatch(r, activeFilter));
+    return matchesSearch && matchesLoanFilter(r, loanFilter.id);
   });
 
   const sorted = [...filtered].sort((a, b) => {
     if (sort === 'oldest') return new Date(a.created_at) - new Date(b.created_at);
-    if (sort === 'amount_desc') return (parseFloat(borrowerData[b.loan_id_internal]?.principal_balance || b.total_due) || 0) - (parseFloat(borrowerData[a.loan_id_internal]?.principal_balance || a.total_due) || 0);
-    if (sort === 'amount_asc') return (parseFloat(borrowerData[a.loan_id_internal]?.principal_balance || a.total_due) || 0) - (parseFloat(borrowerData[b.loan_id_internal]?.principal_balance || b.total_due) || 0);
+    if (sort === 'amount_desc') return (parseFloat(getBorrower(b).principal_balance || b.total_due) || 0) - (parseFloat(getBorrower(a).principal_balance || a.total_due) || 0);
+    if (sort === 'amount_asc') return (parseFloat(getBorrower(a).principal_balance || a.total_due) || 0) - (parseFloat(getBorrower(b).principal_balance || b.total_due) || 0);
     return new Date(b.created_at) - new Date(a.created_at);
   });
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const paginated = sorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-
-
-  const isNarrowPortfolio = windowWidth < 1280;
-  const pagePad = isNarrowPortfolio ? '34px 42px' : '40px 60px';
-  const snapshotWidth = isNarrowPortfolio ? '100%' : 340;
-  const TABLE_COLS = isNarrowPortfolio
-    ? '130px 165px minmax(220px, 1fr) 120px 105px 115px'
-    : '150px 190px minmax(220px, 1fr) 135px 120px 120px';
-  const tableInnerMinWidth = isNarrowPortfolio ? 900 : 'auto';
 
   const loanStatusBadge = (status) => {
     const isDefault = status === 'Default';
@@ -605,75 +672,25 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     };
   };
 
-  // If a loan is selected, show the detail page
-  if (selected) {
-    return (
-      <>
-        <LoanDetail
-          selected={selected}
-          liveData={liveData}
-          liveLoading={liveLoading}
-          loanPayments={loanPayments}
-          docUrls={docUrls}
-          docSuccess={docSuccess}
-          uploadingDocs={uploadingDocs}
-          docFileRef={docFileRef}
-          lenderEmail={email}
-          lenderName={lenderName}
-          borrowerEmails={borrowerEmails}
-          paymentSuccess={paymentSuccess}
-          onBack={() => { setSelected(null); setLiveData(null); setLoanPayments([]); setDocUrls([]); setPaymentSuccess(false); }}
-          onRecordPayment={() => { setPaymentSuccess(false); setShowPaymentModal(true); }}
-          onRemoveDoc={handleRemoveDoc}
-          onUploadDocs={handleUploadDocs}
-          onDeleteLoan={() => { setShowDeleteModal(true); setDeleteConfirmText(''); }}
-        />
-
-        {showPaymentModal && liveData && (
-          <RecordPaymentModal borrower={liveData} lenderEmail={email} lenderName={lenderName} onClose={() => setShowPaymentModal(false)} onSuccess={(updates) => { setShowPaymentModal(false); setPaymentSuccess(true); setLiveData(prev => ({ ...prev, ...updates })); setTimeout(() => setPaymentSuccess(false), 5000); }} />
-        )}
-
-        {showDeleteModal && selected && (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-            <div style={{ background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: 12, padding: 28, width: '100%', maxWidth: 400 }}>
-              <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#1a0000', border: '0.5px solid #3a0000', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
-                <span style={{ color: '#f87171', fontSize: 18 }}>!</span>
-              </div>
-              <div style={{ fontSize: 15, fontWeight: 500, color: '#fff', marginBottom: 8 }}>Delete this loan?</div>
-              <div style={{ fontSize: 12, color: '#555', lineHeight: 1.6, marginBottom: 20 }}>
-                This will permanently delete <span style={{ color: '#ccc' }}>{selected.loan_id_internal}</span> and remove <span style={{ color: '#ccc' }}>{selected.borrower_name}</span>'s borrower portal access. This cannot be undone.
-              </div>
-              <div style={{ fontSize: 11, color: '#555', marginBottom: 6 }}>Type DELETE to confirm</div>
-              <input style={{ width: '100%', background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 6, padding: '9px 12px', fontSize: 13, color: '#fff', fontFamily: 'monospace', outline: 'none', boxSizing: 'border-box', marginBottom: 16 }} value={deleteConfirmText} onChange={e => setDeleteConfirmText(e.target.value)} placeholder="DELETE" />
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={handleDeleteLoan} disabled={deleteConfirmText !== 'DELETE' || deleting} style={{ flex: 1, background: deleteConfirmText === 'DELETE' ? '#7f1d1d' : '#1a1a1a', color: deleteConfirmText === 'DELETE' ? '#f87171' : '#444', fontSize: 13, fontWeight: 500, padding: 10, borderRadius: 6, border: '0.5px solid #f87171', cursor: deleteConfirmText === 'DELETE' ? 'pointer' : 'not-allowed', transition: 'all 0.15s' }}>{deleting ? 'Deleting...' : 'Delete permanently'}</button>
-                <button onClick={() => { setShowDeleteModal(false); setDeleteConfirmText(''); }} style={{ flex: 1, background: 'transparent', color: '#fff', fontSize: 13, padding: 10, borderRadius: 6, border: '0.5px solid #2a2a2a', cursor: 'pointer' }}>Cancel</button>
-              </div>
-            </div>
-          </div>
-        )}
-      </>
-    );
-  }
-
-  // Loans list
   const now = new Date();
   const thisMonth = now.getMonth();
   const thisYear = now.getFullYear();
   const allBorrowers = Object.values(borrowerData);
   const principalOutstanding = requests.reduce((sum, r) => {
     const b = borrowerData[r.loan_id_internal] || {};
-    return sum + (parseFloat(b.principal_balance || r.total_due) || 0);
+    return isActiveLoan(r) ? sum + (parseFloat(b.principal_balance || r.total_due) || 0) : sum;
   }, 0);
-  const dueThisMonth = allBorrowers.filter(b => { if (!b.next_payment_date) return false; const d = new Date(b.next_payment_date); return d.getMonth() === thisMonth && d.getFullYear() === thisYear; });
-  const dueThisMonthTotal = dueThisMonth.reduce((sum, b) => sum + (parseFloat(b.monthly_payment) || 0), 0);
-  const rateValues = requests.map(r => parseFloat((borrowerData[r.loan_id_internal] || {}).interest_rate || r.interest_rate)).filter(n => !isNaN(n) && n > 0);
-  const avgRate = rateValues.length > 0 ? rateValues.reduce((sum, rate) => sum + rate, 0) / rateValues.length : 0;
-  const notActivated = requests.filter(r => !borrowerData[r.loan_id_internal]).length;
-  const missingPayment = allBorrowers.filter(b => !b.monthly_payment).length;
-  const pastDue = requests.filter(r => getLoanStatus(r) === 'Past Due').length;
-  const inDefault = requests.filter(r => getLoanStatus(r) === 'Default').length;
-  const activatedBorrowers = allBorrowers.length;
+  const receivedThisMonth = allBorrowers.filter(b => { if (!b.last_payment_date) return false; const d = new Date(b.last_payment_date); return d.getMonth() === thisMonth && d.getFullYear() === thisYear; });
+  const receivedThisMonthTotal = receivedThisMonth.reduce((sum, b) => sum + (parseFloat(b.last_payment_amount || b.monthly_payment) || 0), 0);
+  const activeLoans = requests.filter(isActiveLoan);
+  const pastDue = requests.filter(isOverdueLoan).length;
+  const needingAttention = requests.filter(isAttentionLoan);
+  const maturingSoon = requests.filter(r => matchesLoanFilter(r, 'maturing_90'));
+  const upcomingPayments = requests.filter(r => matchesLoanFilter(r, 'upcoming'));
+  const currentLoans = requests.filter(r => matchesLoanFilter(r, 'current'));
+  const bucketOne = requests.filter(r => matchesLoanFilter(r, 'bucket_1_30'));
+  const bucketTwo = requests.filter(r => matchesLoanFilter(r, 'bucket_31_60'));
+  const bucketThree = requests.filter(r => matchesLoanFilter(r, 'bucket_60_plus'));
   const previewLoan = sorted.find(r => r.loan_id_internal === previewId) || sorted[0] || null;
   const previewBorrower = previewLoan ? borrowerData[previewLoan.loan_id_internal] || {} : {};
   const previewBalance = previewBorrower.principal_balance || previewLoan?.total_due;
@@ -681,162 +698,240 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const previewPrincipalPaid = previewOriginal && previewBalance ? (parseFloat(previewOriginal) - parseFloat(previewBalance)) : 0;
   const previewTotalPaid = previewPrincipalPaid + (parseFloat(previewBorrower.total_interest_paid || 0) || 0);
   const previewDocs = uniqueDocUrls(previewBorrower.loan_document_urls, previewLoan?.loan_document_urls).length;
-  const filterLabels = {
-    all: 'All loans',
-    not_activated: 'Borrowers not activated',
-    missing_payment: 'Missing payment amount',
-    past_due: 'Past due loans',
-    default: 'Loans currently in default',
-  };
+  const loansNeedingAttentionCount = needingAttention.length;
+  const nextMaturity = [...maturingSoon].sort((a, b) => daysFromToday(getBorrower(a).maturity_date || a.maturity_date) - daysFromToday(getBorrower(b).maturity_date || b.maturity_date))[0];
+  const nextMaturityBorrower = nextMaturity ? getBorrower(nextMaturity) : {};
 
-  const sc = { background: '#111', border: '0.5px solid #252525', borderRadius: 9, padding: '22px 24px' };
+  const sc = { background: '#111', border: '0.5px solid #252525', borderRadius: 9, padding: '22px 24px', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit' };
   const sl = { fontSize: 10, color: '#555', textTransform: 'uppercase', letterSpacing: 0.9, marginBottom: 10 };
   const sv = { fontSize: 27, fontWeight: 600, color: '#fff', marginBottom: 6 };
   const ss = { fontSize: 12, color: '#444' };
-  const attentionItem = (filter, num, label) => ({
-    background: activeFilter === filter || hoveredAttention === filter ? '#1e1a00' : '#151515',
-    padding: '16px 22px',
-    borderLeft: '0.5px solid #242424',
-    boxShadow: activeFilter === filter ? 'inset 4px 0 0 #FFD700' : 'none',
+  const attentionCardStyle = (filter, accent) => ({
+    background: hoveredAttention === filter ? '#141414' : '#111',
+    border: '0.5px solid #252525',
+    borderLeft: `3px solid ${accent}`,
+    borderRadius: 9,
+    padding: '18px 20px 16px',
     cursor: 'pointer',
-    transition: 'background 0.12s, box-shadow 0.12s',
+    transition: 'background 0.12s',
+    overflow: 'hidden',
   });
   const snapLine = { display: 'flex', justifyContent: 'space-between', gap: 16, padding: '8px 0', fontSize: 13, borderBottom: '0.5px solid #1b1b1b' };
-
-  return (
-    <div style={{ ...s.page, padding: pagePad }}>
-      <style>{`
-        .swiftdeed-table-scroll {
-          scrollbar-color: #FFD700 #0f0f0f;
-          scrollbar-width: thin;
-        }
-        .swiftdeed-table-scroll::-webkit-scrollbar {
-          height: 14px;
-          background: #0f0f0f;
-        }
-        .swiftdeed-table-scroll::-webkit-scrollbar-track {
-          background: #0f0f0f;
-          border-top: 0.5px solid #FFD700;
-          border-bottom: 0.5px solid #FFD700;
-        }
-        .swiftdeed-table-scroll::-webkit-scrollbar-thumb {
-          background: #111;
-          border: 1px solid #FFD700;
-          border-radius: 999px;
-        }
-        .swiftdeed-table-scroll::-webkit-scrollbar-button {
-          width: 14px;
-          background: #0f0f0f;
-          border: 0.5px solid #FFD700;
-        }
-      `}</style>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
-        <div>
-          <div style={{ fontSize: 28, fontWeight: 500, color: '#fff' }}>{lenderName || user?.firstName || 'Lender'}'s Loan Portfolio</div>
+  const shellNarrow = windowWidth < 900;
+  const contentPad = shellNarrow ? '28px 22px' : isNarrowPortfolio ? '34px 42px' : '34px 46px';
+  const contentWrap = { width: '100%', maxWidth: 1160, boxSizing: 'border-box' };
+  const sidebarGutter = shellNarrow ? 16 : 20;
+  const dashboardStatCols = 'repeat(auto-fit, minmax(220px, 1fr))';
+  const attentionCols = 'repeat(auto-fit, minmax(240px, 1fr))';
+  const bucketCols = isNarrowPortfolio ? 'repeat(5, minmax(145px, 1fr))' : 'repeat(5, minmax(0, 1fr))';
+  const navItem = (id, label, count) => {
+    const active = activeView === id && !selected;
+    return (
+      <button
+        key={id}
+        onClick={() => { setActiveView(id); setSelected(null); if (id === 'loans') setLoansView('all'); }}
+        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: active ? '#151515' : 'transparent', border: 'none', borderLeft: active ? '3px solid #FFD700' : '3px solid transparent', color: active ? '#fff' : '#666', padding: shellNarrow ? '12px 14px' : `12px 18px 12px ${sidebarGutter}px`, fontSize: 14, cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}
+      >
+        <span>{label}</span>
+        {count != null && count > 0 && <span style={{ color: '#FFD700', background: '#1e1a00', borderRadius: 999, padding: '1px 8px', fontSize: 11 }}>{count}</span>}
+      </button>
+    );
+  };
+  const dashboardListItem = (loan, filterId, accent, detail, tag) => {
+    const b = getBorrower(loan);
+    return (
+      <button key={loan.id} onClick={() => setLoansView(filterId)} style={{ width: '100%', display: 'grid', gridTemplateColumns: '1fr auto', gap: 12, background: 'transparent', border: 'none', borderTop: '0.5px solid #1f1f1f', padding: '13px 0', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}>
+        <span>
+          <span style={{ display: 'block', color: '#fff', fontSize: 13, lineHeight: 1.2 }}>{loan.borrower_name || loan.property_address || '-'}</span>
+          <span style={{ display: 'block', color: '#555', fontSize: 12, marginTop: 3 }}>{detail || formatCurrency(b.principal_balance || loan.total_due)}</span>
+        </span>
+        {tag && <span style={{ color: accent, background: `${accent}22`, borderRadius: 4, padding: '3px 8px', fontSize: 11, alignSelf: 'center' }}>{tag}</span>}
+      </button>
+    );
+  };
+  const placeholder = (title) => (
+    <div style={{ padding: contentPad }}>
+      <div style={{ fontSize: 24, fontWeight: 500, color: '#fff' }}>{title}</div>
+    </div>
+  );
+  const modals = (
+    <>
+      {showPaymentModal && liveData && (
+        <RecordPaymentModal borrower={liveData} lenderEmail={email} lenderName={lenderName} onClose={() => setShowPaymentModal(false)} onSuccess={(updates) => { setShowPaymentModal(false); setPaymentSuccess(true); setLiveData(prev => ({ ...prev, ...updates })); setTimeout(() => setPaymentSuccess(false), 5000); }} />
+      )}
+      {showDeleteModal && selected && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ background: '#141414', border: '0.5px solid #2a2a2a', borderRadius: 12, padding: 28, width: '100%', maxWidth: 400 }}>
+            <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#1a0000', border: '0.5px solid #3a0000', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+              <span style={{ color: '#f87171', fontSize: 18 }}>!</span>
+            </div>
+            <div style={{ fontSize: 15, fontWeight: 500, color: '#fff', marginBottom: 8 }}>Delete this loan?</div>
+            <div style={{ fontSize: 12, color: '#555', lineHeight: 1.6, marginBottom: 20 }}>
+              This will permanently delete <span style={{ color: '#ccc' }}>{selected.loan_id_internal}</span> and remove <span style={{ color: '#ccc' }}>{selected.borrower_name}</span>'s borrower portal access. This cannot be undone.
+            </div>
+            <div style={{ fontSize: 11, color: '#555', marginBottom: 6 }}>Type DELETE to confirm</div>
+            <input style={{ width: '100%', background: '#1a1a1a', border: '0.5px solid #2a2a2a', borderRadius: 6, padding: '9px 12px', fontSize: 13, color: '#fff', fontFamily: 'monospace', outline: 'none', boxSizing: 'border-box', marginBottom: 16 }} value={deleteConfirmText} onChange={e => setDeleteConfirmText(e.target.value)} placeholder="DELETE" />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={handleDeleteLoan} disabled={deleteConfirmText !== 'DELETE' || deleting} style={{ flex: 1, background: deleteConfirmText === 'DELETE' ? '#7f1d1d' : '#1a1a1a', color: deleteConfirmText === 'DELETE' ? '#f87171' : '#444', fontSize: 13, fontWeight: 500, padding: 10, borderRadius: 6, border: '0.5px solid #f87171', cursor: deleteConfirmText === 'DELETE' ? 'pointer' : 'not-allowed', transition: 'all 0.15s' }}>{deleting ? 'Deleting...' : 'Delete permanently'}</button>
+              <button onClick={() => { setShowDeleteModal(false); setDeleteConfirmText(''); }} style={{ flex: 1, background: 'transparent', color: '#fff', fontSize: 13, padding: 10, borderRadius: 6, border: '0.5px solid #2a2a2a', cursor: 'pointer' }}>Cancel</button>
+            </div>
+          </div>
         </div>
-        <button style={{ ...s.serviceBtn, padding: '12px 28px', fontSize: 14 }} onClick={onSubmitRequest} {...hovSolid}>+ Upload loan documents</button>
+      )}
+    </>
+  );
+
+  const dashboardView = (
+    <div style={{ padding: contentPad }}>
+      <div style={contentWrap}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 18, marginBottom: 28 }}>
+        <div>
+          <div style={{ fontSize: 24, fontWeight: 500, color: '#fff', marginBottom: 6 }}>Dashboard</div>
+          <div style={{ fontSize: 13, color: '#444' }}>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</div>
+        </div>
+        <button style={{ ...s.serviceBtn, marginLeft: 0, padding: '10px 18px' }} onClick={onSubmitRequest} {...hovSolid}>Service a loan</button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 14 }}>
-        <div style={sc}><div style={sl}>Principal Outstanding</div><div style={sv}>{formatCurrency(principalOutstanding)}</div><div style={ss}>{requests.length} serviced loans</div></div>
-        <div style={sc}><div style={sl}>Due This Month</div><div style={sv}>{formatCurrency(dueThisMonthTotal)}</div><div style={ss}>{dueThisMonth.length} scheduled payments</div></div>
-        <div style={sc}><div style={sl}>Activated Borrowers</div><div style={sv}>{activatedBorrowers} / {requests.length}</div><div style={ss}>{notActivated} pending activation</div></div>
-        <div style={sc}><div style={sl}>Avg. Note Rate</div><div style={sv}>{avgRate > 0 ? avgRate.toFixed(1).replace('.0', '') + '%' : '-'}</div><div style={ss}>Across active loans</div></div>
+      <div style={{ display: 'grid', gridTemplateColumns: dashboardStatCols, gap: 12, marginBottom: 28 }}>
+        <button style={sc} onClick={() => setLoansView('all')}><div style={sl}>Principal Outstanding</div><div style={sv}>{formatCurrency(principalOutstanding)}</div><div style={ss}>{activeLoans.length} active loans</div></button>
+        <button style={sc} onClick={() => setLoansView('received_month')}><div style={sl}>Received This Month</div><div style={{ ...sv, color: '#FFD700' }}>{formatCurrency(receivedThisMonthTotal)}</div><div style={ss}>{receivedThisMonth.length} loans with payments</div></button>
+        <button style={sc} onClick={() => setLoansView('attention')}><div style={sl}>Loans Needing Attention</div><div style={{ ...sv, color: loansNeedingAttentionCount > 0 ? '#FFD700' : '#666' }}>{loansNeedingAttentionCount}</div><div style={ss}>Review flagged loans</div></button>
+        <button style={sc} onClick={() => setLoansView('maturing_90')}><div style={sl}>Maturing Within 90 Days</div><div style={{ ...sv, color: '#FFD700' }}>{maturingSoon.length}</div><div style={ss}>{nextMaturity ? `${formatDate(nextMaturityBorrower.maturity_date || nextMaturity.maturity_date)} - ${formatCurrency(nextMaturityBorrower.principal_balance || nextMaturity.total_due)}` : '-'}</div></button>
       </div>
 
-      <div style={{ background: '#111', border: '0.5px solid #252525', borderRadius: 9, display: 'grid', gridTemplateColumns: '240px repeat(4, 1fr)', overflow: 'hidden', marginBottom: 22 }}>
-        <div style={{ background: '#111', color: '#fff', fontSize: 14, fontWeight: 600, textAlign: 'left', padding: '22px 24px', display: 'flex', alignItems: 'center' }}>Needs Attention</div>
+      <div style={{ fontSize: 12, color: '#FFD700', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 }}>Needs Attention</div>
+      <div style={{ display: 'grid', gridTemplateColumns: attentionCols, gap: 12, marginBottom: 28 }}>
         {[
-          { filter: 'not_activated', num: notActivated, label: 'Borrowers not activated' },
-          { filter: 'missing_payment', num: missingPayment, label: 'Missing payment amount' },
-          { filter: 'past_due', num: pastDue, label: 'Past due loans' },
-          { filter: 'default', num: inDefault, label: 'Loans currently in default' },
-        ].map(({ filter, num, label }) => (
-          <button
-            key={filter}
-            onClick={() => { setAttentionFilter(activeFilter === filter ? 'all' : filter); setPage(1); }}
-            onMouseEnter={() => setHoveredAttention(filter)}
-            onMouseLeave={() => setHoveredAttention(null)}
-            style={{ ...attentionItem(filter, num, label), borderTop: 'none', borderRight: 'none', borderBottom: 'none', textAlign: 'left', fontFamily: 'inherit' }}
-          >
-            <div style={{ fontSize: 24, fontWeight: 600, color: num > 0 ? '#FFD700' : '#666', marginBottom: 6 }}>{num}</div>
-            <div style={{ fontSize: 13, color: '#555' }}>{label}</div>
+          { id: 'maturity', label: 'Maturity', count: maturingSoon.length, loans: maturingSoon, accent: '#FFD700' },
+          { id: 'overdue', label: 'Overdue', count: pastDue, loans: requests.filter(isOverdueLoan), accent: '#f87171' },
+          { id: 'upcoming', label: 'Upcoming', count: upcomingPayments.length, loans: upcomingPayments, accent: '#4aa3ff' },
+        ].map(card => (
+          <div key={card.id} onMouseEnter={() => setHoveredAttention(card.id)} onMouseLeave={() => setHoveredAttention(null)} style={attentionCardStyle(card.id, card.accent)}>
+            <button onClick={() => setLoansView(card.id)} style={{ width: '100%', background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                <span style={{ color: card.accent, fontSize: 13, textTransform: 'uppercase' }}>{card.label}</span>
+                <span style={{ color: '#555', fontSize: 12 }}>{card.id === 'upcoming' ? `${card.count} payments this week` : `${card.count} loans`}</span>
+              </div>
+            </button>
+            <div style={{ marginTop: 14 }}>
+              {card.loans.slice(0, 3).map(loan => {
+                const b = getBorrower(loan);
+                const daysLabel = card.id === 'maturity'
+                  ? `${Math.max(0, daysFromToday(b.maturity_date || loan.maturity_date) || 0)} days`
+                  : card.id === 'overdue'
+                    ? `${daysPastDue(loan)} days`
+                    : b.next_payment_date ? formatDate(b.next_payment_date) : '';
+                const detail = card.id === 'overdue'
+                  ? `${formatCurrency(b.principal_balance || loan.total_due)} outstanding`
+                  : card.id === 'upcoming'
+                    ? `${formatCurrency(b.monthly_payment)} due`
+                    : formatCurrency(b.principal_balance || loan.total_due);
+                return dashboardListItem(loan, card.id, card.accent, detail, daysLabel);
+              })}
+              {card.loans.length === 0 && <div style={{ color: '#444', fontSize: 13, padding: '18px 0' }}>None</div>}
+              <button onClick={() => setLoansView(card.id)} style={{ background: 'transparent', border: 'none', color: card.accent, padding: '14px 0 0', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12 }}>View all {card.label.toLowerCase()} -&gt;</button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ fontSize: 12, color: '#FFD700', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 }}>Delinquency Buckets</div>
+      <div className="swiftdeed-table-scroll" style={{ border: '0.5px solid #252525', borderRadius: 9, overflowX: 'auto', overflowY: 'hidden', background: '#111' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: bucketCols, minWidth: isNarrowPortfolio ? 725 : 0 }}>
+        {[
+          { id: 'all', label: 'All Loans', count: activeLoans.length, total: principalOutstanding, accent: '#fff' },
+          { id: 'current', label: 'Current', count: currentLoans.length, total: currentLoans.reduce((sum, r) => sum + (parseFloat(getBorrower(r).principal_balance || r.total_due) || 0), 0), accent: '#34d399' },
+          { id: 'bucket_1_30', label: '1-30 Days Past Due', count: bucketOne.length, total: bucketOne.reduce((sum, r) => sum + (parseFloat(getBorrower(r).principal_balance || r.total_due) || 0), 0), accent: '#FFD700' },
+          { id: 'bucket_31_60', label: '31-60 Days Past Due', count: bucketTwo.length, total: bucketTwo.reduce((sum, r) => sum + (parseFloat(getBorrower(r).principal_balance || r.total_due) || 0), 0), accent: '#f87171' },
+          { id: 'bucket_60_plus', label: '60+ Days Past Due', count: bucketThree.length, total: bucketThree.reduce((sum, r) => sum + (parseFloat(getBorrower(r).principal_balance || r.total_due) || 0), 0), accent: '#777' },
+        ].map(bucket => (
+          <button key={bucket.id} onClick={() => setLoansView(bucket.id)} style={{ background: 'transparent', border: 'none', borderRight: '0.5px solid #222', padding: '18px 16px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center' }}>
+            <div style={{ ...sl, marginBottom: 8 }}>{bucket.label}</div>
+            <div style={{ fontSize: 27, color: bucket.accent, marginBottom: 6 }}>{bucket.count}</div>
+            <div style={{ color: '#444', fontSize: 12 }}>{bucket.total ? formatCurrency(bucket.total) : '-'}</div>
           </button>
         ))}
+        </div>
+      </div>
+      </div>
+    </div>
+  );
+
+  const loansView = (
+    <div style={{ padding: contentPad }}>
+      <div style={contentWrap}>
+      <style>{`
+        .swiftdeed-table-scroll { scrollbar-color: #FFD700 #0f0f0f; scrollbar-width: thin; }
+        .swiftdeed-table-scroll::-webkit-scrollbar { height: 14px; background: #0f0f0f; }
+        .swiftdeed-table-scroll::-webkit-scrollbar-track { background: #0f0f0f; border-top: 0.5px solid #FFD700; border-bottom: 0.5px solid #FFD700; }
+        .swiftdeed-table-scroll::-webkit-scrollbar-thumb { background: #111; border: 1px solid #FFD700; border-radius: 999px; }
+        .swiftdeed-table-scroll::-webkit-scrollbar-button { width: 14px; background: #0f0f0f; border: 0.5px solid #FFD700; }
+      `}</style>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 18, marginBottom: 18 }}>
+        <div>
+          <div style={{ fontSize: 24, fontWeight: 500, color: '#fff', marginBottom: 6 }}>Loans</div>
+          <div style={{ fontSize: 13, color: loanFilter.accent }}>{loanFilter.label}</div>
+        </div>
+        <button style={{ ...s.serviceBtn, marginLeft: 0, padding: '10px 18px' }} onClick={onSubmitRequest} {...hovSolid}>Service a loan</button>
       </div>
 
       <div style={{ display: 'flex', flexDirection: isNarrowPortfolio ? 'column' : 'row', gap: isNarrowPortfolio ? 14 : 18, alignItems: 'flex-start', width: '100%', maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
         <div className="swiftdeed-table-scroll" style={{ flex: '1 1 auto', width: '100%', minWidth: 0, maxWidth: '100%', border: '0.5px solid #252525', borderRadius: 9, overflowX: 'auto', overflowY: 'hidden', WebkitOverflowScrolling: 'touch', background: '#111', boxSizing: 'border-box', boxShadow: 'inset 0 0 0 0.5px #1f1f1f' }}>
           <div style={{ minWidth: tableInnerMinWidth }}>
-          <div style={{ display: 'flex', gap: 10, padding: 14, borderBottom: '0.5px solid #222', alignItems: 'stretch' }}>
-            <input style={{ ...s.searchInput, maxWidth: 'none', height: 52, boxSizing: 'border-box' }} placeholder={activeFilter === 'all' ? 'Search by loan ID, borrower, or property...' : `Showing: ${filterLabels[activeFilter]}`} value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
-            <select style={{ ...s.select, height: 52, width: 260, boxSizing: 'border-box' }} value={sort} onChange={e => { setSort(e.target.value); setPage(1); }}>
-              <option value="newest">Sort: Newest first</option>
-              <option value="oldest">Sort: Oldest first</option>
-              <option value="amount_desc">Sort: Balance high to low</option>
-              <option value="amount_asc">Sort: Balance low to high</option>
-            </select>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: TABLE_COLS, gap: isNarrowPortfolio ? 6 : 12, padding: isNarrowPortfolio ? '12px 12px' : '12px 20px', borderBottom: '0.5px solid #222', fontSize: 10, color: '#FFD700', textTransform: 'uppercase', letterSpacing: 0.8, background: '#111' }}>
-            <span>Loan</span><span>Borrower</span><span>Property</span><span>Balance</span><span>Next Due</span><span>Loan Status</span>
-          </div>
-
-          {loading && <div style={s.empty}>Loading your loans...</div>}
-          {!loading && sorted.length === 0 && <div style={s.empty}>{searchTerm ? 'No results found.' : activeFilter !== 'all' ? `No loans match ${filterLabels[activeFilter].toLowerCase()}. Click the active attention item again to show all loans.` : 'No loans yet. Upload your first loan documents above.'}</div>}
-
-          {!loading && paginated.map(r => {
-            const b = borrowerData[r.loan_id_internal] || {};
-            const isHov = hoveredId === r.id;
-            const isActive = previewLoan?.id === r.id;
-            const loanStatus = getLoanStatus(r);
-            return (
-              <div key={r.id}
-                style={{ display: 'grid', gridTemplateColumns: TABLE_COLS, gap: isNarrowPortfolio ? 6 : 12, minHeight: 70, padding: isNarrowPortfolio ? '0 12px' : '0 20px', borderBottom: '0.5px solid #1b1b1b', alignItems: 'center', fontSize: isNarrowPortfolio ? 11 : 13, cursor: 'pointer', background: isActive || isHov ? '#1e1a00' : '#111', boxShadow: isActive ? 'inset 4px 0 0 #FFD700' : 'none', transition: 'background 0.1s, box-shadow 0.1s' }}
-                onClick={() => setPreviewId(r.loan_id_internal)}
-                onDoubleClick={() => setSelected(r)}
-                onMouseEnter={() => setHoveredId(r.id)}
-                onMouseLeave={() => setHoveredId(null)}>
-                <span>
-                  <span style={{ color: '#777' }}>{r.loan_id_internal || r.loan_id || '-'}</span>
-                  <span style={{ display: 'block', color: '#555', fontSize: 12, marginTop: 4 }}>{formatDate(r.created_at)}</span>
-                  {isActive && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setSelected(r); }}
-                      style={{ display: 'block', background: 'transparent', border: 'none', padding: 0, color: '#FFD700', fontSize: 11, marginTop: 5, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
-                    >
-                      Open loan file -&gt;
-                    </button>
-                  )}
-                </span>
-                <span style={{ color: '#fff', fontWeight: 600 }}>{r.borrower_name || '-'}</span>
-                <span style={{ color: '#777', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: 8 }}>{r.property_address || '-'}</span>
-                <span style={{ color: '#f0f0f0', fontWeight: 500 }}>{formatCurrency(b.principal_balance || r.total_due)}</span>
-                <span style={{ color: '#e0d8c8' }}>{b.next_payment_date ? formatDate(b.next_payment_date) : '-'}</span>
-                <span><span style={loanStatusBadge(loanStatus)}>{loanStatus}</span></span>
-              </div>
-            );
-          })}
-
-          {!loading && sorted.length > PAGE_SIZE && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', borderTop: '0.5px solid #1a1a1a', background: '#111' }}>
-              <button
-                style={{ background: 'transparent', border: `0.5px solid ${page === 1 ? '#2a2a2a' : '#FFD700'}`, borderRadius: 5, color: page === 1 ? '#333' : '#fff', fontSize: 12, padding: '6px 14px', cursor: page === 1 ? 'not-allowed' : 'pointer', transition: 'all 0.15s' }}
-                disabled={page === 1}
-                onClick={() => setPage(p => p - 1)}
-                onMouseEnter={e => { if (page !== 1) { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.color = '#FFD700'; } }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = page === 1 ? '#333' : '#fff'; }}
-              >Prev</button>
-              <span style={{ fontSize: 12, color: '#555' }}>Page {safePage} of {totalPages} - {sorted.length} total</span>
-              <button
-                style={{ background: 'transparent', border: `0.5px solid ${page === totalPages ? '#2a2a2a' : '#FFD700'}`, borderRadius: 5, color: page === totalPages ? '#333' : '#fff', fontSize: 12, padding: '6px 14px', cursor: page === totalPages ? 'not-allowed' : 'pointer', transition: 'all 0.15s' }}
-                disabled={page === totalPages}
-                onClick={() => setPage(p => p + 1)}
-                onMouseEnter={e => { if (page !== totalPages) { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.color = '#FFD700'; } }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = page === totalPages ? '#333' : '#fff'; }}
-              >Next</button>
+            <div style={{ display: 'flex', gap: 10, padding: 14, borderBottom: '0.5px solid #222', alignItems: 'stretch' }}>
+              <input style={{ ...s.searchInput, maxWidth: 'none', height: 52, boxSizing: 'border-box' }} placeholder="Search by loan ID, borrower, or property..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
+              <select style={{ ...s.select, height: 52, width: 260, boxSizing: 'border-box' }} value={sort} onChange={e => { setSort(e.target.value); setPage(1); }}>
+                <option value="newest">Sort: Newest first</option>
+                <option value="oldest">Sort: Oldest first</option>
+                <option value="amount_desc">Sort: Balance high to low</option>
+                <option value="amount_asc">Sort: Balance low to high</option>
+              </select>
             </div>
-          )}
+
+            <div style={{ display: 'grid', gridTemplateColumns: TABLE_COLS, gap: isNarrowPortfolio ? 6 : 12, padding: isNarrowPortfolio ? '12px 12px' : '12px 20px', borderBottom: '0.5px solid #222', fontSize: 10, color: '#FFD700', textTransform: 'uppercase', letterSpacing: 0.8, background: '#111' }}>
+              <span>Loan</span><span>Borrower</span><span>Property</span><span>Balance</span><span>Next Due</span><span>Loan Status</span>
+            </div>
+
+            {loading && <div style={s.empty}>Loading your loans...</div>}
+            {!loading && sorted.length === 0 && <div style={s.empty}>{searchTerm ? 'No results found.' : `No loans match ${loanFilter.label.toLowerCase()}.`}</div>}
+
+            {!loading && paginated.map(r => {
+              const b = borrowerData[r.loan_id_internal] || {};
+              const isHov = hoveredId === r.id;
+              const isActive = previewLoan?.id === r.id;
+              const loanStatus = getLoanStatus(r);
+              return (
+                <div key={r.id}
+                  style={{ display: 'grid', gridTemplateColumns: TABLE_COLS, gap: isNarrowPortfolio ? 6 : 12, minHeight: 70, padding: isNarrowPortfolio ? '0 12px' : '0 20px', borderBottom: '0.5px solid #1b1b1b', alignItems: 'center', fontSize: isNarrowPortfolio ? 11 : 13, cursor: 'pointer', background: isActive || isHov ? '#171717' : '#111', boxShadow: isActive ? `inset 4px 0 0 ${loanFilter.accent}` : 'none', transition: 'background 0.1s, box-shadow 0.1s' }}
+                  onClick={() => setPreviewId(r.loan_id_internal)}
+                  onDoubleClick={() => setSelected(r)}
+                  onMouseEnter={() => setHoveredId(r.id)}
+                  onMouseLeave={() => setHoveredId(null)}>
+                  <span>
+                    <span style={{ color: '#777' }}>{r.loan_id_internal || r.loan_id || '-'}</span>
+                    <span style={{ display: 'block', color: '#555', fontSize: 12, marginTop: 4 }}>{formatDate(r.created_at)}</span>
+                    {isActive && (
+                      <button onClick={(e) => { e.stopPropagation(); setSelected(r); }} style={{ display: 'block', background: 'transparent', border: 'none', padding: 0, color: loanFilter.accent, fontSize: 11, marginTop: 5, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+                        Open loan file -&gt;
+                      </button>
+                    )}
+                  </span>
+                  <span style={{ color: '#fff', fontWeight: 600 }}>{r.borrower_name || '-'}</span>
+                  <span style={{ color: '#777', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: 8 }}>{r.property_address || '-'}</span>
+                  <span style={{ color: '#f0f0f0', fontWeight: 500 }}>{formatCurrency(b.principal_balance || r.total_due)}</span>
+                  <span style={{ color: '#e0d8c8' }}>{b.next_payment_date ? formatDate(b.next_payment_date) : '-'}</span>
+                  <span><span style={loanStatusBadge(loanStatus)}>{loanStatus}</span></span>
+                </div>
+              );
+            })}
+
+            {!loading && sorted.length > PAGE_SIZE && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', borderTop: '0.5px solid #1a1a1a', background: '#111' }}>
+                <button style={{ background: 'transparent', border: `0.5px solid ${page === 1 ? '#2a2a2a' : '#FFD700'}`, borderRadius: 5, color: page === 1 ? '#333' : '#fff', fontSize: 12, padding: '6px 14px', cursor: page === 1 ? 'not-allowed' : 'pointer', transition: 'all 0.15s' }} disabled={page === 1} onClick={() => setPage(p => p - 1)}>Prev</button>
+                <span style={{ fontSize: 12, color: '#555' }}>Page {safePage} of {totalPages} - {sorted.length} total</span>
+                <button style={{ background: 'transparent', border: `0.5px solid ${page === totalPages ? '#2a2a2a' : '#FFD700'}`, borderRadius: 5, color: page === totalPages ? '#333' : '#fff', fontSize: 12, padding: '6px 14px', cursor: page === totalPages ? 'not-allowed' : 'pointer', transition: 'all 0.15s' }} disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>Next</button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -849,12 +944,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
                     <div style={{ fontSize: 18, lineHeight: 1.3, fontWeight: 600, color: '#fff' }}>{previewLoan.property_address || '-'}</div>
                     <div style={{ color: '#565656', marginTop: 7, fontSize: 13 }}>{previewLoan.loan_id_internal || previewLoan.loan_id} - {previewLoan.borrower_name || '-'}</div>
                   </div>
-                  <button
-                    onClick={() => setSelected(previewLoan)}
-                    style={{ background: '#FFD700', border: 'none', color: '#0f0f0f', cursor: 'pointer', fontSize: 12, fontWeight: 700, padding: '8px 12px', borderRadius: 6, whiteSpace: 'nowrap', fontFamily: 'inherit', transition: 'all 0.15s' }}
-                    onMouseEnter={e => { e.currentTarget.style.background = '#FFE45C'; e.currentTarget.style.boxShadow = '0 0 16px rgba(255, 215, 0, 0.45)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = '#FFD700'; e.currentTarget.style.boxShadow = 'none'; }}
-                  >Open loan file</button>
+                  <button onClick={() => setSelected(previewLoan)} style={{ background: '#FFD700', border: 'none', color: '#0f0f0f', cursor: 'pointer', fontSize: 12, fontWeight: 700, padding: '8px 12px', borderRadius: 6, whiteSpace: 'nowrap', fontFamily: 'inherit', transition: 'all 0.15s' }}>Open loan file</button>
                 </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderBottom: '0.5px solid #222' }}>
@@ -893,6 +983,58 @@ export default function Portal({ onSubmitRequest, resetToken }) {
           )}
         </aside>
       </div>
+      </div>
+    </div>
+  );
+
+  const detailView = selected ? (
+    <LoanDetail
+      selected={selected}
+      liveData={liveData}
+      liveLoading={liveLoading}
+      loanPayments={loanPayments}
+      docUrls={docUrls}
+      docSuccess={docSuccess}
+      uploadingDocs={uploadingDocs}
+      docFileRef={docFileRef}
+      lenderEmail={email}
+      lenderName={lenderName}
+      borrowerEmails={borrowerEmails}
+      paymentSuccess={paymentSuccess}
+      onBack={() => { setSelected(null); setLiveData(null); setLoanPayments([]); setDocUrls([]); setPaymentSuccess(false); setActiveView('loans'); }}
+      onRecordPayment={() => { setPaymentSuccess(false); setShowPaymentModal(true); }}
+      onRemoveDoc={handleRemoveDoc}
+      onUploadDocs={handleUploadDocs}
+      onDeleteLoan={() => { setShowDeleteModal(true); setDeleteConfirmText(''); }}
+    />
+  ) : null;
+
+  const mainView = selected
+    ? detailView
+    : activeView === 'dashboard' ? dashboardView
+    : activeView === 'loans' ? loansView
+    : activeView === 'documents' ? placeholder('Documents')
+    : activeView === 'invoices' ? placeholder('Invoices')
+    : placeholder('Settings');
+
+  return (
+    <div style={{ display: shellNarrow ? 'block' : 'grid', gridTemplateColumns: shellNarrow ? '1fr' : '238px minmax(0, 1fr)', minHeight: 'calc(100vh - 65px)', background: '#0f0f0f' }}>
+      <aside style={{ background: '#0b0b0b', borderRight: shellNarrow ? 'none' : '0.5px solid #222', borderBottom: shellNarrow ? '0.5px solid #222' : 'none', minHeight: shellNarrow ? 'auto' : 'calc(100vh - 65px)', display: 'flex', flexDirection: shellNarrow ? 'row' : 'column', overflowX: shellNarrow ? 'auto' : 'visible' }}>
+        <div style={{ padding: shellNarrow ? '14px 16px' : `24px 18px 34px ${sidebarGutter}px`, minWidth: shellNarrow ? 160 : 'auto', borderBottom: shellNarrow ? 'none' : '0.5px solid #1d1d1d' }}>
+          <div style={{ color: '#FFD700', fontSize: 12, fontWeight: 500, letterSpacing: 0.6, textTransform: 'uppercase' }}>Lender Portal</div>
+        </div>
+        <nav style={{ padding: shellNarrow ? 8 : '18px 0', flex: 1, minWidth: shellNarrow ? 560 : 'auto' }}>
+          {navItem('dashboard', 'Dashboard', loansNeedingAttentionCount)}
+          {navItem('loans', 'Loans')}
+          {navItem('documents', 'Documents')}
+          {navItem('invoices', 'Invoices')}
+        </nav>
+        {!shellNarrow && <div style={{ padding: '16px 10px', borderTop: '0.5px solid #1d1d1d' }}>{navItem('settings', 'Settings')}</div>}
+      </aside>
+      <main style={{ minWidth: 0 }}>
+        {mainView}
+      </main>
+      {modals}
     </div>
   );
 }
