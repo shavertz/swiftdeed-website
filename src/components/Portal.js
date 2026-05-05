@@ -393,6 +393,8 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const [loanFilter, setLoanFilter] = useState({ id: 'all', label: 'All active loans', accent: '#FFD700' });
   const [hoveredAttention, setHoveredAttention] = useState(null);
   const [hoveredId, setHoveredId] = useState(null);
+  const [hoveredNav, setHoveredNav] = useState(null);
+  const [hoveredCard, setHoveredCard] = useState(null);
   const [liveData, setLiveData] = useState(null);
   const [liveLoading, setLiveLoading] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -754,6 +756,13 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const nextMaturityBorrower = nextMaturity ? getBorrower(nextMaturity) : {};
 
   const sc = { background: '#111', border: '0.5px solid #252525', borderRadius: 9, padding: '22px 24px', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit' };
+  const statCard = (id) => ({
+    ...sc,
+    background: hoveredCard === id ? '#151515' : '#111',
+    borderColor: hoveredCard === id ? '#3a3a3a' : '#252525',
+    boxShadow: hoveredCard === id ? 'inset 3px 0 0 #FFD700' : 'none',
+    transition: 'background 0.12s, border-color 0.12s, box-shadow 0.12s',
+  });
   const sl = { fontSize: 10, color: '#555', textTransform: 'uppercase', letterSpacing: 0.9, marginBottom: 10 };
   const sv = { fontSize: 27, fontWeight: 600, color: '#fff', marginBottom: 6 };
   const ss = { fontSize: 12, color: '#444' };
@@ -777,14 +786,17 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const bucketCols = isNarrowPortfolio ? 'repeat(5, minmax(145px, 1fr))' : 'repeat(5, minmax(0, 1fr))';
   const navItem = (id, label, count) => {
     const active = activeView === id && !selected;
+    const hovered = hoveredNav === id;
     return (
       <button
         key={id}
         onClick={() => { setActiveView(id); setSelected(null); if (id === 'loans') setLoansView('all'); }}
-        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: active ? '#151515' : 'transparent', border: 'none', borderLeft: active ? '3px solid #FFD700' : '3px solid transparent', color: active ? '#fff' : '#666', padding: shellNarrow ? '12px 14px' : `12px 18px 12px ${sidebarGutter}px`, fontSize: 14, cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}
+        onMouseEnter={() => setHoveredNav(id)}
+        onMouseLeave={() => setHoveredNav(null)}
+        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: active || hovered ? '#151515' : 'transparent', border: 'none', borderLeft: active ? '3px solid #FFD700' : '3px solid transparent', color: active || hovered ? '#fff' : '#666', padding: shellNarrow ? '12px 14px' : `12px 18px 12px ${sidebarGutter}px`, fontSize: 14, cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', transition: 'background 0.12s, color 0.12s' }}
       >
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
-          <NavIcon type={id} active={active} />
+          <NavIcon type={id} active={active || hovered} />
           <span>{label}</span>
         </span>
         {count != null && count > 0 && <span style={{ color: '#FFD700', background: '#1e1a00', borderRadius: 999, padding: '1px 8px', fontSize: 11 }}>{count}</span>}
@@ -847,10 +859,10 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: dashboardStatCols, gap: 12, marginBottom: 28 }}>
-        <button style={sc} onClick={() => setLoansView('all')}><div style={sl}>Principal Outstanding</div><div style={sv}>{formatCurrency(principalOutstanding)}</div><div style={ss}>{activeLoans.length} active loans</div></button>
-        <button style={sc} onClick={() => setLoansView('received_month')}><div style={sl}>Received This Month</div><div style={{ ...sv, color: '#FFD700' }}>{formatCurrency(receivedThisMonthTotal)}</div><div style={ss}>{receivedThisMonth.length} loans with payments</div></button>
-        <button style={sc} onClick={() => setLoansView('attention')}><div style={sl}>Loans Needing Attention</div><div style={{ ...sv, color: loansNeedingAttentionCount > 0 ? '#FFD700' : '#666' }}>{loansNeedingAttentionCount}</div><div style={ss}>Review flagged loans</div></button>
-        <button style={sc} onClick={() => setLoansView('maturing_90')}><div style={sl}>Maturing Within 90 Days</div><div style={{ ...sv, color: '#FFD700' }}>{maturingSoon.length}</div><div style={ss}>{nextMaturity ? `${formatDate(nextMaturityBorrower.maturity_date || nextMaturity.maturity_date)} - ${formatCurrency(nextMaturityBorrower.principal_balance || nextMaturity.total_due)}` : '-'}</div></button>
+        <button style={statCard('principal')} onClick={() => setLoansView('all')} onMouseEnter={() => setHoveredCard('principal')} onMouseLeave={() => setHoveredCard(null)}><div style={sl}>Principal Outstanding</div><div style={sv}>{formatCurrency(principalOutstanding)}</div><div style={ss}>{activeLoans.length} active loans</div></button>
+        <button style={statCard('received')} onClick={() => setLoansView('received_month')} onMouseEnter={() => setHoveredCard('received')} onMouseLeave={() => setHoveredCard(null)}><div style={sl}>Received This Month</div><div style={{ ...sv, color: '#FFD700' }}>{formatCurrency(receivedThisMonthTotal)}</div><div style={ss}>{receivedThisMonth.length} loans with payments</div></button>
+        <button style={statCard('attention')} onClick={() => setLoansView('attention')} onMouseEnter={() => setHoveredCard('attention')} onMouseLeave={() => setHoveredCard(null)}><div style={sl}>Loans Needing Attention</div><div style={{ ...sv, color: loansNeedingAttentionCount > 0 ? '#FFD700' : '#666' }}>{loansNeedingAttentionCount}</div><div style={ss}>Review flagged loans</div></button>
+        <button style={statCard('maturing')} onClick={() => setLoansView('maturing_90')} onMouseEnter={() => setHoveredCard('maturing')} onMouseLeave={() => setHoveredCard(null)}><div style={sl}>Maturing Within 90 Days</div><div style={{ ...sv, color: '#FFD700' }}>{maturingSoon.length}</div><div style={ss}>{nextMaturity ? `${formatDate(nextMaturityBorrower.maturity_date || nextMaturity.maturity_date)} - ${formatCurrency(nextMaturityBorrower.principal_balance || nextMaturity.total_due)}` : '-'}</div></button>
       </div>
 
       <div style={{ fontSize: 12, color: '#FFD700', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 }}>Needs Attention</div>
@@ -860,7 +872,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
           { id: 'overdue', label: 'Overdue', count: pastDue, loans: requests.filter(isOverdueLoan), accent: '#f87171' },
           { id: 'upcoming', label: 'Upcoming', count: upcomingPayments.length, loans: upcomingPayments, accent: '#4aa3ff' },
         ].map(card => (
-          <div key={card.id} onMouseEnter={() => setHoveredAttention(card.id)} onMouseLeave={() => setHoveredAttention(null)} style={attentionCardStyle(card.id, card.accent)}>
+          <div key={card.id} onClick={() => setLoansView(card.id)} onMouseEnter={() => setHoveredAttention(card.id)} onMouseLeave={() => setHoveredAttention(null)} style={attentionCardStyle(card.id, card.accent)}>
             <button onClick={() => setLoansView(card.id)} style={{ width: '100%', background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
                 <span style={{ color: card.accent, fontSize: 13, textTransform: 'uppercase' }}>{card.label}</span>
@@ -899,7 +911,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
           { id: 'bucket_31_60', label: '31-60 Days Past Due', count: bucketTwo.length, total: bucketTwo.reduce((sum, r) => sum + (parseFloat(getBorrower(r).principal_balance || r.total_due) || 0), 0), accent: '#f87171' },
           { id: 'bucket_60_plus', label: '60+ Days Past Due', count: bucketThree.length, total: bucketThree.reduce((sum, r) => sum + (parseFloat(getBorrower(r).principal_balance || r.total_due) || 0), 0), accent: '#777' },
         ].map(bucket => (
-          <button key={bucket.id} onClick={() => setLoansView(bucket.id)} style={{ background: 'transparent', border: 'none', borderRight: '0.5px solid #222', padding: '18px 16px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center' }}>
+          <button key={bucket.id} onClick={() => setLoansView(bucket.id)} onMouseEnter={() => setHoveredCard(bucket.id)} onMouseLeave={() => setHoveredCard(null)} style={{ background: hoveredCard === bucket.id ? '#151515' : 'transparent', border: 'none', borderRight: '0.5px solid #222', padding: '18px 16px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center', transition: 'background 0.12s' }}>
             <div style={{ ...sl, marginBottom: 8 }}>{bucket.label}</div>
             <div style={{ fontSize: 27, color: bucket.accent, marginBottom: 6 }}>{bucket.count}</div>
             <div style={{ color: '#444', fontSize: 12 }}>{bucket.total ? formatCurrency(bucket.total) : '-'}</div>
