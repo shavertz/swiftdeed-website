@@ -911,7 +911,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
           { id: 'bucket_31_60', label: '31-60 Days Past Due', count: bucketTwo.length, total: bucketTwo.reduce((sum, r) => sum + (parseFloat(getBorrower(r).principal_balance || r.total_due) || 0), 0), accent: '#f87171' },
           { id: 'bucket_60_plus', label: '60+ Days Past Due', count: bucketThree.length, total: bucketThree.reduce((sum, r) => sum + (parseFloat(getBorrower(r).principal_balance || r.total_due) || 0), 0), accent: '#777' },
         ].map(bucket => (
-          <button key={bucket.id} onClick={() => setLoansView(bucket.id)} onMouseEnter={() => setHoveredCard(bucket.id)} onMouseLeave={() => setHoveredCard(null)} style={{ background: hoveredCard === bucket.id ? '#151515' : 'transparent', border: 'none', borderRight: '0.5px solid #222', padding: '18px 16px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center', transition: 'background 0.12s' }}>
+          <button key={bucket.id} onClick={() => setLoansView(bucket.id)} onMouseEnter={() => setHoveredCard(bucket.id)} onMouseLeave={() => setHoveredCard(null)} style={{ background: hoveredCard === bucket.id ? '#151515' : 'transparent', border: 'none', borderRight: '0.5px solid #222', boxShadow: hoveredCard === bucket.id ? 'inset 3px 0 0 #FFD700' : 'none', padding: '18px 16px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center', transition: 'background 0.12s, box-shadow 0.12s' }}>
             <div style={{ ...sl, marginBottom: 8 }}>{bucket.label}</div>
             <div style={{ fontSize: 27, color: bucket.accent, marginBottom: 6 }}>{bucket.count}</div>
             <div style={{ color: '#444', fontSize: 12 }}>{bucket.total ? formatCurrency(bucket.total) : '-'}</div>
