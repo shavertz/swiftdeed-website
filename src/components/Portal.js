@@ -331,6 +331,14 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
 
   return (
     <div style={{ ...s.page, maxWidth: 1320, padding: '34px 46px' }}>
+      <style>{`
+        .swiftdeed-statement-button {
+          box-shadow: none !important;
+        }
+        .swiftdeed-statement-button:hover {
+          box-shadow: 0 12px 28px rgba(255, 215, 0, 0.28), inset 0 -2px 0 rgba(0, 0, 0, 0.18) !important;
+        }
+      `}</style>
       <button onClick={onBack} style={{ background: 'none', border: 'none', color: '#FFD700', fontSize: 13, cursor: 'pointer', marginBottom: 18, padding: 0, display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'inherit' }}
         onMouseEnter={e => e.currentTarget.style.opacity = '0.7'} onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
         Back to Loans
@@ -343,9 +351,7 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           {selected.payoff_statement_url
-            ? <a href={selected.payoff_statement_url} target="_blank" rel="noreferrer" style={{ ...secondaryBtn, background: '#FFD700', color: '#0f0f0f', border: 'none', fontWeight: 700, boxShadow: 'none' }}
-                onMouseEnter={e => e.currentTarget.style.boxShadow = '0 12px 28px rgba(255, 215, 0, 0.28), inset 0 -2px 0 rgba(0, 0, 0, 0.18)'}
-                onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}>Download statement</a>
+            ? <a className="swiftdeed-statement-button" href={selected.payoff_statement_url} target="_blank" rel="noreferrer" style={{ ...secondaryBtn, background: '#FFD700', color: '#0f0f0f', border: 'none', fontWeight: 700 }}>Download statement</a>
             : <button disabled style={{ ...secondaryBtn, color: '#333', borderColor: '#222', cursor: 'not-allowed' }}>No statement</button>
           }
         </div>
