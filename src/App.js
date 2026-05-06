@@ -10,6 +10,7 @@ import TermsPage from './components/TermsPage';
 import PrivacyPage from './components/PrivacyPage';
 import ProfilePage from './components/ProfilePage';
 import BorrowerProfilePage from './components/BorrowerProfilePage';
+import './App.css';
 
 const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY;
@@ -257,19 +258,20 @@ export default function App() {
   };
 
   const nav = (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 60px', borderBottom: '0.5px solid #2a2a2a', background: '#0f0f0f', position: 'sticky', top: 0, zIndex: 100 }}>
+    <div className="site-nav" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 60px', borderBottom: '0.5px solid #2a2a2a', background: '#0f0f0f', position: 'sticky', top: 0, zIndex: 100 }}>
       <div onClick={() => setPage('home')} style={{ cursor: 'pointer' }}>
-        <span style={{ fontSize: 20, fontWeight: 500, letterSpacing: -0.3 }}>
+        <span className="site-logo" style={{ fontSize: 20, fontWeight: 500, letterSpacing: -0.3 }}>
           <span style={{ color: '#fff' }}>Swift</span><span style={{ color: '#FFD700' }}>Deed</span>
         </span>
       </div>
 
       {page === 'home' && (
-        <div style={{ display: 'flex', gap: 32, alignItems: 'center', position: 'absolute', left: '50%', transform: 'translateX(-50%)' }}>
+        <div className="site-nav-links" style={{ display: 'flex', gap: 32, alignItems: 'center', position: 'absolute', left: '50%', transform: 'translateX(-50%)' }}>
           {['how', 'pricing', 'why'].map((id, i) => (
             <span
               key={id}
               onClick={() => scrollTo(id)}
+              className="site-nav-link"
               style={{ fontSize: 16, color: '#FFD700', cursor: 'pointer', transition: 'opacity 0.15s' }}
               onMouseEnter={e => e.currentTarget.style.opacity = '0.7'}
               onMouseLeave={e => e.currentTarget.style.opacity = '1'}
@@ -280,7 +282,7 @@ export default function App() {
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+      <div className="site-nav-actions" style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
         {isSignedIn ? (
           <>
             {portalType === 'borrower' ? (

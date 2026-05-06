@@ -1,38 +1,256 @@
-.App {
-  text-align: center;
+.site-nav {
+  box-sizing: border-box;
+  gap: 28px;
+  width: 100%;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+.site-logo,
+.site-nav-link {
+  white-space: nowrap;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
+.site-nav-actions {
+  flex-shrink: 0;
+}
+
+.home-section,
+.home-band,
+.home-hero {
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.home-band > div {
+  max-width: 1180px !important;
+}
+
+.home-section {
+  max-width: 1300px !important;
+}
+
+.home-hero-title,
+.home-section [style],
+.home-band [style] {
+  letter-spacing: 0 !important;
+}
+
+.home-pricing-cards {
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)) !important;
+}
+
+.home-portal-grid {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)) !important;
+}
+
+.home-card-body,
+.home-pricing-cards > div,
+.home-addon-card {
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.home-loan-bar,
+.home-chart-pay-row,
+.home-pay-grid,
+.home-lender-table-head,
+.home-lender-table-row {
+  min-width: 0;
+}
+
+.home-loan-bar {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+.home-chart-pay-row {
+  grid-template-columns: minmax(120px, 150px) minmax(0, 1fr) !important;
+}
+
+.home-pay-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+.home-lender-table-head,
+.home-lender-table-row {
+  grid-template-columns: minmax(58px, 0.8fr) minmax(74px, 1fr) minmax(74px, 0.9fr) !important;
+}
+
+.home-lender-table-row span,
+.home-lender-table-head span,
+.home-pay-grid div,
+.home-loan-bar div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 980px) {
+  .site-nav {
+    padding: 14px 36px !important;
+    gap: 22px;
+  }
+
+  .site-nav-links {
+    position: static !important;
+    transform: none !important;
+    gap: 24px !important;
+    margin-left: auto;
+  }
+
+  .home-hero {
+    padding: 56px 40px 72px !important;
+  }
+
+  .home-hero-title {
+    font-size: 48px !important;
+  }
+
+  .home-band,
+  .home-section {
+    padding-left: 40px !important;
+    padding-right: 40px !important;
+  }
+
+  .home-portal-grid {
+    gap: 24px !important;
+  }
+
+  .home-chart-pay-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  .home-borrower-chart {
+    display: grid;
+    grid-template-columns: 128px minmax(0, 1fr);
+    gap: 16px;
+    align-items: center;
   }
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
-}
-
-.App-link {
-  color: #61dafb;
-}
-
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
+@media (max-width: 760px) {
+  .site-nav {
+    align-items: center !important;
+    display: grid !important;
+    grid-template-columns: 1fr auto;
+    padding: 14px 28px !important;
+    row-gap: 14px;
   }
-  to {
-    transform: rotate(360deg);
+
+  .site-nav-links {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-content: center;
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .site-nav-actions {
+    justify-content: flex-end;
+  }
+
+  .home-hero {
+    padding: 56px 32px 64px !important;
+  }
+
+  .home-hero-title {
+    font-size: 44px !important;
+    line-height: 1.15 !important;
+  }
+
+  .home-hero-copy {
+    font-size: 17px !important;
+  }
+
+  .home-stats-row {
+    flex-wrap: wrap;
+    gap: 28px !important;
+  }
+
+  .home-band,
+  .home-section {
+    padding: 64px 32px !important;
+  }
+
+  .home-steps-grid,
+  .home-why-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .home-steps-grid > div {
+    border-right: none !important;
+    border-bottom: 0.5px solid #1e1e1e;
+  }
+
+  .home-steps-grid > div:last-child {
+    border-bottom: none;
+  }
+
+  .home-pricing-cards {
+    grid-template-columns: 1fr !important;
+  }
+
+  .home-portal-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .home-addon-card {
+    grid-template-columns: 1fr !important;
+  }
+
+  .home-addon-card > div:last-child,
+  .home-addon-card [style*="text-align: right"] {
+    text-align: left !important;
+  }
+}
+
+@media (max-width: 560px) {
+  .site-nav {
+    grid-template-columns: 1fr;
+    padding: 12px 20px !important;
+  }
+
+  .site-nav-actions,
+  .site-nav-links {
+    justify-content: flex-start;
+  }
+
+  .site-nav-links {
+    gap: 18px !important;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+
+  .site-nav-actions button {
+    padding: 8px 14px !important;
+  }
+
+  .home-hero {
+    padding: 48px 22px 56px !important;
+  }
+
+  .home-hero-title {
+    font-size: 38px !important;
+  }
+
+  .home-hero-copy {
+    font-size: 16px !important;
+  }
+
+  .home-band,
+  .home-section {
+    padding: 56px 22px !important;
+  }
+
+  .home-loan-bar,
+  .home-pay-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .home-borrower-chart {
+    grid-template-columns: 1fr;
+  }
+
+  .home-lender-summary {
+    align-items: flex-start !important;
+    flex-direction: column;
+    gap: 10px;
   }
 }
