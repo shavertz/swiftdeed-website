@@ -250,7 +250,7 @@ function PaymentForm({ turnaround, form, files, onSubmitting, onProcessingStep, 
           onClick={() => handleSubmit(false)}
           disabled={submitting || !stripe}
           style={{ background: submitting ? '#a08800' : '#FFD700', color: '#0f0f0f', fontSize: 14, fontWeight: 500, padding: '13px 32px', borderRadius: 7, border: 'none', cursor: submitting ? 'not-allowed' : 'pointer' }}>
-          {submitting ? 'Processing…' : `Pay $${turnaround === 'rush' ? '50' : '40'} & Submit →`}
+          {submitting ? 'Processing…' : `Pay $${turnaround === 'rush' ? '50' : '40'} & Submit ->`}
         </button>
       </div>
     </div>

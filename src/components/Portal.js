@@ -1040,6 +1040,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     overflow: 'hidden',
   });
   const shellNarrow = windowWidth < 900;
+  const shellTiny = windowWidth < 560;
   const contentPad = shellNarrow ? '28px 22px' : isNarrowPortfolio ? '34px 42px' : '34px 46px';
   const contentWrap = { width: '100%', maxWidth: 1160, boxSizing: 'border-box' };
   const onboardingBanner = {
@@ -1097,7 +1098,27 @@ export default function Portal({ onSubmitRequest, resetToken }) {
         onClick={() => { setActiveView(id); setSelected(null); if (id === 'loans') setLoansView('all'); }}
         onMouseEnter={() => setHoveredNav(id)}
         onMouseLeave={() => setHoveredNav(null)}
-        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: active || hovered ? '#151515' : 'transparent', border: 'none', borderLeft: active ? '3px solid #FFD700' : '3px solid transparent', color: active || hovered ? '#fff' : '#666', padding: shellNarrow ? '12px 14px' : `12px 18px 12px ${sidebarGutter}px`, fontSize: 14, cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', transition: 'background 0.12s, color 0.12s' }}
+        style={{
+          width: shellNarrow ? (shellTiny ? '100%' : 'auto') : '100%',
+          minWidth: shellNarrow && !shellTiny ? 128 : 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 12,
+          background: active || hovered ? '#151515' : 'transparent',
+          border: 'none',
+          borderLeft: !shellNarrow && active ? '3px solid #FFD700' : '3px solid transparent',
+          borderBottom: shellNarrow && active ? '2px solid #FFD700' : '2px solid transparent',
+          borderRadius: shellNarrow ? 8 : 0,
+          color: active || hovered ? '#fff' : '#666',
+          padding: shellNarrow ? '10px 12px' : `12px 18px 12px ${sidebarGutter}px`,
+          fontSize: 14,
+          cursor: 'pointer',
+          textAlign: 'left',
+          fontFamily: 'inherit',
+          transition: 'background 0.12s, color 0.12s',
+          flexShrink: 0,
+        }}
       >
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
           <NavIcon type={id} active={active || hovered} />
@@ -1412,11 +1433,36 @@ export default function Portal({ onSubmitRequest, resetToken }) {
 
   return (
     <div style={{ display: shellNarrow ? 'block' : 'grid', gridTemplateColumns: shellNarrow ? '1fr' : '238px minmax(0, 1fr)', minHeight: 'calc(100vh - 65px)', background: '#0f0f0f' }}>
-      <aside style={{ background: '#0b0b0b', borderRight: shellNarrow ? 'none' : '0.5px solid #222', borderBottom: shellNarrow ? '0.5px solid #222' : 'none', minHeight: shellNarrow ? 'auto' : 'calc(100vh - 65px)', display: 'flex', flexDirection: shellNarrow ? 'row' : 'column', overflowX: shellNarrow ? 'auto' : 'visible' }}>
-        <div style={{ padding: shellNarrow ? '14px 16px' : `24px 18px 34px ${sidebarGutter}px`, minWidth: shellNarrow ? 160 : 'auto', borderBottom: shellNarrow ? 'none' : '0.5px solid #1d1d1d' }}>
+      <style>{`
+        .swiftdeed-portal-nav-scroll {
+          scrollbar-color: #FFD700 #0f0f0f;
+          scrollbar-width: thin;
+        }
+        .swiftdeed-portal-nav-scroll::-webkit-scrollbar {
+          height: 12px;
+          background: #0f0f0f;
+        }
+        .swiftdeed-portal-nav-scroll::-webkit-scrollbar-track {
+          background: #0f0f0f;
+          border-top: 0.5px solid #FFD700;
+          border-bottom: 0.5px solid #FFD700;
+        }
+        .swiftdeed-portal-nav-scroll::-webkit-scrollbar-thumb {
+          background: #111;
+          border: 1px solid #FFD700;
+          border-radius: 999px;
+        }
+        .swiftdeed-portal-nav-scroll::-webkit-scrollbar-button {
+          width: 12px;
+          background: #0f0f0f;
+          border: 0.5px solid #FFD700;
+        }
+      `}</style>
+      <aside style={{ background: '#0b0b0b', borderRight: shellNarrow ? 'none' : '0.5px solid #222', borderBottom: shellNarrow ? '0.5px solid #222' : 'none', minHeight: shellNarrow ? 'auto' : 'calc(100vh - 65px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ padding: shellNarrow ? '14px 22px 8px' : `24px 18px 34px ${sidebarGutter}px`, borderBottom: shellNarrow ? 'none' : '0.5px solid #1d1d1d' }}>
           <div style={{ color: '#FFD700', fontSize: 12, fontWeight: 500, letterSpacing: 0.6, textTransform: 'uppercase' }}>Lender Portal</div>
         </div>
-        <nav style={{ padding: shellNarrow ? 8 : '18px 0', flex: 1, minWidth: shellNarrow ? 560 : 'auto' }}>
+        <nav className={shellNarrow && !shellTiny ? 'swiftdeed-portal-nav-scroll' : undefined} style={{ padding: shellNarrow ? '0 22px 14px' : '18px 0', flex: shellNarrow ? 'none' : 1, display: shellNarrow ? (shellTiny ? 'grid' : 'flex') : 'block', gridTemplateColumns: shellTiny ? 'repeat(2, minmax(0, 1fr))' : undefined, gap: shellNarrow ? 8 : 0, overflowX: shellNarrow && !shellTiny ? 'auto' : 'visible', WebkitOverflowScrolling: 'touch' }}>
           {navItem('dashboard', 'Dashboard', loansNeedingAttentionCount)}
           {navItem('loans', 'Loans')}
           {navItem('documents', 'Documents')}

@@ -239,7 +239,7 @@ export default function LenderOnboarding({ onComplete }) {
           onClick={handleSubmit}
           disabled={!isValid || loading}
         >
-          {loading ? 'Setting up your account...' : 'Get started →'}
+          {loading ? 'Setting up your account...' : 'Get started ->'}
         </button>
       </div>
     </div>

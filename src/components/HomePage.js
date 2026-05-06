@@ -235,7 +235,7 @@ export default function HomePage({ onLenderLogin, onBorrowerLogin, onTerms, onPr
               <div style={s.divider}></div>
               <div className="home-lender-summary" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ fontSize: 12, color: '#555' }}>3 active loans · 1 statement ready</div>
-                <div style={{ fontSize: 12, color: '#4a90b8', cursor: 'pointer' }}>View all →</div>
+                <div style={{ fontSize: 12, color: '#4a90b8', cursor: 'pointer' }}>View all -&gt;</div>
               </div>
             </div>
           </div>

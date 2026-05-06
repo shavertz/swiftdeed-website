@@ -227,7 +227,7 @@ export default function BorrowerOnboarding({ borrowerId, onComplete }) {
           onClick={handleSubmit}
           disabled={!isValid || loading}
         >
-          {loading ? 'Verifying...' : 'Access my loan portal →'}
+          {loading ? 'Verifying...' : 'Access my loan portal ->'}
         </button>
       </div>
     </div>
