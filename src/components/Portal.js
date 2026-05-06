@@ -330,13 +330,123 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
   );
 
   return (
-    <div style={{ ...s.page, maxWidth: 1320, padding: '34px 46px' }}>
+    <div className="loan-detail-page" style={{ ...s.page }}>
       <style>{`
+        .loan-detail-page {
+          max-width: 1320px;
+          padding: 34px 46px;
+        }
+        .loan-detail-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 24px;
+          margin-bottom: 22px;
+        }
+        .loan-detail-title {
+          font-size: 26px;
+          line-height: 1.2;
+          font-weight: 500;
+          color: #fff;
+          margin-bottom: 6px;
+          overflow-wrap: anywhere;
+        }
+        .loan-detail-actions {
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+          justify-content: flex-end;
+          flex-shrink: 0;
+        }
+        .loan-detail-metrics {
+          display: grid;
+          grid-template-columns: repeat(5, minmax(0, 1fr));
+          gap: 1px;
+          background: #252525;
+          border: 0.5px solid #252525;
+          border-radius: 9px;
+          overflow: hidden;
+          margin-bottom: 18px;
+        }
+        .loan-detail-overview-grid {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 14px;
+          margin-top: 14px;
+        }
+        .loan-detail-lower-grid {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) minmax(320px, 0.8fr);
+          gap: 14px;
+          margin-top: 14px;
+          margin-bottom: 24px;
+        }
+        .loan-detail-actions-grid {
+          display: grid;
+          grid-template-columns: minmax(220px, 0.8fr) minmax(220px, 1fr) minmax(220px, 0.8fr);
+          gap: 12px;
+          align-items: start;
+        }
+        .loan-detail-progress-row {
+          display: flex;
+          justify-content: space-between;
+          gap: 16px;
+          margin-bottom: 9px;
+        }
         .swiftdeed-statement-button {
           box-shadow: none !important;
+          white-space: nowrap;
         }
         .swiftdeed-statement-button:hover {
           box-shadow: 0 12px 28px rgba(255, 215, 0, 0.28), inset 0 -2px 0 rgba(0, 0, 0, 0.18) !important;
+        }
+        @media (max-width: 1150px) {
+          .loan-detail-page {
+            padding: 28px 32px;
+          }
+          .loan-detail-header {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+            gap: 14px;
+          }
+          .loan-detail-actions {
+            justify-content: flex-start;
+          }
+          .loan-detail-metrics {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+          .loan-detail-overview-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+          .loan-detail-overview-grid > *:last-child {
+            grid-column: 1 / -1;
+          }
+          .loan-detail-lower-grid,
+          .loan-detail-actions-grid {
+            grid-template-columns: minmax(0, 1fr);
+          }
+        }
+        @media (max-width: 760px) {
+          .loan-detail-page {
+            padding: 22px 18px;
+          }
+          .loan-detail-title {
+            font-size: 22px;
+          }
+          .loan-detail-metrics,
+          .loan-detail-overview-grid {
+            grid-template-columns: minmax(0, 1fr);
+          }
+          .loan-detail-overview-grid > *:last-child {
+            grid-column: auto;
+          }
+          .loan-detail-progress-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+          }
+          .swiftdeed-statement-button {
+            width: 100%;
+          }
         }
       `}</style>
       <button onClick={onBack} style={{ background: 'none', border: 'none', color: '#FFD700', fontSize: 13, cursor: 'pointer', marginBottom: 18, padding: 0, display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'inherit' }}
@@ -344,12 +454,12 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
         Back to Loans
       </button>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 24, marginBottom: 22 }}>
+      <div className="loan-detail-header">
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 26, lineHeight: 1.2, fontWeight: 500, color: '#fff', marginBottom: 6 }}>{selected.property_address || '-'}</div>
+          <div className="loan-detail-title">{selected.property_address || '-'}</div>
           <div style={{ fontSize: 13, color: '#555' }}>{selected.loan_id_internal || selected.loan_id || '-'} - {selected.borrower_name || '-'}</div>
         </div>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+        <div className="loan-detail-actions">
           {selected.payoff_statement_url
             ? <a className="swiftdeed-statement-button" href={selected.payoff_statement_url} target="_blank" rel="noreferrer" style={{ ...secondaryBtn, background: '#FFD700', color: '#0f0f0f', border: 'none', fontWeight: 700 }}>Download statement</a>
             : <button disabled style={{ ...secondaryBtn, color: '#333', borderColor: '#222', cursor: 'not-allowed' }}>No statement</button>
@@ -357,7 +467,7 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 1, background: '#252525', border: '0.5px solid #252525', borderRadius: 9, overflow: 'hidden', marginBottom: 18 }}>
+      <div className="loan-detail-metrics">
         {[
           { label: 'Current balance', value: formatCurrency(balance), gold: true, hint: originalAmount ? `of ${formatCurrency(originalAmount)} original` : '' },
           { label: 'Rate', value: rate ? rate + '%' : '-' },
@@ -388,7 +498,7 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
         <>
         <div style={card}>
           <div style={cardLabel}>Principal progress</div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 9 }}>
+          <div className="loan-detail-progress-row">
             <span style={{ fontSize: 12, color: '#555' }}>{formatCurrency(principalPaid)} paid down</span>
             <span style={{ fontSize: 12, color: '#555' }}>{formatCurrency(balance)} remaining - {principalProgress.toFixed(0)}% complete</span>
           </div>
@@ -397,7 +507,7 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 14, marginTop: 14 }}>
+        <div className="loan-detail-overview-grid">
           <div style={card}>
             <div style={cardLabel}>Borrower</div>
             {[
@@ -440,14 +550,14 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(280px, 0.8fr)', gap: 14, marginTop: 14, marginBottom: 24 }}>
+        <div className="loan-detail-lower-grid">
           {paymentsPanel}
           {documentsPanel}
         </div>
 
         <div style={card}>
           <div style={cardLabel}>More actions</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 12, alignItems: 'start' }}>
+          <div className="loan-detail-actions-grid">
             <button onClick={onRecordPayment} style={secondaryBtn}
               onMouseEnter={e => { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.color = '#FFD700'; }}
               onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#fff'; }}>
