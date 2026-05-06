@@ -160,6 +160,9 @@ function RecordPaymentModal({ borrower, lenderEmail, lenderName, onClose, onSucc
 //  Loan Detail Page 
 function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, docSuccess, uploadingDocs, docFileRef, lenderEmail, lenderName, borrowerEmails, onBack, onRecordPayment, onRemoveDoc, onUploadDocs, onDeleteLoan, paymentSuccess }) {
   const [showAllPayments, setShowAllPayments] = useState(false);
+  const [activeTab, setActiveTab] = useState('overview');
+  const [loanNotes, setLoanNotes] = useState(liveData?.notes || selected?.notes || '');
+  const [notesSaved, setNotesSaved] = useState(false);
 
   const live = liveData || {};
   const balance = live.principal_balance != null ? live.principal_balance : selected?.total_due;
@@ -172,10 +175,15 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
   const paymentStatus = live.payment_status || selected?.payment_status;
   const nextPaymentDate = live.next_payment_date || selected?.next_payment_date;
   const totalInterestPaid = live.total_interest_paid || 0;
+  const lateCharges = live.late_charges || selected?.late_charges || 0;
+  const otherCharges = live.other_charges || selected?.other_charges || 0;
   const totalPaid = (principalPaid + parseFloat(totalInterestPaid || 0));
   const panelBorrowerEmail = borrowerEmails[selected.loan_id_internal] || live.borrower_email || selected?.borrower_email || '-';
   const loanType = live.loan_type || selected?.loan_type || '-';
   const monthlyPayment = live.monthly_payment || selected?.monthly_payment;
+  const principalProgress = originalAmount && parseFloat(originalAmount) > 0 ? Math.max(0, Math.min(100, (principalPaid / parseFloat(originalAmount)) * 100)) : 0;
+  const displayPayments = activeTab === 'payments' || showAllPayments ? loanPayments : loanPayments.slice(0, 5);
+  const isDocumentsTab = activeTab === 'documents';
 
   const statusColor = () => {
     if (!paymentStatus) return '#555';
@@ -185,194 +193,306 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
     return '#ccc';
   };
 
-  const card = { background: '#141414', border: '0.5px solid #222', borderRadius: 10, padding: '20px 22px' };
-  const cardLabel = { fontSize: 10, color: '#FFD700', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 14 };
-  const fieldRow = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '0.5px solid #1a1a1a' };
+  const card = { background: '#111', border: '0.5px solid #252525', borderRadius: 9, padding: '20px 22px', boxSizing: 'border-box' };
+  const cardLabel = { fontSize: 11, color: '#FFD700', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 16 };
+  const fieldRow = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, padding: '8px 0', borderBottom: '0.5px solid #1a1a1a' };
   const fieldKey = { fontSize: 12, color: '#555' };
-  const fieldVal = { fontSize: 12, color: '#ccc', textAlign: 'right' };
+  const fieldVal = { fontSize: 12, color: '#ccc', textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
+  const documentType = name => {
+    const lower = name.toLowerCase();
+    if (lower.includes('promissory') || lower.includes('note')) return 'Promissory note';
+    if (lower.includes('agreement')) return 'Loan agreement';
+    if (lower.includes('payoff')) return 'Payoff';
+    if (lower.includes('tax')) return 'Tax';
+    return 'Other';
+  };
+  const documentName = url => decodeURIComponent(url.split('/').pop()).replace(/^\d+_/, '').replace(/[-_]/g, ' ').replace('.pdf', '').trim();
+  const handleDocDrop = e => {
+    e.preventDefault();
+    if (!uploadingDocs && e.dataTransfer.files?.length) onUploadDocs(e.dataTransfer.files);
+  };
+  const tabButton = (id, label) => ({
+    background: activeTab === id ? '#171717' : 'transparent',
+    color: activeTab === id ? '#FFD700' : '#666',
+    border: 'none',
+    borderBottom: activeTab === id ? '2px solid #FFD700' : '2px solid transparent',
+    padding: '12px 14px',
+    fontSize: 13,
+    cursor: 'pointer',
+    fontFamily: 'inherit',
+  });
+  const secondaryBtn = { background: 'transparent', color: '#fff', fontSize: 13, fontWeight: 500, padding: '10px 16px', borderRadius: 7, border: '0.5px solid #FFD700', cursor: 'pointer', transition: 'all 0.15s', textDecoration: 'none', textAlign: 'center', fontFamily: 'inherit' };
 
-  const previewPayments = loanPayments.slice(0, 3);
-  const displayPayments = showAllPayments ? loanPayments : previewPayments;
+  const paymentsPanel = (
+    <div style={card}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 14, marginBottom: 10 }}>
+        <div style={cardLabel}>Payment history</div>
+        {loanPayments.length > 5 && (
+          <button onClick={() => setShowAllPayments(p => !p)} style={{ background: 'transparent', border: 'none', color: '#FFD700', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
+            {showAllPayments ? 'Show less' : `View all ${loanPayments.length}`}
+          </button>
+        )}
+      </div>
+      {loanPayments.length === 0 ? (
+        <div style={{ color: '#444', fontSize: 13, padding: '8px 0 2px' }}>No payments recorded yet.</div>
+      ) : (
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ borderBottom: '0.5px solid #222' }}>
+                {['Date', 'Amount', 'Interest', 'Principal', 'Balance'].map(h => (
+                  <th key={h} style={{ fontSize: 10, color: '#555', textTransform: 'uppercase', letterSpacing: 0.8, padding: '8px 10px', textAlign: h === 'Date' ? 'left' : 'right', fontWeight: 500 }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {displayPayments.map((p, i) => (
+                <tr key={p.id || i} style={{ borderBottom: '0.5px solid #1a1a1a' }}>
+                  <td style={{ padding: '10px', fontSize: 12, color: '#777' }}>{p.payment_date ? new Date(p.payment_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '-'}</td>
+                  <td style={{ padding: '10px', fontSize: 12, color: '#fff', fontWeight: 500, textAlign: 'right' }}>{formatCurrency(p.amount)}</td>
+                  <td style={{ padding: '10px', fontSize: 12, color: '#777', textAlign: 'right' }}>{formatCurrency(p.interest_portion)}</td>
+                  <td style={{ padding: '10px', fontSize: 12, color: '#777', textAlign: 'right' }}>{formatCurrency(p.principal_portion)}</td>
+                  <td style={{ padding: '10px', fontSize: 12, color: '#ccc', textAlign: 'right' }}>{formatCurrency(p.principal_balance_after)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+
+  const documentsPanel = (
+    <div style={card}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 14, marginBottom: 10 }}>
+        <div style={cardLabel}>Loan documents</div>
+        {docSuccess && <span style={{ fontSize: 11, color: '#34d399' }}>{docSuccess}</span>}
+      </div>
+      <input ref={docFileRef} type="file" accept="application/pdf" multiple style={{ display: 'none' }} onChange={e => onUploadDocs(e.target.files)} />
+      <div
+        onDragOver={e => e.preventDefault()}
+        onDrop={handleDocDrop}
+        onClick={() => docFileRef.current.click()}
+        style={{
+          border: '0.5px dashed #3a3300',
+          background: '#0d0d0d',
+          borderRadius: 9,
+          minHeight: isDocumentsTab ? 145 : 94,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 7,
+          color: uploadingDocs ? '#555' : '#ccc',
+          cursor: uploadingDocs ? 'not-allowed' : 'pointer',
+          marginBottom: 16,
+          transition: 'all 0.15s',
+        }}
+        onMouseEnter={e => { if (!uploadingDocs) { e.currentTarget.style.borderColor = '#FFD700'; e.currentTarget.style.background = '#121000'; } }}
+        onMouseLeave={e => { e.currentTarget.style.borderColor = '#3a3300'; e.currentTarget.style.background = '#0d0d0d'; }}
+      >
+        {isDocumentsTab && <div style={{ width: 38, height: 38, borderRadius: 8, border: '0.5px solid #252525', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFD700', fontSize: 22 }}>^</div>}
+        <div style={{ fontSize: isDocumentsTab ? 15 : 13, color: '#ddd' }}>{isDocumentsTab ? 'Drag and drop loan documents here' : 'Drag and drop additional loan documents'}</div>
+        <div style={{ fontSize: 12, color: '#555' }}>{uploadingDocs ? 'Uploading...' : 'Browse to upload - PDF only'}</div>
+      </div>
+      {docUrls.length === 0 ? (
+        <div style={{ color: '#444', fontSize: 13, padding: '8px 0 12px' }}>No documents on file.</div>
+      ) : (
+        <div style={{ borderTop: '0.5px solid #1a1a1a' }}>
+          {isDocumentsTab && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 1.7fr) minmax(120px, 0.8fr) minmax(110px, 0.7fr) 150px', gap: 12, padding: '10px 0', borderBottom: '0.5px solid #1a1a1a' }}>
+              {['Document', 'Type', 'Uploaded', 'Action'].map(h => <div key={h} style={{ fontSize: 10, color: '#555', textTransform: 'uppercase', letterSpacing: 0.8 }}>{h}</div>)}
+            </div>
+          )}
+          {docUrls.slice(0, isDocumentsTab ? docUrls.length : 4).map((url, i) => {
+        const name = documentName(url);
+        return (
+          <div key={i} style={isDocumentsTab ? { display: 'grid', gridTemplateColumns: 'minmax(220px, 1.7fr) minmax(120px, 0.8fr) minmax(110px, 0.7fr) 150px', gap: 12, alignItems: 'center', padding: '12px 0', borderBottom: '0.5px solid #1a1a1a' } : { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: '0.5px solid #1a1a1a' }}>
+            <a href={url} target="_blank" rel="noreferrer" style={{ fontSize: 13, color: '#ccc', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: 'none', flex: 1 }}
+              onMouseEnter={e => e.currentTarget.style.color = '#FFD700'} onMouseLeave={e => e.currentTarget.style.color = '#ccc'}>
+              {name || `Document ${i + 1}`}
+            </a>
+            {isDocumentsTab && <div style={{ fontSize: 12, color: '#777' }}>{documentType(name)}</div>}
+            {isDocumentsTab && <div style={{ fontSize: 12, color: '#555' }}>-</div>}
+            <div style={{ display: 'flex', gap: 12, justifyContent: isDocumentsTab ? 'flex-end' : 'flex-start', alignItems: 'center' }}>
+              {isDocumentsTab && <a href={url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: '#FFD700', textDecoration: 'none' }}>View</a>}
+            <button onClick={() => onRemoveDoc(url)} style={{ background: 'transparent', border: 'none', color: '#555', cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }}
+              onMouseEnter={e => e.currentTarget.style.color = '#f87171'} onMouseLeave={e => e.currentTarget.style.color = '#555'}>
+              Remove
+            </button>
+            </div>
+          </div>
+        );
+          })}
+        </div>
+      )}
+    </div>
+  );
 
   return (
-    <div style={s.page}>
-      {/* Back */}
-      <button onClick={onBack} style={{ background: 'none', border: 'none', color: '#E9A800', fontSize: 13, cursor: 'pointer', marginBottom: 20, padding: 0, display: 'flex', alignItems: 'center', gap: 6 }}
+    <div style={{ ...s.page, maxWidth: 1320, padding: '34px 46px' }}>
+      <button onClick={onBack} style={{ background: 'none', border: 'none', color: '#FFD700', fontSize: 13, cursor: 'pointer', marginBottom: 18, padding: 0, display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'inherit' }}
         onMouseEnter={e => e.currentTarget.style.opacity = '0.7'} onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
-         My Loans
+        Back to Loans
       </button>
 
-      {/* Header */}
-      <div style={{ marginBottom: 20 }}>
-        <div style={{ fontSize: 22, fontWeight: 400, color: '#fff', marginBottom: 4 }}>{selected.property_address || '-'}</div>
-        <div style={{ fontSize: 13, color: '#555' }}>{selected.loan_id_internal} - {selected.borrower_name}</div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 24, marginBottom: 22 }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 26, lineHeight: 1.2, fontWeight: 500, color: '#fff', marginBottom: 6 }}>{selected.property_address || '-'}</div>
+          <div style={{ fontSize: 13, color: '#555' }}>{selected.loan_id_internal || selected.loan_id || '-'} - {selected.borrower_name || '-'}</div>
+        </div>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          {selected.payoff_statement_url
+            ? <a href={selected.payoff_statement_url} target="_blank" rel="noreferrer" style={{ ...secondaryBtn, background: '#FFD700', color: '#0f0f0f', border: 'none', fontWeight: 700, boxShadow: '0 10px 22px rgba(255, 215, 0, 0.14)' }}>Download statement</a>
+            : <button disabled style={{ ...secondaryBtn, color: '#333', borderColor: '#222', cursor: 'not-allowed' }}>No statement</button>
+          }
+        </div>
       </div>
 
-      {/* Stat bar */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 1, background: '#222', borderRadius: 10, overflow: 'hidden', marginBottom: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 1, background: '#252525', border: '0.5px solid #252525', borderRadius: 9, overflow: 'hidden', marginBottom: 18 }}>
         {[
-          { label: 'Balance', value: formatCurrency(balance), gold: true },
+          { label: 'Current balance', value: formatCurrency(balance), gold: true, hint: originalAmount ? `of ${formatCurrency(originalAmount)} original` : '' },
           { label: 'Rate', value: rate ? rate + '%' : '-' },
           { label: 'Per diem', value: perDiem ? formatCurrency(perDiem) : '-' },
-          { label: 'Next payment', value: formatDate(nextPaymentDate) },
-          { label: 'Loan status', value: paymentStatus || '-', custom: statusColor() },
-        ].map(({ label, value, gold, custom }) => (
-          <div key={label} style={{ background: '#141414', padding: '14px 20px' }}>
-            <div style={{ fontSize: 10, color: '#555', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 5 }}>{label}</div>
-            <div style={{ fontSize: 16, fontWeight: 500, color: gold ? '#E9A800' : custom || '#e0d8c8' }}>{value}</div>
+          { label: 'Next payment', value: formatDate(nextPaymentDate), hint: monthlyPayment ? `${formatCurrency(monthlyPayment)} due` : '' },
+          { label: 'Status', value: paymentStatus || '-', custom: statusColor() },
+        ].map(({ label, value, gold, custom, hint }) => (
+          <div key={label} style={{ background: '#111', padding: '16px 18px' }}>
+            <div style={{ fontSize: 10, color: '#555', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 7 }}>{label}</div>
+            <div style={{ fontSize: 20, fontWeight: 600, color: gold ? '#FFD700' : custom || '#e0d8c8' }}>{value}</div>
+            {hint && <div style={{ fontSize: 11, color: '#444', marginTop: 5 }}>{hint}</div>}
           </div>
         ))}
       </div>
 
-      {/* 3 cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginBottom: 16 }}>
-        {/* Borrower */}
-        <div style={card}>
-          <div style={cardLabel}>Borrower</div>
-          {[
-            { k: 'Legal name', v: live.legal_name || selected.borrower_name || '-' },
-            { k: 'Guarantor', v: live.guarantor_name || selected.guarantor_name || '-' },
-            { k: 'Email', v: panelBorrowerEmail, link: true },
-            { k: 'Property', v: selected.property_address || '-' },
-            { k: 'Portal access', v: live.portal_access || 'Active', green: true },
-          ].map(({ k, v, link, green }) => (
-            <div key={k} style={{ ...fieldRow }}>
-              <span style={fieldKey}>{k}</span>
-              <span style={{ ...fieldVal, color: link ? '#5b9bd5' : green ? '#34d399' : '#ccc', maxWidth: '60%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Loan details */}
-        <div style={card}>
-          <div style={cardLabel}>Loan details {liveLoading && <span style={{ fontSize: 10, color: '#444', fontStyle: 'italic', textTransform: 'none', letterSpacing: 0 }}>updating...</span>}</div>
-          {[
-            { k: 'Origination date', v: formatDate(loanStart) },
-            { k: 'Maturity date', v: formatDate(maturity) },
-            { k: 'Loan type', v: loanType.replace('_', ' ') },
-            { k: 'Original amount', v: formatCurrency(originalAmount) },
-            { k: 'Monthly payment', v: formatCurrency(monthlyPayment) },
-          ].map(({ k, v }) => (
-            <div key={k} style={fieldRow}><span style={fieldKey}>{k}</span><span style={fieldVal}>{v}</span></div>
-          ))}
-        </div>
-
-        {/* Loan breakdown */}
-        <div style={card}>
-          <div style={cardLabel}>Loan breakdown</div>
-          {[
-            { k: 'Original amount', v: formatCurrency(originalAmount) },
-            { k: 'Principal remaining', v: formatCurrency(balance), gold: true },
-            { k: 'Principal paid', v: formatCurrency(principalPaid) },
-            { k: 'Interest paid to date', v: formatCurrency(totalInterestPaid) },
-            { k: 'Total paid', v: formatCurrency(totalPaid) },
-          ].map(({ k, v, gold }) => (
-            <div key={k} style={fieldRow}><span style={fieldKey}>{k}</span><span style={{ ...fieldVal, color: gold ? '#E9A800' : '#ccc' }}>{v}</span></div>
-          ))}
-        </div>
+      <div style={{ marginBottom: 20, borderBottom: '0.5px solid #222', display: 'flex', gap: 4, overflowX: 'auto' }}>
+        {[
+          ['overview', 'Overview'],
+          ['payments', 'Payments'],
+          ['documents', 'Documents'],
+          ['notes', 'Notes'],
+        ].map(([id, label]) => (
+          <button key={id} onClick={() => setActiveTab(id)} style={tabButton(id, label)}>{label}</button>
+        ))}
       </div>
 
-      {/* Bottom 3-card row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginBottom: 40 }}>
-
-        {/* Payment history */}
-        <div style={{ background: '#141414', border: '0.5px solid #222', borderRadius: 10, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 22px', borderBottom: '0.5px solid #1e1e1e' }}>
-            <span style={{ fontSize: 10, color: '#FFD700', textTransform: 'uppercase', letterSpacing: 1 }}>Payment history</span>
-            {loanPayments.length > 3 && (
-              <button onClick={() => setShowAllPayments(p => !p)} style={{ background: 'none', border: 'none', color: '#E9A800', fontSize: 12, cursor: 'pointer', padding: 0 }}>
-                {showAllPayments ? 'Show less' : `View all ${loanPayments.length}`}
-              </button>
-            )}
+      {activeTab === 'overview' && (
+        <>
+        <div style={card}>
+          <div style={cardLabel}>Principal progress</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 9 }}>
+            <span style={{ fontSize: 12, color: '#555' }}>{formatCurrency(principalPaid)} paid down</span>
+            <span style={{ fontSize: 12, color: '#555' }}>{formatCurrency(balance)} remaining - {principalProgress.toFixed(0)}% complete</span>
           </div>
-          {loanPayments.length === 0 ? (
-            <div style={{ padding: '24px 22px', color: '#333', fontSize: 13 }}>No payments recorded yet.</div>
-          ) : (
-            <div style={{ overflowY: 'auto', maxHeight: 280, scrollbarWidth: 'thin', scrollbarColor: '#E9A800 #1a1a1a' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ borderBottom: '0.5px solid #1e1e1e' }}>
-                    {['Date', 'Amount', 'Balance'].map(h => (
-                      <th key={h} style={{ fontSize: 10, color: '#555', textTransform: 'uppercase', letterSpacing: 0.7, padding: '8px 16px', textAlign: h === 'Date' ? 'left' : 'right', fontWeight: 400 }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {displayPayments.map((p, i) => (
-                    <tr key={p.id || i} style={{ borderBottom: '0.5px solid #1a1a1a' }}>
-                      <td style={{ padding: '10px 16px', fontSize: 12, color: '#555' }}>{p.payment_date ? new Date(p.payment_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}</td>
-                      <td style={{ padding: '10px 16px', fontSize: 12, color: '#fff', fontWeight: 500, textAlign: 'right' }}>{formatCurrency(p.amount)}</td>
-                      <td style={{ padding: '10px 16px', fontSize: 12, color: '#888', textAlign: 'right' }}>{formatCurrency(p.principal_balance_after)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        {/* Documents */}
-        <div style={{ background: '#141414', border: '0.5px solid #222', borderRadius: 10, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ padding: '16px 22px', borderBottom: '0.5px solid #1e1e1e', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 10, color: '#FFD700', textTransform: 'uppercase', letterSpacing: 1 }}>Documents</span>
-            {docSuccess && <span style={{ fontSize: 11, color: '#34d399' }}> {docSuccess}</span>}
-          </div>
-          <div style={{ flex: 1, overflowY: 'auto', maxHeight: 260, scrollbarWidth: 'thin', scrollbarColor: '#E9A800 #1a1a1a' }}>
-            {docUrls.length === 0 ? (
-              <div style={{ padding: '20px 22px', color: '#333', fontSize: 13 }}>No documents on file.</div>
-            ) : docUrls.map((url, i) => {
-              const name = decodeURIComponent(url.split('/').pop()).replace(/^\d+_/, '').replace(/[-_]/g, ' ').replace('.pdf', '').trim();
-              return (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 22px', borderBottom: '0.5px solid #1a1a1a' }}>
-                  <a href={url} target="_blank" rel="noreferrer" style={{ fontSize: 13, color: '#ccc', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: 'none', flex: 1 }}
-                    onMouseEnter={e => e.currentTarget.style.color = '#FFD700'} onMouseLeave={e => e.currentTarget.style.color = '#ccc'}>
-                    {name || `Document ${i + 1}`}
-                  </a>
-                  <span style={{ fontSize: 14, color: '#555', cursor: 'pointer', marginLeft: 12, flexShrink: 0 }} onClick={() => onRemoveDoc(url)}
-                    onMouseEnter={e => e.currentTarget.style.color = '#f87171'} onMouseLeave={e => e.currentTarget.style.color = '#555'}></span>
-                </div>
-              );
-            })}
-          </div>
-          <div style={{ padding: '14px 22px', borderTop: '0.5px solid #1e1e1e' }}>
-            <input ref={docFileRef} type="file" accept="application/pdf" multiple style={{ display: 'none' }} onChange={e => onUploadDocs(e.target.files)} />
-            <button onClick={() => docFileRef.current.click()} disabled={uploadingDocs} style={{ width: '100%', background: 'transparent', color: uploadingDocs ? '#555' : '#fff', fontSize: 13, padding: '8px', borderRadius: 6, border: '0.5px solid #FFD700', cursor: uploadingDocs ? 'not-allowed' : 'pointer', transition: 'all 0.15s', opacity: uploadingDocs ? 0.6 : 1 }}
-              onMouseEnter={e => { if (!uploadingDocs) { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.color = '#FFD700'; } }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#fff'; }}>
-              {uploadingDocs ? 'Uploading...' : '+ Upload documents'}
-            </button>
+          <div style={{ height: 5, background: '#1e1e1e', borderRadius: 999, overflow: 'hidden' }}>
+            <div style={{ width: `${principalProgress}%`, height: '100%', background: '#FFD700', borderRadius: 999 }} />
           </div>
         </div>
 
-        {/* Actions */}
-        <div style={{ background: '#141414', border: '0.5px solid #222', borderRadius: 10, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ padding: '16px 22px', borderBottom: '0.5px solid #1e1e1e', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 10, color: '#FFD700', textTransform: 'uppercase', letterSpacing: 1 }}>Actions</span>
-            {paymentSuccess && <span style={{ fontSize: 11, color: '#34d399' }}> Payment recorded</span>}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 14, marginTop: 14 }}>
+          <div style={card}>
+            <div style={cardLabel}>Borrower</div>
+            {[
+              { k: 'Legal name', v: live.legal_name || selected.borrower_name || '-' },
+              { k: 'Guarantor', v: live.guarantor_name || selected.guarantor_name || '-' },
+              { k: 'Email', v: panelBorrowerEmail, link: true },
+              { k: 'Property', v: selected.property_address || '-' },
+              { k: 'Portal access', v: live.portal_access || 'Active', green: true },
+            ].map(({ k, v, link, green }) => (
+              <div key={k} style={fieldRow}><span style={fieldKey}>{k}</span><span style={{ ...fieldVal, color: link ? '#5b9bd5' : green ? '#34d399' : '#ccc' }}>{v}</span></div>
+            ))}
           </div>
-          <div style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 10, flex: 1 }}>
-            <button onClick={onRecordPayment} style={{ width: '100%', background: 'transparent', color: '#fff', fontSize: 13, fontWeight: 500, padding: '10px', borderRadius: 6, border: '0.5px solid #FFD700', cursor: 'pointer', transition: 'all 0.15s' }}
+
+          <div style={card}>
+            <div style={cardLabel}>Loan details {liveLoading && <span style={{ fontSize: 10, color: '#444', fontStyle: 'italic', textTransform: 'none', letterSpacing: 0 }}>updating...</span>}</div>
+            {[
+              { k: 'Origination date', v: formatDate(loanStart) },
+              { k: 'Maturity date', v: formatDate(maturity) },
+              { k: 'Next payment date', v: formatDate(nextPaymentDate) },
+              { k: 'Loan type', v: loanType.replace('_', ' ') },
+              { k: 'Monthly payment', v: formatCurrency(monthlyPayment) },
+            ].map(({ k, v }) => (
+              <div key={k} style={fieldRow}><span style={fieldKey}>{k}</span><span style={fieldVal}>{v}</span></div>
+            ))}
+          </div>
+
+          <div style={card}>
+            <div style={cardLabel}>Loan breakdown</div>
+            {[
+              { k: 'Original amount', v: formatCurrency(originalAmount) },
+              { k: 'Principal remaining', v: formatCurrency(balance), gold: true },
+              { k: 'Principal paid', v: formatCurrency(principalPaid) },
+              { k: 'Interest paid to date', v: formatCurrency(totalInterestPaid) },
+              { k: 'Late charges', v: formatCurrency(lateCharges) },
+              { k: 'Other charges', v: formatCurrency(otherCharges) },
+              { k: 'Total paid', v: formatCurrency(totalPaid) },
+            ].map(({ k, v, gold }) => (
+              <div key={k} style={fieldRow}><span style={fieldKey}>{k}</span><span style={{ ...fieldVal, color: gold ? '#FFD700' : '#ccc' }}>{v}</span></div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(280px, 0.8fr)', gap: 14, marginTop: 14, marginBottom: 24 }}>
+          {paymentsPanel}
+          {documentsPanel}
+        </div>
+
+        <div style={card}>
+          <div style={cardLabel}>More actions</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 12, alignItems: 'start' }}>
+            <button onClick={onRecordPayment} style={secondaryBtn}
               onMouseEnter={e => { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.color = '#FFD700'; }}
               onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#fff'; }}>
-              Record payment
+              Record manual payment
             </button>
-            {selected.payoff_statement_url
-              ? <a href={selected.payoff_statement_url} target="_blank" rel="noreferrer" style={{ width: '100%', background: 'transparent', color: '#fff', fontSize: 13, fontWeight: 500, padding: '10px', borderRadius: 6, border: '0.5px solid #FFD700', cursor: 'pointer', textDecoration: 'none', textAlign: 'center', display: 'block', boxSizing: 'border-box', transition: 'all 0.15s' }}
-                  onMouseEnter={e => { e.currentTarget.style.background = '#1e1a00'; e.currentTarget.style.color = '#FFD700'; }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#fff'; }}>Download statement</a>
-              : <button disabled style={{ width: '100%', background: 'transparent', color: '#333', fontSize: 13, padding: '10px', borderRadius: 6, border: '0.5px solid #222', cursor: 'not-allowed' }}>No statement available</button>
-            }
-            <div style={{ flex: 1 }} />
-            <div style={{ borderTop: '0.5px solid #1e1e1e', paddingTop: 16 }}>
-              <p style={{ fontSize: 11, color: '#444', lineHeight: 1.5, marginBottom: 12 }}>Only use if you uploaded entirely wrong documents and need to start over.</p>
-              <button onClick={onDeleteLoan} style={{ width: '100%', background: 'transparent', color: '#f87171', fontSize: 13, fontWeight: 500, padding: '10px', borderRadius: 6, border: '0.5px solid #f87171', cursor: 'pointer', transition: 'all 0.15s' }}
-                onMouseEnter={e => e.currentTarget.style.background = '#1a0000'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                Delete loan permanently
-              </button>
-            </div>
+            <div style={{ color: '#444', fontSize: 12, lineHeight: 1.5 }}>Use only when a payment needs to be entered manually. This should not be the lender's default payment workflow.</div>
+            <button onClick={onDeleteLoan} style={{ background: 'transparent', color: '#f87171', fontSize: 13, fontWeight: 500, padding: '10px 16px', borderRadius: 7, border: '0.5px solid #f87171', cursor: 'pointer', transition: 'all 0.15s', fontFamily: 'inherit' }}
+              onMouseEnter={e => e.currentTarget.style.background = '#1a0000'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+              Delete loan permanently
+            </button>
           </div>
         </div>
+        </>
+      )}
 
-      </div>
+      {activeTab === 'payments' && paymentsPanel}
+      {activeTab === 'documents' && documentsPanel}
+      {activeTab === 'notes' && (
+        <div style={card}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 14, marginBottom: 12 }}>
+            <div style={cardLabel}>Notes</div>
+            {notesSaved && <span style={{ fontSize: 11, color: '#34d399' }}>Saved locally</span>}
+          </div>
+          <textarea
+            value={loanNotes}
+            onChange={e => { setLoanNotes(e.target.value); setNotesSaved(false); }}
+            placeholder="Add internal notes for this loan..."
+            style={{
+              width: '100%',
+              minHeight: 230,
+              resize: 'vertical',
+              background: '#0d0d0d',
+              border: '0.5px solid #252525',
+              borderRadius: 8,
+              color: '#ddd',
+              padding: 14,
+              boxSizing: 'border-box',
+              fontSize: 13,
+              lineHeight: 1.6,
+              fontFamily: 'inherit',
+              outline: 'none',
+            }}
+            onFocus={e => e.currentTarget.style.borderColor = '#FFD700'}
+            onBlur={e => e.currentTarget.style.borderColor = '#252525'}
+          />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 14, marginTop: 14 }}>
+            <div style={{ color: '#444', fontSize: 12 }}>Private notes for this loan. Database save comes later.</div>
+            <button onClick={() => setNotesSaved(true)} style={{ ...secondaryBtn, background: '#FFD700', color: '#0f0f0f', border: 'none', fontWeight: 700 }}>Save notes</button>
+          </div>
+        </div>
+      )}
+
+      {paymentSuccess && <div style={{ marginTop: 14, color: '#34d399', fontSize: 12 }}>Payment recorded.</div>}
     </div>
   );
 }
