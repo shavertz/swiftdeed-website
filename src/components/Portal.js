@@ -158,7 +158,7 @@ function RecordPaymentModal({ borrower, lenderEmail, lenderName, onClose, onSucc
 }
 
 //  Loan Detail Page 
-function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, docSuccess, uploadingDocs, docFileRef, lenderEmail, lenderName, borrowerEmails, onBack, onRecordPayment, onRemoveDoc, onUploadDocs, onDeleteLoan, paymentSuccess }) {
+function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, docSuccess, uploadingDocs, docFileRef, lenderEmail, lenderName, borrowerEmails, onBack, onRecordPayment, onRemoveDoc, onUploadDocs, onDeleteLoan, onViewDocuments, paymentSuccess }) {
   const [showAllPayments, setShowAllPayments] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [loanNotes, setLoanNotes] = useState(liveData?.notes || selected?.notes || '');
@@ -456,14 +456,11 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
 
       <div className="loan-detail-header">
         <div style={{ minWidth: 0 }}>
-          <div className="loan-detail-title">{selected.property_address || '-'}</div>
-          <div style={{ fontSize: 13, color: '#555' }}>{selected.loan_id_internal || selected.loan_id || '-'} - {selected.borrower_name || '-'}</div>
+          <div className="loan-detail-title">{selected.loan_id_internal || selected.loan_id || '-'} - {selected.borrower_name || '-'}</div>
+          <div style={{ fontSize: 13, color: '#555' }}>{selected.property_address || '-'}</div>
         </div>
         <div className="loan-detail-actions">
-          {selected.payoff_statement_url
-            ? <a className="swiftdeed-statement-button" href={selected.payoff_statement_url} target="_blank" rel="noreferrer" style={{ ...secondaryBtn, background: '#FFD700', color: '#0f0f0f', border: 'none', fontWeight: 700 }}>Download statement</a>
-            : <button disabled style={{ ...secondaryBtn, color: '#333', borderColor: '#222', cursor: 'not-allowed' }}>No statement</button>
-          }
+          <button className="swiftdeed-statement-button" onClick={() => onViewDocuments(selected)} style={{ ...secondaryBtn, background: '#FFD700', color: '#0f0f0f', border: 'none', fontWeight: 700 }}>View documents -&gt;</button>
         </div>
       </div>
 
@@ -623,6 +620,9 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const [borrowerData, setBorrowerData] = useState({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [docSearch, setDocSearch] = useState('');
+  const [docTab, setDocTab] = useState('monthly');
+  const [expandedDocGroups, setExpandedDocGroups] = useState({});
   const [sortConfig, setSortConfig] = useState({ key: 'created_at', direction: 'desc' });
   const [page, setPage] = useState(1);
   const [activeView, setActiveView] = useState('dashboard');
@@ -658,6 +658,9 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     setActiveView('dashboard');
     setLoanFilter({ id: 'all', label: 'All active loans', accent: '#FFD700' });
     setSearch('');
+    setDocSearch('');
+    setDocTab('monthly');
+    setExpandedDocGroups({});
     setPage(1);
   }, [resetToken]);
 
@@ -1145,6 +1148,15 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       <div style={{ fontSize: 24, fontWeight: 500, color: '#fff' }}>{title}</div>
     </div>
   );
+  const openLoanDocuments = (loan) => {
+    setSelected(null);
+    setLiveData(null);
+    setLoanPayments([]);
+    setDocUrls([]);
+    setActiveView('documents');
+    setDocTab('monthly');
+    setDocSearch(loan?.loan_id_internal || loan?.loan_id || loan?.borrower_name || '');
+  };
   const modals = (
     <>
       {showPaymentModal && liveData && (
@@ -1277,6 +1289,178 @@ export default function Portal({ onSubmitRequest, resetToken }) {
         ))}
         </div>
       </div>
+      </div>
+    </div>
+  );
+
+  const monthLabel = today.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const docAccent = { monthly: '#4aa3ff', payoff: '#34d399', loan: '#FFD700', tax: '#a78bfa' };
+  const documentRecords = [
+    ...activeLoans.map(loan => {
+      const b = getBorrower(loan);
+      return {
+        id: `monthly-${loan.loan_id_internal}`,
+        tab: 'monthly',
+        type: 'Monthly statement',
+        title: `${monthLabel} Statement`,
+        detail: 'Current monthly borrower statement',
+        loan,
+        borrower: loan.borrower_name || b.legal_name || '-',
+        period: monthLabel,
+        date: 'Ready',
+        action: 'View',
+      };
+    }),
+    ...requests.filter(r => r.payoff_statement_url).map(loan => {
+      const b = getBorrower(loan);
+      return {
+        id: `payoff-${loan.loan_id_internal}`,
+        tab: 'payoff',
+        type: 'Payoff statement',
+        title: 'Payoff Statement',
+        detail: `${formatCurrency(loan.total_due || b.principal_balance)} payoff amount`,
+        loan,
+        borrower: loan.borrower_name || b.legal_name || '-',
+        period: 'Good-through date',
+        date: formatDate(loan.created_at),
+        action: 'View',
+      };
+    }),
+    ...requests.flatMap(loan => {
+      const urls = uniqueDocUrls(getBorrower(loan).loan_document_urls, loan.loan_document_urls);
+      return urls.length > 0
+        ? urls.map((url, index) => ({
+            id: `loan-${loan.loan_id_internal}-${index}`,
+            tab: 'loan',
+            type: 'Loan document',
+            title: decodeURIComponent(url.split('/').pop()).replace(/^\d+_/, '').replace(/[-_]/g, ' ').replace('.pdf', '').trim() || 'Loan document',
+            detail: 'Uploaded loan file',
+            loan,
+            borrower: loan.borrower_name || '-',
+            period: 'Loan file',
+            date: formatDate(loan.created_at),
+            action: 'View',
+          }))
+        : [{
+            id: `loan-placeholder-${loan.loan_id_internal}`,
+            tab: 'loan',
+            type: 'Loan documents',
+            title: 'Loan file',
+            detail: 'Promissory note, deed of trust, agreement',
+            loan,
+            borrower: loan.borrower_name || '-',
+            period: 'On file',
+            date: '-',
+            action: 'View',
+          }];
+    }),
+    ...activeLoans.map(loan => ({
+      id: `tax-2025-${loan.loan_id_internal}`,
+      tab: 'tax',
+      type: 'Tax form',
+      title: '1098 Mortgage Interest Statement',
+      detail: '2025 tax year',
+      loan,
+      borrower: loan.borrower_name || '-',
+      period: '2025 tax year',
+      date: 'Jan 31, 2026',
+      action: 'View',
+    })),
+  ];
+  const normalizedDocSearch = docSearch.trim().toLowerCase();
+  const visibleDocs = documentRecords.filter(doc => {
+    const loanId = doc.loan?.loan_id_internal || doc.loan?.loan_id || '';
+    const haystack = [doc.title, doc.type, doc.detail, doc.borrower, loanId, doc.loan?.property_address].join(' ').toLowerCase();
+    return doc.tab === docTab && (!normalizedDocSearch || haystack.includes(normalizedDocSearch));
+  });
+  const docsByLoan = visibleDocs.reduce((groups, doc) => {
+    const key = doc.loan?.loan_id_internal || 'portfolio';
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(doc);
+    return groups;
+  }, {});
+  const toggleDocGroup = (key) => {
+    setExpandedDocGroups(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+  const documentRow = (doc) => {
+    const accent = docAccent[doc.tab] || '#FFD700';
+    const visibleDate = doc.date && doc.date !== '-' && doc.date !== 'Ready' ? doc.date : '';
+    return (
+      <div key={doc.id} style={{ display: 'grid', gridTemplateColumns: shellNarrow ? '1fr auto' : 'minmax(230px, 280px) 145px 104px minmax(86px, 1fr)', gap: shellNarrow ? '8px 12px' : 12, alignItems: 'center', padding: '12px 14px', borderTop: '0.5px solid #1c1c1c' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+          <span style={{ width: 28, height: 28, borderRadius: 7, background: `${accent}18`, border: `0.5px solid ${accent}55`, flexShrink: 0 }} />
+          <span style={{ minWidth: 0 }}>
+            <span style={{ display: 'block', color: '#fff', fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doc.title}</span>
+            <span style={{ display: 'block', color: '#555', fontSize: 12, marginTop: 2 }}>{doc.detail}</span>
+          </span>
+        </div>
+        {!shellNarrow && <span />}
+        {!shellNarrow && <span style={{ color: '#777', fontSize: 12, textAlign: 'right' }}>{visibleDate}</span>}
+        <button style={{ background: 'transparent', border: 'none', color: '#FFD700', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'right', whiteSpace: 'nowrap', justifySelf: 'end' }}>View -&gt;</button>
+        {shellNarrow && visibleDate && <div style={{ gridColumn: '1 / -1', color: '#666', fontSize: 12, paddingLeft: 40 }}>{visibleDate}</div>}
+      </div>
+    );
+  };
+  const documentsView = (
+    <div style={{ padding: contentPad }}>
+      <div style={{ ...contentWrap, maxWidth: 'none' }}>
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ fontSize: 24, fontWeight: 500, color: '#fff', marginBottom: 6 }}>Documents</div>
+          <div style={{ fontSize: 13, color: '#555', lineHeight: 1.6 }}>Search a borrower, loan ID, or document name. If a borrower has multiple loans, documents stay grouped by loan.</div>
+        </div>
+        <input
+          value={docSearch}
+          onChange={e => setDocSearch(e.target.value)}
+          placeholder="Search borrower, loan ID, document..."
+          style={{ ...s.searchInput, maxWidth: 460, width: '100%', marginBottom: 18 }}
+        />
+        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', borderBottom: '0.5px solid #222', marginBottom: 18 }}>
+          {[
+            ['monthly', 'Monthly Statements'],
+            ['payoff', 'Payoff Statements'],
+            ['loan', 'Loan Docs'],
+            ['tax', 'Tax Forms'],
+          ].map(([id, label]) => (
+            <button key={id} onClick={() => setDocTab(id)} style={{ background: 'transparent', border: 'none', borderBottom: docTab === id ? '2px solid #FFD700' : '2px solid transparent', color: docTab === id ? '#FFD700' : '#777', padding: '12px 14px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>{label}</button>
+          ))}
+        </div>
+        <div style={{ color: '#555', fontSize: 12, marginBottom: 10 }}>{visibleDocs.length} document{visibleDocs.length === 1 ? '' : 's'}</div>
+        {visibleDocs.length === 0 ? (
+          <div style={{ ...s.empty, borderRadius: 9, border: '0.5px solid #252525' }}>No documents match that search.</div>
+        ) : (
+          <div style={{ display: 'grid', gap: 10, maxWidth: 720 }}>
+            {Object.entries(docsByLoan).map(([loanId, docs]) => {
+              const loan = docs[0].loan;
+              const groupKey = `${docTab}-${loanId}`;
+              const expanded = !!expandedDocGroups[groupKey];
+              const title = loan ? (loan.borrower_name || '-') : 'Portfolio documents';
+              const displayLoanId = loan ? (loan.loan_id_internal || loan.loan_id || '-') : 'Portfolio';
+              const subline = loan?.property_address || 'Documents not tied to a single loan';
+              const groupColumns = shellNarrow
+                ? '1fr auto'
+                : 'minmax(230px, 280px) 145px 104px minmax(86px, 1fr)';
+              return (
+                <div key={loanId} style={{ background: '#111', border: '0.5px solid #252525', borderRadius: 9, overflow: 'hidden' }}>
+                  <button onClick={() => toggleDocGroup(groupKey)} style={{ width: '100%', display: 'grid', gridTemplateColumns: groupColumns, gap: shellNarrow ? 14 : 12, alignItems: 'center', background: expanded ? '#151515' : '#111', border: 'none', borderLeft: expanded ? '3px solid #FFD700' : '3px solid transparent', padding: shellNarrow ? '14px 14px 14px 12px' : '13px 14px 13px 13px', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', transition: 'background 0.12s' }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ color: '#fff', fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</div>
+                      <div style={{ color: '#555', fontSize: 12, marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{subline}</div>
+                    </div>
+                    {!shellNarrow && <div style={{ color: '#FFD700', fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayLoanId}</div>}
+                    <div style={{ color: '#FFD700', fontSize: 12, whiteSpace: 'nowrap', textAlign: 'right' }}>{docs.length} item{docs.length === 1 ? '' : 's'}</div>
+                    <div style={{ color: expanded ? '#FFD700' : '#777', fontSize: 12, whiteSpace: 'nowrap', textAlign: 'right', justifySelf: 'end' }}>{expanded ? 'Collapse' : 'Expand'} -&gt;</div>
+                    {shellNarrow && <div style={{ gridColumn: '1 / -1', color: '#777', fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayLoanId}</div>}
+                  </button>
+                  {expanded && (
+                    <div>
+                      {docs.map(documentRow)}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1420,6 +1604,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       onRemoveDoc={handleRemoveDoc}
       onUploadDocs={handleUploadDocs}
       onDeleteLoan={() => { setShowDeleteModal(true); setDeleteConfirmText(''); }}
+      onViewDocuments={openLoanDocuments}
     />
   ) : null;
 
@@ -1427,7 +1612,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     ? detailView
     : activeView === 'dashboard' ? dashboardView
     : activeView === 'loans' ? loansView
-    : activeView === 'documents' ? placeholder('Documents')
+    : activeView === 'documents' ? documentsView
     : activeView === 'invoices' ? placeholder('Invoices')
     : placeholder('Settings');
 
