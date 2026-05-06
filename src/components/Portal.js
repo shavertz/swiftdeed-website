@@ -1112,6 +1112,31 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const dashboardView = (
     <div style={{ padding: contentPad }}>
       <div style={contentWrap}>
+      <style>{`
+        .swiftdeed-bucket-scroll {
+          scrollbar-color: #FFD700 #0f0f0f;
+          scrollbar-width: thin;
+        }
+        .swiftdeed-bucket-scroll::-webkit-scrollbar {
+          height: 14px;
+          background: #0f0f0f;
+        }
+        .swiftdeed-bucket-scroll::-webkit-scrollbar-track {
+          background: #0f0f0f;
+          border-top: 0.5px solid #FFD700;
+          border-bottom: 0.5px solid #FFD700;
+        }
+        .swiftdeed-bucket-scroll::-webkit-scrollbar-thumb {
+          background: #111;
+          border: 1px solid #FFD700;
+          border-radius: 999px;
+        }
+        .swiftdeed-bucket-scroll::-webkit-scrollbar-button {
+          width: 14px;
+          background: #0f0f0f;
+          border: 0.5px solid #FFD700;
+        }
+      `}</style>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 18, marginBottom: 28 }}>
         <div>
           <div style={{ fontSize: 24, fontWeight: 500, color: '#fff', marginBottom: 6 }}>Dashboard</div>
@@ -1164,7 +1189,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       </div>
 
       <div style={{ fontSize: 12, color: '#FFD700', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 }}>Delinquency Buckets</div>
-      <div className="swiftdeed-table-scroll" style={{ border: '0.5px solid #252525', borderRadius: 9, overflowX: 'auto', overflowY: 'hidden', background: '#111' }}>
+      <div className="swiftdeed-bucket-scroll" style={{ border: '0.5px solid #252525', borderRadius: 9, overflowX: 'auto', overflowY: 'hidden', background: '#111', scrollbarColor: '#FFD700 #0f0f0f', scrollbarWidth: 'thin' }}>
         <div style={{ display: 'grid', gridTemplateColumns: bucketCols, minWidth: isNarrowPortfolio ? 725 : 0 }}>
         {[
           { id: 'all', label: 'All Loans', count: activeLoans.length, total: principalOutstanding, accent: '#fff' },
