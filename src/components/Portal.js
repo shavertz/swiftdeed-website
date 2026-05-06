@@ -343,7 +343,9 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           {selected.payoff_statement_url
-            ? <a href={selected.payoff_statement_url} target="_blank" rel="noreferrer" style={{ ...secondaryBtn, background: '#FFD700', color: '#0f0f0f', border: 'none', fontWeight: 700, boxShadow: '0 12px 28px rgba(255, 215, 0, 0.28), inset 0 -2px 0 rgba(0, 0, 0, 0.18)' }}>Download statement</a>
+            ? <a href={selected.payoff_statement_url} target="_blank" rel="noreferrer" style={{ ...secondaryBtn, background: '#FFD700', color: '#0f0f0f', border: 'none', fontWeight: 700, boxShadow: 'none' }}
+                onMouseEnter={e => e.currentTarget.style.boxShadow = '0 12px 28px rgba(255, 215, 0, 0.28), inset 0 -2px 0 rgba(0, 0, 0, 0.18)'}
+                onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}>Download statement</a>
             : <button disabled style={{ ...secondaryBtn, color: '#333', borderColor: '#222', cursor: 'not-allowed' }}>No statement</button>
           }
         </div>
