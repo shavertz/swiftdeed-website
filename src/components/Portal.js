@@ -1042,6 +1042,48 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const shellNarrow = windowWidth < 900;
   const contentPad = shellNarrow ? '28px 22px' : isNarrowPortfolio ? '34px 42px' : '34px 46px';
   const contentWrap = { width: '100%', maxWidth: 1160, boxSizing: 'border-box' };
+  const onboardingBanner = {
+    display: 'grid',
+    gridTemplateColumns: shellNarrow ? 'auto 1fr' : 'auto minmax(0, 1fr) auto',
+    gap: shellNarrow ? '12px 14px' : '16px',
+    alignItems: 'center',
+    background: '#1d1705',
+    border: '0.5px solid #4a3900',
+    borderLeft: '3px solid #FFD700',
+    borderRadius: 9,
+    padding: shellNarrow ? '14px 16px' : '16px 18px',
+    marginBottom: 28,
+    boxSizing: 'border-box',
+  };
+  const onboardingIcon = {
+    width: 34,
+    height: 34,
+    borderRadius: 8,
+    background: '#3a2d00',
+    color: '#FFD700',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: 22,
+    lineHeight: 1,
+    flexShrink: 0,
+  };
+  const onboardingCta = {
+    gridColumn: shellNarrow ? '2 / 3' : 'auto',
+    justifySelf: shellNarrow ? 'start' : 'end',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
+    background: 'transparent',
+    border: 'none',
+    color: '#FFD700',
+    fontSize: 13,
+    fontWeight: 600,
+    padding: 0,
+    cursor: 'pointer',
+    fontFamily: 'inherit',
+    whiteSpace: 'nowrap',
+  };
   const sidebarGutter = shellNarrow ? 16 : 20;
   const dashboardStatCols = 'repeat(auto-fit, minmax(220px, 1fr))';
   const attentionCols = 'repeat(auto-fit, minmax(240px, 1fr))';
@@ -1137,13 +1179,21 @@ export default function Portal({ onSubmitRequest, resetToken }) {
           border: 0.5px solid #FFD700;
         }
       `}</style>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 18, marginBottom: 28 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 18, marginBottom: 18 }}>
         <div>
           <div style={{ fontSize: 24, fontWeight: 500, color: '#fff', marginBottom: 6 }}>Dashboard</div>
           <div style={{ fontSize: 13, color: '#444' }}>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</div>
         </div>
-        <button style={{ ...s.serviceBtn, marginLeft: 0, padding: '10px 18px' }} onClick={onSubmitRequest} {...hovSolid}>Service a loan</button>
       </div>
+
+      <button onClick={onSubmitRequest} style={{ ...onboardingBanner, width: '100%', textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer' }} {...hovSolid}>
+        <span style={onboardingIcon}>+</span>
+        <span style={{ minWidth: 0 }}>
+          <span style={{ display: 'block', color: '#fff', fontSize: 14, fontWeight: 600, marginBottom: 2 }}>Onboard a new loan</span>
+          <span style={{ display: 'block', color: '#d8d0b8', fontSize: 13, lineHeight: 1.45 }}>Upload your loan documents and SwiftDeed will extract the terms automatically. Live in minutes.</span>
+        </span>
+        <span style={onboardingCta}>Get started <span aria-hidden="true">-&gt;</span></span>
+      </button>
 
       <div style={{ display: 'grid', gridTemplateColumns: dashboardStatCols, gap: 12, marginBottom: 28 }}>
         <button style={statCard('principal')} onClick={() => setLoansView('all')} onMouseEnter={() => setHoveredCard('principal')} onMouseLeave={() => setHoveredCard(null)}><div style={sl}>Principal Outstanding</div><div style={sv}>{formatCurrency(principalOutstanding)}</div><div style={ss}>{activeLoans.length} active loans</div></button>
@@ -1265,7 +1315,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
           <div style={{ fontSize: 24, fontWeight: 500, color: '#fff', marginBottom: 6 }}>Loans</div>
           <div style={{ fontSize: 13, color: loanFilter.accent }}>{sorted.length} {loanFilter.label.toLowerCase()}</div>
         </div>
-        <button style={{ ...s.serviceBtn, marginLeft: 0, padding: '10px 18px' }} onClick={onSubmitRequest} {...hovSolid}>Service a loan</button>
+        <button style={{ ...s.serviceBtn, marginLeft: 0, padding: '10px 18px' }} onClick={onSubmitRequest} {...hovSolid}>Onboard a loan</button>
       </div>
 
       <div className="swiftdeed-table-scroll" style={{ width: '100%', minWidth: 0, maxWidth: '100%', border: '0.5px solid #252525', borderRadius: 9, overflowX: 'auto', overflowY: 'hidden', WebkitOverflowScrolling: 'touch', background: '#111', boxSizing: 'border-box', boxShadow: 'inset 0 0 0 0.5px #1f1f1f' }}>

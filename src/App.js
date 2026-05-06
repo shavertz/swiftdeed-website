@@ -437,8 +437,8 @@ export default function App() {
               <path d="M17 22H14C13.4 22 13 22.4 13 23V30C13 30.6 13.4 31 14 31H30C30.6 31 31 30.6 31 30V23C31 22.4 30.6 22 30 22H27" stroke="#FFD700" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </div>
-          <div style={{ fontSize: 16, fontWeight: 400, color: '#fff', marginBottom: 8 }}>Service a loan</div>
-          <div style={{ fontSize: 13, color: '#555', lineHeight: 1.5 }}>Upload loan docs and get a payoff statement</div>
+          <div style={{ fontSize: 16, fontWeight: 400, color: '#fff', marginBottom: 8 }}>Onboard a loan</div>
+          <div style={{ fontSize: 13, color: '#555', lineHeight: 1.5 }}>Upload loan docs and start servicing</div>
         </div>
         <div
           onClick={() => setPage('portal')}
