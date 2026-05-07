@@ -1569,6 +1569,30 @@ export default function Portal({ onSubmitRequest, resetToken }) {
             border-radius: 999px;
             border: 2px solid #0f0f0f;
           }
+          .swiftdeed-yellow-scroll {
+            scrollbar-color: #FFD700 #0f0f0f;
+            scrollbar-width: thin;
+          }
+          .swiftdeed-yellow-scroll::-webkit-scrollbar {
+            width: 14px;
+            height: 14px;
+            background: #0f0f0f;
+          }
+          .swiftdeed-yellow-scroll::-webkit-scrollbar-track {
+            background: #0f0f0f;
+            border: 0.5px solid #FFD700;
+          }
+          .swiftdeed-yellow-scroll::-webkit-scrollbar-thumb {
+            background: #111;
+            border: 1px solid #FFD700;
+            border-radius: 999px;
+          }
+          .swiftdeed-yellow-scroll::-webkit-scrollbar-button {
+            width: 14px;
+            height: 14px;
+            background: #0f0f0f;
+            border: 0.5px solid #FFD700;
+          }
         `}</style>
         <div style={{ marginBottom: 24 }}>
           <div style={{ fontSize: 24, fontWeight: 500, color: '#fff', marginBottom: 6 }}>Documents</div>
@@ -1615,7 +1639,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
           </div>
 
           <div style={{ minWidth: 0, padding: shellNarrow ? 16 : 18 }}>
-            <div style={{ display: 'flex', gap: 8, overflowX: 'auto', borderBottom: '0.5px solid #252525', marginBottom: 16 }}>
+            <div className="swiftdeed-yellow-scroll" style={{ display: 'flex', gap: 8, overflowX: 'auto', borderBottom: '0.5px solid #252525', marginBottom: 16 }}>
               {[
                 ['payoff', 'Payoff Statements'],
                 ['monthly', 'Monthly Statements'],
