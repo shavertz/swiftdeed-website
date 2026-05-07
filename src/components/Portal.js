@@ -16,6 +16,12 @@ function formatCurrency(val) {
   return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function defaultGoodThroughDate() {
+  const d = new Date();
+  d.setDate(d.getDate() + 30);
+  return d.toISOString().slice(0, 10);
+}
+
 function parseDocUrls(value) {
   if (!value) return [];
   return String(value).split(',').map(u => u.trim()).filter(Boolean);
@@ -157,8 +163,40 @@ function RecordPaymentModal({ borrower, lenderEmail, lenderName, onClose, onSucc
   );
 }
 
+function PayoffStatementModal({ loan, goodThroughDate, onDateChange, onClose, onGenerate }) {
+  if (!loan) return null;
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 18 }}>
+      <div style={{ width: '100%', maxWidth: 430, background: '#121212', border: '0.5px solid #2a2a2a', borderRadius: 11, padding: 24, boxShadow: '0 18px 60px rgba(0,0,0,0.45)' }}>
+        <div style={{ fontSize: 19, color: '#fff', fontWeight: 600, marginBottom: 6 }}>Generate payoff statement</div>
+        <div style={{ fontSize: 12, color: '#666', lineHeight: 1.5, marginBottom: 18 }}>Loan is already selected. Choose the good-through date for the payoff PDF.</div>
+
+        <div style={{ background: '#0f0f0f', border: '0.5px solid #252525', borderRadius: 8, padding: 14, marginBottom: 16 }}>
+          <div style={{ fontSize: 10, color: '#555', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 7 }}>Selected loan</div>
+          <div style={{ color: '#FFD700', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{loan.loan_id_internal || loan.loan_id || '-'}</div>
+          <div style={{ color: '#fff', fontSize: 13 }}>{loan.borrower_name || '-'}</div>
+          <div style={{ color: '#555', fontSize: 12, marginTop: 4 }}>{loan.property_address || '-'}</div>
+        </div>
+
+        <label style={{ display: 'block', fontSize: 11, color: '#555', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 7 }}>Good-through date</label>
+        <input
+          type="date"
+          value={goodThroughDate}
+          onChange={e => onDateChange(e.target.value)}
+          style={{ width: '100%', background: '#0f0f0f', border: '0.5px solid #2a2a2a', borderRadius: 7, padding: '10px 12px', color: '#fff', fontSize: 13, fontFamily: 'inherit', boxSizing: 'border-box', marginBottom: 18 }}
+        />
+
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button onClick={onGenerate} style={{ flex: 1, background: '#FFD700', color: '#0f0f0f', fontSize: 13, fontWeight: 700, padding: '10px 12px', borderRadius: 7, border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Generate PDF</button>
+          <button onClick={onClose} style={{ flex: 1, background: 'transparent', color: '#fff', fontSize: 13, padding: '10px 12px', borderRadius: 7, border: '0.5px solid #2a2a2a', cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 //  Loan Detail Page 
-function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, docSuccess, uploadingDocs, docFileRef, lenderEmail, lenderName, borrowerEmails, onBack, onRecordPayment, onRemoveDoc, onUploadDocs, onDeleteLoan, onViewDocuments, paymentSuccess }) {
+function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, docSuccess, uploadingDocs, docFileRef, lenderEmail, lenderName, borrowerEmails, onBack, onRecordPayment, onRemoveDoc, onUploadDocs, onDeleteLoan, onViewDocuments, onGeneratePayoff, paymentSuccess }) {
   const [showAllPayments, setShowAllPayments] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [loanNotes, setLoanNotes] = useState(liveData?.notes || selected?.notes || '');
@@ -461,6 +499,7 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
         </div>
         <div className="loan-detail-actions">
           <button className="swiftdeed-statement-button" onClick={() => onViewDocuments(selected)} style={{ ...secondaryBtn, background: '#FFD700', color: '#0f0f0f', border: 'none', fontWeight: 700 }}>View documents -&gt;</button>
+          <button className="swiftdeed-statement-button" onClick={() => onGeneratePayoff(selected)} style={{ ...secondaryBtn, background: '#1d1705', color: '#FFD700', border: '0.5px solid #4a3900', fontWeight: 700 }}>Generate payoff statement -&gt;</button>
         </div>
       </div>
 
@@ -622,7 +661,8 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const [search, setSearch] = useState('');
   const [docSearch, setDocSearch] = useState('');
   const [docTab, setDocTab] = useState('monthly');
-  const [expandedDocGroups, setExpandedDocGroups] = useState({});
+  const [selectedDocLoanId, setSelectedDocLoanId] = useState('');
+  const [docSort, setDocSort] = useState('borrower');
   const [sortConfig, setSortConfig] = useState({ key: 'created_at', direction: 'desc' });
   const [page, setPage] = useState(1);
   const [activeView, setActiveView] = useState('dashboard');
@@ -635,6 +675,8 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const [liveData, setLiveData] = useState(null);
   const [liveLoading, setLiveLoading] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [payoffLoan, setPayoffLoan] = useState(null);
+  const [payoffGoodThrough, setPayoffGoodThrough] = useState(defaultGoodThroughDate());
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [lenderName, setLenderName] = useState('');
   const [loanPayments, setLoanPayments] = useState([]);
@@ -655,12 +697,15 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     setLoanPayments([]);
     setDocUrls([]);
     setPaymentSuccess(false);
+    setPayoffLoan(null);
+    setPayoffGoodThrough(defaultGoodThroughDate());
     setActiveView('dashboard');
     setLoanFilter({ id: 'all', label: 'All active loans', accent: '#FFD700' });
     setSearch('');
     setDocSearch('');
     setDocTab('monthly');
-    setExpandedDocGroups({});
+    setSelectedDocLoanId('');
+    setDocSort('borrower');
     setPage(1);
   }, [resetToken]);
 
@@ -1203,10 +1248,21 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     setDocUrls([]);
     setActiveView('documents');
     setDocTab('monthly');
-    setDocSearch(loan?.loan_id_internal || loan?.loan_id || loan?.borrower_name || '');
+    setSelectedDocLoanId(loan?.loan_id_internal || loan?.loan_id || '');
+  };
+  const openPayoffModal = (loan) => {
+    setPayoffLoan(loan);
+    setPayoffGoodThrough(defaultGoodThroughDate());
+  };
+  const closePayoffModal = () => {
+    setPayoffLoan(null);
+  };
+  const handleGeneratePayoff = () => {
+    setPayoffLoan(null);
   };
   const modals = (
     <>
+      <PayoffStatementModal loan={payoffLoan} goodThroughDate={payoffGoodThrough} onDateChange={setPayoffGoodThrough} onClose={closePayoffModal} onGenerate={handleGeneratePayoff} />
       {showPaymentModal && liveData && (
         <RecordPaymentModal borrower={liveData} lenderEmail={email} lenderName={lenderName} onClose={() => setShowPaymentModal(false)} onSuccess={(updates) => { setShowPaymentModal(false); setPaymentSuccess(true); setLiveData(prev => ({ ...prev, ...updates })); setTimeout(() => setPaymentSuccess(false), 5000); }} />
       )}
@@ -1353,7 +1409,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   );
 
   const monthLabel = today.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-  const docAccent = { monthly: '#4aa3ff', payoff: '#34d399', loan: '#FFD700', tax: '#a78bfa' };
+  const docAccent = { monthly: '#4aa3ff', payoff: '#34d399', loan: '#FFD700', yearend: '#a78bfa' };
   const documentRecords = [
     ...activeLoans.map(loan => {
       const b = getBorrower(loan);
@@ -1370,18 +1426,19 @@ export default function Portal({ onSubmitRequest, resetToken }) {
         action: 'View',
       };
     }),
-    ...requests.filter(r => r.payoff_statement_url).map(loan => {
+    ...activeLoans.map(loan => {
       const b = getBorrower(loan);
       return {
         id: `payoff-${loan.loan_id_internal}`,
         tab: 'payoff',
         type: 'Payoff statement',
-        title: 'Payoff Statement',
-        detail: `${formatCurrency(loan.total_due || b.principal_balance)} payoff amount`,
+        title: loan.payoff_statement_url ? 'Payoff Statement' : 'No payoff statement yet',
+        detail: loan.payoff_statement_url ? `${formatCurrency(loan.total_due || b.principal_balance)} payoff amount` : 'Generate one for this loan',
+        generated: !!loan.payoff_statement_url,
         loan,
         borrower: loan.borrower_name || b.legal_name || '-',
-        period: 'Good-through date',
-        date: formatDate(loan.created_at),
+        period: loan.payoff_statement_url ? 'Good-through date' : 'Not generated',
+        date: loan.payoff_statement_url ? formatDate(loan.created_at) : '-',
         action: 'View',
       };
     }),
@@ -1413,34 +1470,66 @@ export default function Portal({ onSubmitRequest, resetToken }) {
             action: 'View',
           }];
     }),
-    ...activeLoans.map(loan => ({
-      id: `tax-2025-${loan.loan_id_internal}`,
-      tab: 'tax',
-      type: 'Tax form',
-      title: '1098 Mortgage Interest Statement',
-      detail: '2025 tax year',
-      loan,
-      borrower: loan.borrower_name || '-',
+    {
+      id: 'yearend-summary-2025',
+      tab: 'yearend',
+      type: 'Year-end document',
+      title: '2025 Lender Year-End Summary',
+      detail: 'Annual summary across every active loan',
+      loan: null,
+      borrower: 'Full portfolio',
       period: '2025 tax year',
       date: 'Jan 31, 2026',
       action: 'View',
-    })),
+    },
+    {
+      id: 'yearend-interest-2025',
+      tab: 'yearend',
+      type: 'Year-end document',
+      title: '2025 Interest Summary',
+      detail: 'Interest totals across every loan',
+      loan: null,
+      borrower: 'Full portfolio',
+      period: '2025 tax year',
+      date: 'Jan 31, 2026',
+      action: 'View',
+    },
+    {
+      id: 'yearend-ledger-2025',
+      tab: 'yearend',
+      type: 'Year-end document',
+      title: '2025 Payment Ledger Export',
+      detail: 'Annual payment ledger for the full portfolio',
+      loan: null,
+      borrower: 'Full portfolio',
+      period: '2025 tax year',
+      date: 'Jan 31, 2026',
+      action: 'View',
+    },
   ];
-  const normalizedDocSearch = docSearch.trim().toLowerCase();
-  const visibleDocs = documentRecords.filter(doc => {
-    const loanId = doc.loan?.loan_id_internal || doc.loan?.loan_id || '';
-    const haystack = [doc.title, doc.type, doc.detail, doc.borrower, loanId, doc.loan?.property_address].join(' ').toLowerCase();
-    return doc.tab === docTab && (!normalizedDocSearch || haystack.includes(normalizedDocSearch));
-  });
-  const docsByLoan = visibleDocs.reduce((groups, doc) => {
-    const key = doc.loan?.loan_id_internal || 'portfolio';
-    if (!groups[key]) groups[key] = [];
-    groups[key].push(doc);
-    return groups;
-  }, {});
-  const toggleDocGroup = (key) => {
-    setExpandedDocGroups(prev => ({ ...prev, [key]: !prev[key] }));
+  const loanDocId = loan => loan?.loan_id_internal || loan?.loan_id || '';
+  const docsForLoan = (loan, tab = docTab) => documentRecords.filter(doc => doc.tab === tab && loanDocId(doc.loan) === loanDocId(loan));
+  const yearEndRecords = documentRecords.filter(doc => doc.tab === 'yearend');
+  const visibleDocCount = (loan, tab = docTab) => {
+    if (tab === 'yearend') return yearEndRecords.length;
+    if (tab === 'payoff') return loan.payoff_statement_url ? 1 : 0;
+    if (tab === 'loan') return uniqueDocUrls(getBorrower(loan).loan_document_urls, loan.loan_document_urls).length;
+    return docsForLoan(loan, tab).length;
   };
+  const normalizedDocSearch = docSearch.trim().toLowerCase();
+  const documentLoanOptions = activeLoans.filter(loan => !normalizedDocSearch || loanDocId(loan).toLowerCase().includes(normalizedDocSearch));
+  const sortedDocumentLoans = [...documentLoanOptions].sort((a, b) => {
+    const aBorrower = (a.borrower_name || '').toLowerCase();
+    const bBorrower = (b.borrower_name || '').toLowerCase();
+    if (docSort === 'recent') return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+    if (docSort === 'maturity') return (daysFromToday(getBorrower(a).maturity_date || a.maturity_date) ?? 99999) - (daysFromToday(getBorrower(b).maturity_date || b.maturity_date) ?? 99999);
+    if (docSort === 'delinquency') return daysPastDue(b) - daysPastDue(a);
+    if (docSort === 'most_docs') return visibleDocCount(b) - visibleDocCount(a) || aBorrower.localeCompare(bBorrower);
+    if (docSort === 'no_docs') return visibleDocCount(a) - visibleDocCount(b) || aBorrower.localeCompare(bBorrower);
+    return aBorrower.localeCompare(bBorrower);
+  });
+  const selectedDocLoan = sortedDocumentLoans.find(loan => loanDocId(loan) === selectedDocLoanId) || sortedDocumentLoans[0] || null;
+  const selectedDocRecords = selectedDocLoan ? docsForLoan(selectedDocLoan).filter(doc => docTab !== 'payoff' || doc.generated) : [];
   const documentRow = (doc) => {
     const accent = docAccent[doc.tab] || '#FFD700';
     const visibleDate = doc.date && doc.date !== '-' && doc.date !== 'Ready' ? doc.date : '';
@@ -1462,64 +1551,111 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   };
   const documentsView = (
     <div style={{ padding: contentPad }}>
-      <div style={{ ...contentWrap, maxWidth: 'none' }}>
+      <div style={{ ...contentWrap, maxWidth: 1160 }}>
+        <style>{`
+          .swiftdeed-doc-loan-list {
+            scrollbar-color: #FFD700 #0f0f0f;
+            scrollbar-width: thin;
+          }
+          .swiftdeed-doc-loan-list::-webkit-scrollbar {
+            width: 8px;
+            background: #0f0f0f;
+          }
+          .swiftdeed-doc-loan-list::-webkit-scrollbar-track {
+            background: #0f0f0f;
+          }
+          .swiftdeed-doc-loan-list::-webkit-scrollbar-thumb {
+            background: #FFD700;
+            border-radius: 999px;
+            border: 2px solid #0f0f0f;
+          }
+        `}</style>
         <div style={{ marginBottom: 24 }}>
           <div style={{ fontSize: 24, fontWeight: 500, color: '#fff', marginBottom: 6 }}>Documents</div>
-          <div style={{ fontSize: 13, color: '#555', lineHeight: 1.6 }}>Search a borrower, loan ID, or document name. If a borrower has multiple loans, documents stay grouped by loan.</div>
+          <div style={{ fontSize: 13, color: '#555', lineHeight: 1.6 }}>Select a loan to view its documents. Payoff statements can be generated once a loan is selected.</div>
         </div>
-        <input
-          value={docSearch}
-          onChange={e => setDocSearch(e.target.value)}
-          placeholder="Search borrower, loan ID, document..."
-          style={{ ...s.searchInput, maxWidth: 460, width: '100%', marginBottom: 18 }}
-        />
-        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', borderBottom: '0.5px solid #222', marginBottom: 18 }}>
-          {[
-            ['monthly', 'Monthly Statements'],
-            ['payoff', 'Payoff Statements'],
-            ['loan', 'Loan Docs'],
-            ['tax', 'Tax Forms'],
-          ].map(([id, label]) => (
-            <button key={id} onClick={() => setDocTab(id)} style={{ background: 'transparent', border: 'none', borderBottom: docTab === id ? '2px solid #FFD700' : '2px solid transparent', color: docTab === id ? '#FFD700' : '#777', padding: '12px 14px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>{label}</button>
-          ))}
-        </div>
-        <div style={{ color: '#555', fontSize: 12, marginBottom: 10 }}>{visibleDocs.length} document{visibleDocs.length === 1 ? '' : 's'}</div>
-        {visibleDocs.length === 0 ? (
-          <div style={{ ...s.empty, borderRadius: 9, border: '0.5px solid #252525' }}>No documents match that search.</div>
-        ) : (
-          <div style={{ display: 'grid', gap: 10, maxWidth: 720 }}>
-            {Object.entries(docsByLoan).map(([loanId, docs]) => {
-              const loan = docs[0].loan;
-              const groupKey = `${docTab}-${loanId}`;
-              const expanded = !!expandedDocGroups[groupKey];
-              const title = loan ? (loan.borrower_name || '-') : 'Portfolio documents';
-              const displayLoanId = loan ? (loan.loan_id_internal || loan.loan_id || '-') : 'Portfolio';
-              const subline = loan?.property_address || 'Documents not tied to a single loan';
-              const groupColumns = shellNarrow
-                ? '1fr auto'
-                : 'minmax(230px, 280px) 145px 104px minmax(86px, 1fr)';
-              return (
-                <div key={loanId} style={{ background: '#111', border: '0.5px solid #252525', borderRadius: 9, overflow: 'hidden' }}>
-                  <button onClick={() => toggleDocGroup(groupKey)} style={{ width: '100%', display: 'grid', gridTemplateColumns: groupColumns, gap: shellNarrow ? 14 : 12, alignItems: 'center', background: expanded ? '#151515' : '#111', border: 'none', borderLeft: expanded ? '3px solid #FFD700' : '3px solid transparent', padding: shellNarrow ? '14px 14px 14px 12px' : '13px 14px 13px 13px', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', transition: 'background 0.12s' }}>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ color: '#fff', fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</div>
-                      <div style={{ color: '#555', fontSize: 12, marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{subline}</div>
+        <div style={{ display: 'grid', gridTemplateColumns: shellNarrow ? '1fr' : '270px minmax(0, 1fr)', border: '0.5px solid #252525', borderRadius: 10, overflow: 'hidden', background: '#0f0f0f', minHeight: shellNarrow ? 520 : 'calc(100vh - 265px)' }}>
+          <div style={{ borderRight: shellNarrow ? 'none' : '0.5px solid #252525', borderBottom: shellNarrow ? '0.5px solid #252525' : 'none', minWidth: 0 }}>
+            <div style={{ padding: 12, borderBottom: '0.5px solid #252525' }}>
+              <label style={{ display: 'block', color: '#555', fontSize: 10, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 7 }}>Search loan ID</label>
+              <input
+                value={docSearch}
+                onChange={e => setDocSearch(e.target.value)}
+                placeholder="SD-2026..."
+                style={{ width: '100%', background: '#111', border: '0.5px solid #2a2a2a', borderRadius: 7, color: '#ccc', fontSize: 12, padding: '8px 9px', fontFamily: 'inherit', boxSizing: 'border-box', marginBottom: 12 }}
+              />
+              <label style={{ display: 'block', color: '#555', fontSize: 10, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 7 }}>Sort loans</label>
+              <select value={docSort} onChange={e => setDocSort(e.target.value)} style={{ width: '100%', background: '#111', border: '0.5px solid #2a2a2a', borderRadius: 7, color: '#ccc', fontSize: 12, padding: '8px 9px', fontFamily: 'inherit' }}>
+                <option value="borrower">Borrower A-Z</option>
+                <option value="recent">Recent activity</option>
+                <option value="maturity">Maturity date</option>
+                <option value="delinquency">Delinquency</option>
+                <option value="most_docs">Most documents</option>
+                <option value="no_docs">No documents</option>
+              </select>
+            </div>
+            <div className="swiftdeed-doc-loan-list" style={{ height: shellNarrow ? 260 : 'calc(100vh - 418px)', minHeight: shellNarrow ? 0 : 455, overflowY: 'auto' }}>
+              {sortedDocumentLoans.length === 0 ? (
+                <div style={{ color: '#555', fontSize: 12, padding: 14 }}>No loan IDs match.</div>
+              ) : sortedDocumentLoans.map(loan => {
+                const active = loanDocId(loan) === loanDocId(selectedDocLoan);
+                const overdueDays = daysPastDue(loan);
+                return (
+                  <button key={loanDocId(loan)} onClick={() => setSelectedDocLoanId(loanDocId(loan))} style={{ width: '100%', background: active ? '#151515' : 'transparent', border: 'none', borderLeft: active ? '3px solid #FFD700' : '3px solid transparent', borderBottom: '0.5px solid #1c1c1c', padding: active ? '11px 12px 11px 9px' : '11px 12px', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center', marginBottom: 4 }}>
+                      <span style={{ color: '#FFD700', fontSize: 11, fontFamily: 'monospace' }}>{loanDocId(loan)}</span>
                     </div>
-                    {!shellNarrow && <div style={{ color: '#FFD700', fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayLoanId}</div>}
-                    <div style={{ color: '#FFD700', fontSize: 12, whiteSpace: 'nowrap', textAlign: 'right' }}>{docs.length} item{docs.length === 1 ? '' : 's'}</div>
-                    <div style={{ color: expanded ? '#FFD700' : '#777', fontSize: 12, whiteSpace: 'nowrap', textAlign: 'right', justifySelf: 'end' }}>{expanded ? 'Collapse' : 'Expand'} -&gt;</div>
-                    {shellNarrow && <div style={{ gridColumn: '1 / -1', color: '#777', fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayLoanId}</div>}
+                    <div style={{ color: '#fff', fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{loan.borrower_name || '-'}</div>
+                    <div style={{ color: '#555', fontSize: 12, marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{loan.property_address || '-'}</div>
+                    {overdueDays > 0 && <div style={{ display: 'inline-flex', marginTop: 7, color: overdueDays > 60 ? '#f87171' : '#FFD700', background: overdueDays > 60 ? '#2a1010' : '#221c00', border: `0.5px solid ${overdueDays > 60 ? '#552020' : '#4a3900'}`, borderRadius: 5, padding: '2px 6px', fontSize: 10 }}>{overdueDays} days overdue</div>}
                   </button>
-                  {expanded && (
-                    <div>
-                      {docs.map(documentRow)}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
-        )}
+
+          <div style={{ minWidth: 0, padding: shellNarrow ? 16 : 18 }}>
+            <div style={{ display: 'flex', gap: 8, overflowX: 'auto', borderBottom: '0.5px solid #252525', marginBottom: 16 }}>
+              {[
+                ['payoff', 'Payoff Statements'],
+                ['monthly', 'Monthly Statements'],
+                ['loan', 'Loan Docs'],
+                ['yearend', 'Year-End Docs'],
+              ].map(([id, label]) => (
+                <button key={id} onClick={() => setDocTab(id)} style={{ background: 'transparent', border: 'none', borderBottom: docTab === id ? '2px solid #FFD700' : '2px solid transparent', color: docTab === id ? '#FFD700' : '#777', padding: '10px 12px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>{label}</button>
+              ))}
+            </div>
+            {docTab === 'yearend' ? (
+              <>
+                <div style={{ paddingBottom: 14, borderBottom: '0.5px solid #252525', marginBottom: 14 }}>
+                  <div style={{ color: '#fff', fontSize: 15, fontWeight: 600 }}>Annual documents across your full portfolio</div>
+                  <div style={{ color: '#555', fontSize: 12, marginTop: 4 }}>These year-end documents are collective across every active loan.</div>
+                </div>
+                <div style={{ color: '#555', fontSize: 11, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 8 }}>{yearEndRecords.length} annual document{yearEndRecords.length === 1 ? '' : 's'}</div>
+                <div style={{ borderTop: '0.5px solid #1c1c1c' }}>{yearEndRecords.map(documentRow)}</div>
+              </>
+            ) : selectedDocLoan ? (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: shellNarrow ? '1fr' : 'minmax(0, 1fr) auto', gap: 14, alignItems: 'start', paddingBottom: 14, borderBottom: '0.5px solid #252525', marginBottom: 14 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ color: '#fff', fontSize: 15, fontWeight: 600 }}>{selectedDocLoan.borrower_name || '-'}</div>
+                    <div style={{ color: '#FFD700', fontSize: 12, fontFamily: 'monospace', marginTop: 3 }}>{loanDocId(selectedDocLoan)}</div>
+                    <div style={{ color: '#555', fontSize: 12, marginTop: 3 }}>{selectedDocLoan.property_address || '-'}</div>
+                  </div>
+                  {docTab === 'payoff' && <button onClick={() => openPayoffModal(selectedDocLoan)} onMouseEnter={e => e.currentTarget.style.boxShadow = '0 0 14px rgba(255, 215, 0, 0.38)'} onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'} style={{ background: '#FFD700', color: '#0f0f0f', border: 'none', borderRadius: 7, padding: '10px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', transition: 'box-shadow 0.12s' }}>{selectedDocLoan.payoff_statement_url ? 'Create updated payoff' : 'Generate payoff statement'} -&gt;</button>}
+                </div>
+                <div style={{ color: '#555', fontSize: 11, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 8 }}>{selectedDocRecords.length ? `${selectedDocRecords.length} ${docTab === 'payoff' ? 'payoff statement' : 'document'}${selectedDocRecords.length === 1 ? '' : 's'}` : `No ${docTab === 'payoff' ? 'payoff statements' : 'documents'} yet`}</div>
+                {selectedDocRecords.length === 0 ? (
+                  <div style={{ ...s.empty, borderRadius: 9, border: '0.5px solid #252525' }}>{docTab === 'payoff' ? 'Generate a payoff statement for this loan when needed.' : 'No documents on file for this category.'}</div>
+                ) : (
+                  <div style={{ borderTop: '0.5px solid #1c1c1c' }}>{selectedDocRecords.map(documentRow)}</div>
+                )}
+              </>
+            ) : (
+              <div style={{ ...s.empty, borderRadius: 9, border: '0.5px solid #252525' }}>Select a loan to view documents.</div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -1664,6 +1800,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       onUploadDocs={handleUploadDocs}
       onDeleteLoan={() => { setShowDeleteModal(true); setDeleteConfirmText(''); }}
       onViewDocuments={openLoanDocuments}
+      onGeneratePayoff={openPayoffModal}
     />
   ) : null;
 
