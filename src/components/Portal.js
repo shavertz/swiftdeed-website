@@ -672,6 +672,8 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const [hoveredId, setHoveredId] = useState(null);
   const [hoveredNav, setHoveredNav] = useState(null);
   const [hoveredCard, setHoveredCard] = useState(null);
+  const [hoveredDocLoan, setHoveredDocLoan] = useState(null);
+  const [hoveredDocTab, setHoveredDocTab] = useState(null);
   const [liveData, setLiveData] = useState(null);
   const [liveLoading, setLiveLoading] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -1622,12 +1624,13 @@ export default function Portal({ onSubmitRequest, resetToken }) {
               {sortedDocumentLoans.length === 0 ? (
                 <div style={{ color: '#555', fontSize: 12, padding: 14 }}>No loan IDs match.</div>
               ) : sortedDocumentLoans.map(loan => {
+                const loanId = loanDocId(loan);
                 const active = loanDocId(loan) === loanDocId(selectedDocLoan);
                 const overdueDays = daysPastDue(loan);
                 return (
-                  <button key={loanDocId(loan)} onClick={() => setSelectedDocLoanId(loanDocId(loan))} style={{ width: '100%', background: active ? '#151515' : 'transparent', border: 'none', borderLeft: active ? '3px solid #FFD700' : '3px solid transparent', borderBottom: '0.5px solid #1c1c1c', padding: active ? '11px 12px 11px 9px' : '11px 12px', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit' }}>
+                  <button key={loanId} onClick={() => setSelectedDocLoanId(loanId)} onMouseEnter={() => setHoveredDocLoan(loanId)} onMouseLeave={() => setHoveredDocLoan(null)} style={{ width: '100%', background: active ? '#151515' : hoveredDocLoan === loanId ? '#121212' : 'transparent', border: 'none', borderLeft: active ? '3px solid #FFD700' : '3px solid transparent', borderBottom: '0.5px solid #1c1c1c', padding: active ? '11px 12px 11px 9px' : '11px 12px', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', transition: 'background 0.12s' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center', marginBottom: 4 }}>
-                      <span style={{ color: '#FFD700', fontSize: 11, fontFamily: 'monospace' }}>{loanDocId(loan)}</span>
+                      <span style={{ color: '#FFD700', fontSize: 11, fontFamily: 'monospace' }}>{loanId}</span>
                     </div>
                     <div style={{ color: '#fff', fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{loan.borrower_name || '-'}</div>
                     <div style={{ color: '#555', fontSize: 12, marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{loan.property_address || '-'}</div>
@@ -1646,7 +1649,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
                 ['loan', 'Loan Docs'],
                 ['yearend', 'Year-End Docs'],
               ].map(([id, label]) => (
-                <button key={id} onClick={() => setDocTab(id)} style={{ background: 'transparent', border: 'none', borderBottom: docTab === id ? '2px solid #FFD700' : '2px solid transparent', color: docTab === id ? '#FFD700' : '#777', padding: '10px 12px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>{label}</button>
+                <button key={id} onClick={() => setDocTab(id)} onMouseEnter={() => setHoveredDocTab(id)} onMouseLeave={() => setHoveredDocTab(null)} style={{ background: hoveredDocTab === id && docTab !== id ? '#141414' : 'transparent', border: 'none', borderBottom: docTab === id ? '2px solid #FFD700' : '2px solid transparent', color: docTab === id ? '#FFD700' : hoveredDocTab === id ? '#ddd' : '#777', padding: '10px 12px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', transition: 'background 0.12s, color 0.12s' }}>{label}</button>
               ))}
             </div>
             {docTab === 'yearend' ? (
