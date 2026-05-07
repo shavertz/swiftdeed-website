@@ -1021,19 +1021,18 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const nextMaturity = [...maturingSoon].sort((a, b) => daysFromToday(getBorrower(a).maturity_date || a.maturity_date) - daysFromToday(getBorrower(b).maturity_date || b.maturity_date))[0];
   const nextMaturityBorrower = nextMaturity ? getBorrower(nextMaturity) : {};
 
-  const sc = { background: '#111', border: '0.5px solid #252525', borderRadius: 9, padding: '22px 24px', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit' };
+  const sc = { background: '#121212', border: '0.5px solid #202020', borderRadius: 9, padding: '22px 24px', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit' };
   const statCard = (id) => ({
     ...sc,
-    background: hoveredCard === id ? '#151515' : '#111',
-    borderColor: hoveredCard === id ? '#3a3a3a' : '#252525',
-    boxShadow: hoveredCard === id ? 'inset 3px 0 0 #FFD700' : 'none',
-    transition: 'background 0.12s, border-color 0.12s, box-shadow 0.12s',
+    background: hoveredCard === id ? '#171717' : '#121212',
+    borderColor: hoveredCard === id ? '#333' : '#202020',
+    transition: 'background 0.12s, border-color 0.12s',
   });
   const sl = { fontSize: 10, color: '#555', textTransform: 'uppercase', letterSpacing: 0.9, marginBottom: 10 };
   const sv = { fontSize: 27, fontWeight: 600, color: '#fff', marginBottom: 6 };
   const ss = { fontSize: 12, color: '#444' };
   const attentionCardStyle = (filter, accent) => ({
-    background: hoveredAttention === filter ? '#141414' : '#111',
+    background: hoveredAttention === filter ? '#141414' : '#101010',
     border: '0.5px solid #252525',
     borderLeft: `3px solid ${accent}`,
     borderRadius: 9,
@@ -1087,6 +1086,55 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     cursor: 'pointer',
     fontFamily: 'inherit',
     whiteSpace: 'nowrap',
+  };
+  const quickActionGrid = {
+    display: 'grid',
+    gridTemplateColumns: shellNarrow ? '1fr' : 'repeat(2, minmax(0, 1fr))',
+    gap: 12,
+    marginBottom: 28,
+  };
+  const quickActionCard = (variant = 'blue') => ({
+    ...onboardingBanner,
+    gridTemplateColumns: shellNarrow ? 'auto 1fr' : 'auto minmax(0, 1fr) auto',
+    width: '100%',
+    minHeight: shellNarrow ? 'auto' : 98,
+    marginBottom: 0,
+    background: variant === 'amber' ? '#1d1705' : '#121f27',
+    border: variant === 'amber' ? '0.5px solid #4a3900' : '0.5px solid #4f6270',
+    borderLeft: variant === 'amber' ? '3px solid #FFD700' : '3px solid #8fb0c4',
+    textAlign: 'left',
+    fontFamily: 'inherit',
+    cursor: 'pointer',
+    transition: 'border-color 0.12s, background 0.12s, box-shadow 0.12s',
+  });
+  const quickActionHover = (variant = 'blue') => ({
+    onMouseEnter: e => {
+      e.currentTarget.style.background = variant === 'amber' ? '#241d06' : '#152937';
+      e.currentTarget.style.borderColor = variant === 'amber' ? '#806a00' : '#7892a3';
+      e.currentTarget.style.boxShadow = variant === 'amber'
+        ? '0 12px 28px rgba(255, 215, 0, 0.14)'
+        : '0 12px 28px rgba(143, 176, 196, 0.14)';
+    },
+    onMouseLeave: e => {
+      e.currentTarget.style.background = variant === 'amber' ? '#1d1705' : '#121f27';
+      e.currentTarget.style.borderColor = variant === 'amber' ? '#4a3900' : '#4f6270';
+      e.currentTarget.style.boxShadow = 'none';
+    },
+  });
+  const payoffIcon = {
+    ...onboardingIcon,
+    background: '#3a2d00',
+    border: 'none',
+    color: '#FFD700',
+    fontSize: 10,
+    fontWeight: 700,
+    letterSpacing: 0.6,
+  };
+  const actionIcon = {
+    ...onboardingIcon,
+    background: '#1d2d37',
+    border: '0.5px solid #4f6270',
+    color: '#dbeaf2',
   };
   const sidebarGutter = shellNarrow ? 16 : 20;
   const dashboardStatCols = 'repeat(auto-fit, minmax(220px, 1fr))';
@@ -1219,20 +1267,31 @@ export default function Portal({ onSubmitRequest, resetToken }) {
         </div>
       </div>
 
-      <button onClick={onSubmitRequest} style={{ ...onboardingBanner, width: '100%', textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer' }} {...hovSolid}>
-        <span style={onboardingIcon}>+</span>
-        <span style={{ minWidth: 0 }}>
-          <span style={{ display: 'block', color: '#fff', fontSize: 14, fontWeight: 600, marginBottom: 2 }}>Onboard a new loan</span>
-          <span style={{ display: 'block', color: '#d8d0b8', fontSize: 13, lineHeight: 1.45 }}>Upload your loan documents and SwiftDeed will extract the terms automatically. Live in minutes.</span>
-        </span>
-        <span style={onboardingCta}>Get started <span aria-hidden="true">-&gt;</span></span>
-      </button>
+      <div style={quickActionGrid}>
+        <button onClick={onSubmitRequest} style={quickActionCard('blue')} {...quickActionHover('blue')}>
+          <span style={actionIcon}>+</span>
+          <span style={{ minWidth: 0 }}>
+            <span style={{ display: 'block', color: '#fff', fontSize: 14, fontWeight: 600, marginBottom: 2 }}>Onboard a new loan</span>
+            <span style={{ display: 'block', color: '#c9d6dd', fontSize: 13, lineHeight: 1.45 }}>Upload loan documents and SwiftDeed will extract the terms automatically.</span>
+          </span>
+          <span style={{ ...onboardingCta, color: '#dbeaf2' }}>Get started <span aria-hidden="true">-&gt;</span></span>
+        </button>
+        <button onClick={() => { setActiveView('documents'); setDocTab('payoff'); setSelected(null); }} style={quickActionCard('amber')} {...quickActionHover('amber')}>
+          <span style={payoffIcon}>PDF</span>
+          <span style={{ minWidth: 0 }}>
+            <span style={{ display: 'block', color: '#fff', fontSize: 14, fontWeight: 600, marginBottom: 2 }}>Generate payoff statement</span>
+            <span style={{ display: 'block', color: '#d8d0b8', fontSize: 13, lineHeight: 1.45 }}>Create a payoff PDF for any active loan.</span>
+            <span style={{ display: 'block', color: '#6f642f', fontSize: 11, marginTop: 4 }}>$30 per statement</span>
+          </span>
+          <span style={onboardingCta}>Generate <span aria-hidden="true">-&gt;</span></span>
+        </button>
+      </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: dashboardStatCols, gap: 12, marginBottom: 28 }}>
         <button style={statCard('principal')} onClick={() => setLoansView('all')} onMouseEnter={() => setHoveredCard('principal')} onMouseLeave={() => setHoveredCard(null)}><div style={sl}>Principal Outstanding</div><div style={sv}>{formatCurrency(principalOutstanding)}</div><div style={ss}>{activeLoans.length} active loans</div></button>
-        <button style={statCard('received')} onClick={() => setLoansView('received_month')} onMouseEnter={() => setHoveredCard('received')} onMouseLeave={() => setHoveredCard(null)}><div style={sl}>Received This Month</div><div style={{ ...sv, color: '#FFD700' }}>{formatCurrency(receivedThisMonthTotal)}</div><div style={ss}>{receivedThisMonth.length} loans with payments</div></button>
-        <button style={statCard('attention')} onClick={() => setLoansView('attention')} onMouseEnter={() => setHoveredCard('attention')} onMouseLeave={() => setHoveredCard(null)}><div style={sl}>Loans Needing Attention</div><div style={{ ...sv, color: loansNeedingAttentionCount > 0 ? '#FFD700' : '#666' }}>{loansNeedingAttentionCount}</div><div style={ss}>Review flagged loans</div></button>
-        <button style={statCard('maturing')} onClick={() => setLoansView('maturing_90')} onMouseEnter={() => setHoveredCard('maturing')} onMouseLeave={() => setHoveredCard(null)}><div style={sl}>Maturing Within 90 Days</div><div style={{ ...sv, color: '#FFD700' }}>{maturingSoon.length}</div><div style={ss}>{nextMaturity ? `${formatDate(nextMaturityBorrower.maturity_date || nextMaturity.maturity_date)} - ${formatCurrency(nextMaturityBorrower.principal_balance || nextMaturity.total_due)}` : '-'}</div></button>
+        <button style={statCard('received')} onClick={() => setLoansView('received_month')} onMouseEnter={() => setHoveredCard('received')} onMouseLeave={() => setHoveredCard(null)}><div style={sl}>Received This Month</div><div style={sv}>{formatCurrency(receivedThisMonthTotal)}</div><div style={ss}>{receivedThisMonth.length} loans with payments</div></button>
+        <button style={statCard('attention')} onClick={() => setLoansView('attention')} onMouseEnter={() => setHoveredCard('attention')} onMouseLeave={() => setHoveredCard(null)}><div style={sl}>Loans Needing Attention</div><div style={sv}>{loansNeedingAttentionCount}</div><div style={ss}>Review flagged loans</div></button>
+        <button style={statCard('maturing')} onClick={() => setLoansView('maturing_90')} onMouseEnter={() => setHoveredCard('maturing')} onMouseLeave={() => setHoveredCard(null)}><div style={sl}>Maturing Within 90 Days</div><div style={sv}>{maturingSoon.length}</div><div style={ss}>{nextMaturity ? `${formatDate(nextMaturityBorrower.maturity_date || nextMaturity.maturity_date)} - ${formatCurrency(nextMaturityBorrower.principal_balance || nextMaturity.total_due)}` : '-'}</div></button>
       </div>
 
       <div style={{ fontSize: 12, color: '#FFD700', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 }}>Needs Attention</div>
@@ -1275,15 +1334,15 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       <div className="swiftdeed-bucket-scroll" style={{ border: '0.5px solid #252525', borderRadius: 9, overflowX: 'auto', overflowY: 'hidden', background: '#111', scrollbarColor: '#FFD700 #0f0f0f', scrollbarWidth: 'thin' }}>
         <div style={{ display: 'grid', gridTemplateColumns: bucketCols, minWidth: isNarrowPortfolio ? 725 : 0 }}>
         {[
-          { id: 'all', label: 'All Loans', count: activeLoans.length, total: principalOutstanding, accent: '#fff' },
-          { id: 'current', label: 'Current', count: currentLoans.length, total: currentLoans.reduce((sum, r) => sum + (parseFloat(getBorrower(r).principal_balance || r.total_due) || 0), 0), accent: '#34d399' },
-          { id: 'bucket_1_30', label: '1-30 Days Past Due', count: bucketOne.length, total: bucketOne.reduce((sum, r) => sum + (parseFloat(getBorrower(r).principal_balance || r.total_due) || 0), 0), accent: '#FFD700' },
-          { id: 'bucket_31_60', label: '31-60 Days Past Due', count: bucketTwo.length, total: bucketTwo.reduce((sum, r) => sum + (parseFloat(getBorrower(r).principal_balance || r.total_due) || 0), 0), accent: '#f87171' },
-          { id: 'bucket_60_plus', label: '60+ Days Past Due', count: bucketThree.length, total: bucketThree.reduce((sum, r) => sum + (parseFloat(getBorrower(r).principal_balance || r.total_due) || 0), 0), accent: '#777' },
+          { id: 'all', label: 'All Loans', count: activeLoans.length, total: principalOutstanding },
+          { id: 'current', label: 'Current', count: currentLoans.length, total: currentLoans.reduce((sum, r) => sum + (parseFloat(getBorrower(r).principal_balance || r.total_due) || 0), 0) },
+          { id: 'bucket_1_30', label: '1-30 Days Past Due', count: bucketOne.length, total: bucketOne.reduce((sum, r) => sum + (parseFloat(getBorrower(r).principal_balance || r.total_due) || 0), 0) },
+          { id: 'bucket_31_60', label: '31-60 Days Past Due', count: bucketTwo.length, total: bucketTwo.reduce((sum, r) => sum + (parseFloat(getBorrower(r).principal_balance || r.total_due) || 0), 0) },
+          { id: 'bucket_60_plus', label: '60+ Days Past Due', count: bucketThree.length, total: bucketThree.reduce((sum, r) => sum + (parseFloat(getBorrower(r).principal_balance || r.total_due) || 0), 0) },
         ].map(bucket => (
-          <button key={bucket.id} onClick={() => setLoansView(bucket.id)} onMouseEnter={() => setHoveredCard(bucket.id)} onMouseLeave={() => setHoveredCard(null)} style={{ background: hoveredCard === bucket.id ? '#151515' : 'transparent', border: 'none', borderRight: '0.5px solid #222', boxShadow: hoveredCard === bucket.id ? 'inset 3px 0 0 #FFD700' : 'none', padding: '18px 16px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center', transition: 'background 0.12s, box-shadow 0.12s' }}>
+          <button key={bucket.id} onClick={() => setLoansView(bucket.id)} onMouseEnter={() => setHoveredCard(bucket.id)} onMouseLeave={() => setHoveredCard(null)} style={{ background: hoveredCard === bucket.id ? '#151515' : 'transparent', border: 'none', borderRight: '0.5px solid #222', padding: '18px 16px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center', transition: 'background 0.12s' }}>
             <div style={{ ...sl, marginBottom: 8 }}>{bucket.label}</div>
-            <div style={{ fontSize: 27, color: bucket.accent, marginBottom: 6 }}>{bucket.count}</div>
+            <div style={{ fontSize: 27, color: '#fff', marginBottom: 6 }}>{bucket.count}</div>
             <div style={{ color: '#444', fontSize: 12 }}>{bucket.total ? formatCurrency(bucket.total) : '-'}</div>
           </button>
         ))}
