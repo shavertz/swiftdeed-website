@@ -947,6 +947,33 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     fetchLive();
   }, [selected]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  function syncLoanDocumentState(loanIdInternal, urls) {
+    if (!loanIdInternal) return;
+    const loanDocumentUrls = uniqueDocUrls(urls).join(',');
+    setBorrowerData(prev => ({
+      ...prev,
+      [loanIdInternal]: {
+        ...(prev[loanIdInternal] || {}),
+        loan_document_urls: loanDocumentUrls,
+      },
+    }));
+    setRequests(prev => prev.map(request => (
+      request.loan_id_internal === loanIdInternal
+        ? { ...request, loan_document_urls: loanDocumentUrls }
+        : request
+    )));
+    setSelected(prev => (
+      prev?.loan_id_internal === loanIdInternal
+        ? { ...prev, loan_document_urls: loanDocumentUrls }
+        : prev
+    ));
+    setLiveData(prev => (
+      prev?.loan_id_internal === loanIdInternal
+        ? { ...prev, loan_document_urls: loanDocumentUrls }
+        : prev
+    ));
+  }
+
   async function handleRemoveDoc(urlToRemove) {
     const newUrls = docUrls.filter(u => u !== urlToRemove);
     const previousUrls = docUrls;
@@ -955,6 +982,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       const borrowerEmail = borrowerEmails[selected.loan_id_internal] || liveData?.borrower_email;
       const res = await fetch('/api/update-loan-docs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ loanIdInternal: selected.loan_id_internal, newDocUrls: newUrls, lenderEmail: email, lenderName, borrowerEmail, borrowerName: selected.borrower_name, docsAdded: false }) });
       if (!res.ok) throw new Error('Document removal failed');
+      syncLoanDocumentState(selected.loan_id_internal, newUrls);
       setDocSuccess('Document removed.');
       setTimeout(() => setDocSuccess(''), 4000);
     } catch (e) {
@@ -986,6 +1014,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       const res = await fetch('/api/update-loan-docs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ loanIdInternal: selected.loan_id_internal, newDocUrls: combined, lenderEmail: email, lenderName, borrowerEmail, borrowerName: selected.borrower_name, docsAdded: newUrls.length > 0 }) });
       if (!res.ok) throw new Error('Document update failed');
       setDocUrls(combined);
+      syncLoanDocumentState(selected.loan_id_internal, combined);
       setDocSuccess(`${newUrls.length} document${newUrls.length !== 1 ? 's' : ''} uploaded.`);
       setTimeout(() => setDocSuccess(''), 4000);
     } catch (e) {
