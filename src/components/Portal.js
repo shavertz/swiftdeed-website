@@ -195,6 +195,139 @@ function PayoffStatementModal({ loan, goodThroughDate, onDateChange, onClose, on
   );
 }
 
+function MonthlyStatementPreviewModal({ doc, borrower, lenderName, onClose }) {
+  if (!doc) return null;
+
+  const loan = doc.loan || {};
+  const accountNumber = loan.loan_id_internal || loan.loan_id || '-';
+  const borrowerName = loan.borrower_name || borrower?.legal_name || '-';
+  const propertyAddress = loan.property_address || borrower?.property_address || '-';
+  const statementDate = '05/01/2026';
+  const paymentDueDate = borrower?.next_payment_date ? new Date(borrower.next_payment_date).toLocaleDateString('en-US') : '05/01/2026';
+  const maturityDate = borrower?.maturity_date ? new Date(borrower.maturity_date).toLocaleDateString('en-US') : '04/01/2028';
+  const originalBalance = parseFloat(borrower?.original_loan_amount || loan.total_due || 125000);
+  const endingBalance = parseFloat(borrower?.principal_balance || 123750);
+  const principalReduction = Math.max(0, originalBalance - endingBalance);
+  const rate = parseFloat(borrower?.interest_rate || loan.interest_rate || 10);
+  const perDiem = parseFloat(borrower?.per_diem || loan.per_diem || 34.38);
+  const monthlyPayment = parseFloat(borrower?.monthly_payment || 2291.67);
+  const paymentReceived = parseFloat(borrower?.last_payment_amount || monthlyPayment);
+  const interestApplied = parseFloat(borrower?.last_payment_interest || 1041.67);
+  const principalApplied = parseFloat(borrower?.last_payment_principal || Math.max(0, paymentReceived - interestApplied));
+  const paymentReceivedDate = borrower?.last_payment_date ? new Date(borrower.last_payment_date).toLocaleDateString('en-US') : '04/28/2026';
+  const paymentStatus = borrower?.payment_status || 'Paid';
+
+  const money = value => '$' + Number(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const row = (label, value, strong = false, muted = false) => (
+    <tr style={{ borderBottom: '0.5px solid #eee' }}>
+      <td style={{ padding: '5px 8px', fontSize: 12, fontWeight: strong ? 700 : 400, paddingLeft: muted ? 20 : 8, color: muted ? '#555' : '#111' }}>{label}</td>
+      <td style={{ padding: '5px 8px', textAlign: 'right', fontSize: 12, fontWeight: strong ? 700 : 400, color: muted ? '#555' : '#111' }}>{value}</td>
+    </tr>
+  );
+  const section = (title, children) => (
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', background: '#f4f4f4', border: '0.5px solid #ddd', borderBottom: 'none', padding: '5px 8px' }}>{title}</div>
+      <table style={{ width: '100%', borderCollapse: 'collapse', border: '0.5px solid #ddd' }}>
+        <tbody>{children}</tbody>
+      </table>
+    </div>
+  );
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.78)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 18 }}>
+      <div className="swiftdeed-yellow-scroll" style={{ width: '100%', maxWidth: 760, maxHeight: '90vh', overflow: 'auto', background: '#fff', borderRadius: 10, boxShadow: '0 18px 70px rgba(0,0,0,0.55)' }}>
+        <div style={{ position: 'sticky', top: 0, zIndex: 2, background: '#111', borderBottom: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px' }}>
+          <div style={{ color: '#fff', fontSize: 13, fontWeight: 600 }}>Monthly statement preview</div>
+          <button onClick={onClose} style={{ background: 'transparent', color: '#FFD700', border: '0.5px solid #4a3900', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', fontFamily: 'inherit' }}>Close</button>
+        </div>
+        <div style={{ background: '#fff', maxWidth: 680, margin: '0 auto', fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif", fontSize: 13, color: '#111', padding: '2rem 2.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10, gap: 20 }}>
+            <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: -0.5 }}>
+              <span style={{ color: '#111' }}>Swift</span><span style={{ color: '#E9A800' }}>Deed</span>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: 17, fontWeight: 700 }}>Monthly Loan Statement</div>
+              <div style={{ fontSize: 11, color: '#444', marginTop: 2 }}>Statement Date: {statementDate} &nbsp;-&nbsp; Account: {accountNumber}</div>
+            </div>
+          </div>
+
+          <div style={{ borderTop: '2.5px solid #111', marginBottom: 14 }} />
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0, marginBottom: 16 }}>
+            <div>
+              <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: '#111', marginBottom: 4 }}>Borrower</div>
+              <div style={{ fontWeight: 700, fontSize: 13 }}>{borrowerName}</div>
+              <div style={{ fontSize: 12 }}>{propertyAddress}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: '#111', marginBottom: 4 }}>Servicer</div>
+              <div style={{ fontWeight: 700, fontSize: 13 }}>{lenderName || 'SwiftDeed Services, Inc.'}</div>
+              <div style={{ fontSize: 12 }}>Processed by SwiftDeed Services, Inc.</div>
+              <div style={{ fontSize: 12 }}>www.theswiftdeed.com</div>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', background: '#f4f4f4', border: '0.5px solid #ddd', marginBottom: 16 }}>
+            {[
+              ['Statement period', 'Apr 1 - Apr 30, 2026'],
+              ['Payment due date', paymentDueDate],
+              ['Loan maturity date', maturityDate],
+              ['Payment status', paymentStatus],
+            ].map(([label, value], index) => (
+              <div key={label} style={{ padding: '8px 10px', borderRight: index < 3 ? '0.5px solid #ddd' : 'none' }}>
+                <div style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: 0.7, marginBottom: 3 }}>{label}</div>
+                <div style={{ fontWeight: 700, fontSize: 12, color: label === 'Payment status' ? '#1a7a3f' : '#111' }}>{value}</div>
+              </div>
+            ))}
+          </div>
+
+          {section('Principal', <>
+            {row('Beginning principal balance', money(originalBalance))}
+            {row('Principal reduction this period', `(${money(principalReduction)})`)}
+            {row('Ending principal balance', money(endingBalance), true)}
+          </>)}
+
+          {section('Interest', <>
+            {row('Note interest rate', `${rate.toFixed(4)}%`)}
+            {row('Interest charged this period', money(interestApplied))}
+            {row('Daily interest (per diem)', `${money(perDiem)} / day`)}
+          </>)}
+
+          {section('Payment detail', <>
+            {row('Scheduled monthly payment', money(monthlyPayment))}
+            {row('Payment received', money(paymentReceived))}
+            {row('Interest applied', money(interestApplied), false, true)}
+            {row('Principal applied', money(principalApplied), false, true)}
+            {row('Late fees charged', '$0.00')}
+            {row('Date payment received', paymentReceivedDate)}
+          </>)}
+
+          <div style={{ border: '1px solid #111', padding: '10px 12px', marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontSize: 10, color: '#555' }}>Next payment due</div>
+              <div style={{ fontWeight: 700, fontSize: 14 }}>{paymentDueDate}</div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: 10, color: '#555' }}>Amount due</div>
+              <div style={{ fontWeight: 700, fontSize: 14 }}>{money(monthlyPayment)}</div>
+            </div>
+          </div>
+
+          <div style={{ fontSize: 10, color: '#444', lineHeight: 1.6, marginBottom: 14 }}>
+            This statement is generated by SwiftDeed as Loan Servicer and reflects all activity for the period indicated above. Please retain this statement for your records. Contact SwiftDeed if you believe any information is inaccurate.
+          </div>
+
+          <div style={{ borderTop: '0.5px solid #ccc', paddingTop: 8, display: 'flex', justifyContent: 'space-between', gap: 18, fontSize: 9.5, color: '#555' }}>
+            <span>Property: {propertyAddress}</span>
+            <span>Processed by SwiftDeed Services, Inc. - www.theswiftdeed.com</span>
+          </div>
+          <div style={{ fontSize: 9.5, color: '#555', marginTop: 4 }}>Prepared by SwiftDeed Processing Team</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 //  Loan Detail Page 
 function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, docSuccess, uploadingDocs, docFileRef, lenderEmail, lenderName, borrowerEmails, onBack, onRecordPayment, onRemoveDoc, onUploadDocs, onDeleteLoan, onViewDocuments, onGeneratePayoff, paymentSuccess }) {
   const [showAllPayments, setShowAllPayments] = useState(false);
@@ -679,6 +812,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [payoffLoan, setPayoffLoan] = useState(null);
   const [payoffGoodThrough, setPayoffGoodThrough] = useState(defaultGoodThroughDate());
+  const [monthlyStatementDoc, setMonthlyStatementDoc] = useState(null);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [lenderName, setLenderName] = useState('');
   const [loanPayments, setLoanPayments] = useState([]);
@@ -701,6 +835,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     setPaymentSuccess(false);
     setPayoffLoan(null);
     setPayoffGoodThrough(defaultGoodThroughDate());
+    setMonthlyStatementDoc(null);
     setActiveView('dashboard');
     setLoanFilter({ id: 'all', label: 'All active loans', accent: '#FFD700' });
     setSearch('');
@@ -1249,7 +1384,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     setLoanPayments([]);
     setDocUrls([]);
     setActiveView('documents');
-    setDocTab('monthly');
+    setDocTab('loan');
     setSelectedDocLoanId(loan?.loan_id_internal || loan?.loan_id || '');
   };
   const openPayoffModal = (loan) => {
@@ -1265,6 +1400,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const modals = (
     <>
       <PayoffStatementModal loan={payoffLoan} goodThroughDate={payoffGoodThrough} onDateChange={setPayoffGoodThrough} onClose={closePayoffModal} onGenerate={handleGeneratePayoff} />
+      <MonthlyStatementPreviewModal doc={monthlyStatementDoc} borrower={monthlyStatementDoc?.loan ? getBorrower(monthlyStatementDoc.loan) : null} lenderName={lenderName} onClose={() => setMonthlyStatementDoc(null)} />
       {showPaymentModal && liveData && (
         <RecordPaymentModal borrower={liveData} lenderEmail={email} lenderName={lenderName} onClose={() => setShowPaymentModal(false)} onSuccess={(updates) => { setShowPaymentModal(false); setPaymentSuccess(true); setLiveData(prev => ({ ...prev, ...updates })); setTimeout(() => setPaymentSuccess(false), 5000); }} />
       )}
@@ -1546,7 +1682,14 @@ export default function Portal({ onSubmitRequest, resetToken }) {
         </div>
         {!shellNarrow && <span />}
         {!shellNarrow && <span style={{ color: '#777', fontSize: 12, textAlign: 'right' }}>{visibleDate}</span>}
-        <button style={{ background: 'transparent', border: 'none', color: '#FFD700', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'right', whiteSpace: 'nowrap', justifySelf: 'end' }}>View -&gt;</button>
+        <button
+          onClick={() => {
+            if (doc.tab === 'monthly') setMonthlyStatementDoc(doc);
+          }}
+          style={{ background: 'transparent', border: 'none', color: '#FFD700', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'right', whiteSpace: 'nowrap', justifySelf: 'end' }}
+        >
+          View -&gt;
+        </button>
         {shellNarrow && visibleDate && <div style={{ gridColumn: '1 / -1', color: '#666', fontSize: 12, paddingLeft: 40 }}>{visibleDate}</div>}
       </div>
     );
@@ -1645,8 +1788,8 @@ export default function Portal({ onSubmitRequest, resetToken }) {
             <div className="swiftdeed-yellow-scroll" style={{ display: 'flex', gap: 8, overflowX: 'auto', borderBottom: '0.5px solid #252525', marginBottom: 16 }}>
               {[
                 ['payoff', 'Payoff Statements'],
-                ['monthly', 'Monthly Statements'],
                 ['loan', 'Loan Docs'],
+                ['monthly', 'Monthly Statements'],
                 ['yearend', 'Year-End Docs'],
               ].map(([id, label]) => (
                 <button key={id} onClick={() => setDocTab(id)} onMouseEnter={() => setHoveredDocTab(id)} onMouseLeave={() => setHoveredDocTab(null)} style={{ background: hoveredDocTab === id && docTab !== id ? '#141414' : 'transparent', border: 'none', borderBottom: docTab === id ? '2px solid #FFD700' : '2px solid transparent', color: docTab === id ? '#FFD700' : hoveredDocTab === id ? '#ddd' : '#777', padding: '10px 12px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', transition: 'background 0.12s, color 0.12s' }}>{label}</button>
