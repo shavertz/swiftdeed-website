@@ -817,12 +817,13 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
 
       <div className="loan-detail-header">
         <div style={{ minWidth: 0 }}>
-          <div className="loan-detail-title">{selected.loan_id_internal || selected.loan_id || '-'} - {selected.borrower_name || '-'}</div>
+          <div className="loan-detail-title">{selected.loan_id_internal || selected.loan_id || '-'}</div>
+          <div style={{ fontSize: 13, color: '#555' }}>{selected.borrower_name || '-'}</div>
           <div style={{ fontSize: 13, color: '#555' }}>{selected.property_address || '-'}</div>
         </div>
         <div className="loan-detail-actions">
           <button className="swiftdeed-statement-button" onClick={() => onViewDocuments(selected)} style={{ ...secondaryBtn, background: '#FFD700', color: '#0f0f0f', border: 'none', fontWeight: 700 }}>View documents -&gt;</button>
-          <button className="swiftdeed-statement-button" onClick={() => onGeneratePayoff(selected)} style={{ ...secondaryBtn, background: '#1d1705', color: '#FFD700', border: '0.5px solid #4a3900', fontWeight: 700 }}>Generate payoff statement -&gt;</button>
+          <button className="swiftdeed-statement-button" onClick={() => onGeneratePayoff(selected)} style={{ ...secondaryBtn, background: '#FFD700', color: '#0f0f0f', border: 'none', fontWeight: 700 }}>Generate payoff statement -&gt;</button>
         </div>
       </div>
 
@@ -2372,7 +2373,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
                 onClick={() => setSelected(r)}
                 onMouseEnter={() => setHoveredId(r.id)}
                 onMouseLeave={() => setHoveredId(null)}>
-                <span style={{ color: '#777', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.loan_id_internal || r.loan_id || '-'}</span>
+                <span style={{ color: '#FFD700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.loan_id_internal || r.loan_id || '-'}</span>
                 <span style={{ color: '#fff', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.borrower_name || '-'}</span>
                 <span style={{ color: '#777', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{loc.city}</span>
                 <span style={{ color: '#777' }}>{loc.state}</span>
