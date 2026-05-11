@@ -601,7 +601,7 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '0.5px solid #222' }}>
-                {['Date', 'Amount', 'Interest', 'Principal', 'Balance'].map(h => (
+                {['Date', 'Amount', 'Principal', 'Interest', 'Remaining Balance'].map(h => (
                   <th key={h} style={{ fontSize: 10, color: '#555', textTransform: 'uppercase', letterSpacing: 0.8, padding: '8px 10px', textAlign: h === 'Date' ? 'left' : 'right', fontWeight: 500 }}>{h}</th>
                 ))}
               </tr>
@@ -611,8 +611,8 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
                 <tr key={p.id || i} style={{ borderBottom: '0.5px solid #1a1a1a' }}>
                   <td style={{ padding: '10px', fontSize: 12, color: '#777' }}>{p.payment_date ? new Date(p.payment_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '-'}</td>
                   <td style={{ padding: '10px', fontSize: 12, color: '#fff', fontWeight: 500, textAlign: 'right' }}>{formatCurrency(p.amount)}</td>
-                  <td style={{ padding: '10px', fontSize: 12, color: '#777', textAlign: 'right' }}>{formatCurrency(p.interest_portion)}</td>
                   <td style={{ padding: '10px', fontSize: 12, color: '#777', textAlign: 'right' }}>{formatCurrency(p.principal_portion)}</td>
+                  <td style={{ padding: '10px', fontSize: 12, color: '#777', textAlign: 'right' }}>{formatCurrency(p.interest_portion)}</td>
                   <td style={{ padding: '10px', fontSize: 12, color: '#ccc', textAlign: 'right' }}>{formatCurrency(p.principal_balance_after)}</td>
                 </tr>
               ))}
