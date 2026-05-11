@@ -8,7 +8,6 @@ import BorrowerOnboarding from './components/BorrowerOnboarding';
 import LenderOnboarding from './components/LenderOnboarding';
 import TermsPage from './components/TermsPage';
 import PrivacyPage from './components/PrivacyPage';
-import ProfilePage from './components/ProfilePage';
 import BorrowerProfilePage from './components/BorrowerProfilePage';
 import './App.css';
 
@@ -302,12 +301,6 @@ export default function App() {
             ) : (
               <>
                 <button
-                  onClick={() => setPage('profile')}
-                  title="Profile"
-                  style={{ background: 'transparent', color: '#fff', fontSize: 14, padding: '7px 10px', borderRadius: 6, border: '0.5px solid #FFD700', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}
-                  {...hov.outline}
-                ><ProfileIcon /></button>
-                <button
                   onClick={() => { setPortalResetToken(t => t + 1); setPage('portal'); }}
                   style={{ background: 'transparent', color: '#fff', fontSize: 14, fontWeight: 500, padding: '8px 18px', borderRadius: 6, border: '0.5px solid #FFD700', cursor: 'pointer', transition: 'all 0.15s' }}
                   {...hov.outline}
@@ -478,7 +471,6 @@ export default function App() {
       {page === 'auth' && (ACTIVATION_TOKEN ? activationAuthPage : standardAuthPage)}
       {page === 'request' && <RequestForm />}
       {page === 'portal' && <Portal onSubmitRequest={() => setPage('request')} resetToken={portalResetToken} />}
-      {page === 'profile' && <ProfilePage onBack={() => setPage('portal')} />}
       {page === 'borrower-profile' && <BorrowerProfilePage onBack={() => routeByEmail(user?.primaryEmailAddress?.emailAddress)} />}
       {page === 'borrower-portal' && <BorrowerPortal onHome={() => setPage('home')} />}
       {page === 'borrower-onboarding' && (

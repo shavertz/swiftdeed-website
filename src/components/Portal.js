@@ -1007,7 +1007,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const [settingsError, setSettingsError] = useState('');
   const [savingSettings, setSavingSettings] = useState(false);
   const [lenderSettings, setLenderSettings] = useState(null);
-  const [accountForm, setAccountForm] = useState({ firstName: '', lastName: '', companyName: '', email: '', phone: '' });
+  const [accountForm, setAccountForm] = useState({ firstName: '', lastName: '', companyName: '', email: '', phone: '', state: '' });
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [billingEmail, setBillingEmail] = useState('');
   const [wireForm, setWireForm] = useState({ wire_bank_name: '', wire_routing_number: '', wire_account_number: '', wire_account_name: '', wire_bank_address: '' });
@@ -1084,6 +1084,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
             companyName: lender.company_name || '',
             email: lender.email || email,
             phone: lender.phone || '',
+            state: lender.state || '',
           });
           setBillingEmail(lender.billing_email || lender.email || email);
           setWireForm({
@@ -1676,6 +1677,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       companyName: lenderSettings?.company_name || '',
       email: lenderSettings?.email || email || '',
       phone: lenderSettings?.phone || '',
+      state: lenderSettings?.state || '',
     });
     showSettingsNotice('Account changes discarded.');
   };
@@ -1709,6 +1711,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
         full_name: `${accountForm.firstName} ${accountForm.lastName}`.trim(),
         company_name: accountForm.companyName,
         phone: accountForm.phone,
+        state: accountForm.state,
       });
       showSettingsNotice('Account changes saved.');
     } catch {
@@ -1806,6 +1809,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
                 {settingField('Company / entity name', { value: accountForm.companyName, onChange: e => setAccountForm(f => ({ ...f, companyName: e.target.value })) })}
                 {settingField('Email address', { value: accountForm.email, readOnly: true, style: { color: '#666' } })}
                 {settingField('Phone number', { value: accountForm.phone, onChange: e => setAccountForm(f => ({ ...f, phone: e.target.value })) })}
+                {settingField('State', { value: accountForm.state, onChange: e => setAccountForm(f => ({ ...f, state: e.target.value })) })}
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 16 }}>
                 <button onClick={resetAccountForm} className="swiftdeed-settings-secondary" style={settingsSecondary}>Cancel</button>
