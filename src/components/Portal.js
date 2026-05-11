@@ -1623,6 +1623,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
             period: 'Loan file',
             date: formatDate(loan.created_at),
             action: 'View',
+            url,
           }))
         : [{
             id: `loan-placeholder-${loan.loan_id_internal}`,
@@ -1714,6 +1715,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
         <button
           onClick={() => {
             if (doc.tab === 'monthly') setMonthlyStatementDoc(doc);
+            if (doc.url) window.open(doc.url, '_blank', 'noopener,noreferrer');
           }}
           style={{ background: 'transparent', border: 'none', color: '#FFD700', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'right', whiteSpace: 'nowrap', justifySelf: 'end' }}
         >
