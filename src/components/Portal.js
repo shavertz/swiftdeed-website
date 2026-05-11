@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { calculatePayment } from '../utils/calculatePayment';
-import { useUser } from '@clerk/clerk-react';
+import { useClerk, useUser } from '@clerk/clerk-react';
 
 const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY;
@@ -978,6 +978,7 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
 //  Main Portal 
 export default function Portal({ onSubmitRequest, resetToken }) {
   const { user } = useUser();
+  const { signOut } = useClerk();
   const [requests, setRequests] = useState([]);
   const [borrowerEmails, setBorrowerEmails] = useState({});
   const [borrowerData, setBorrowerData] = useState({});
@@ -1002,6 +1003,14 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const [invoiceStatus, setInvoiceStatus] = useState('all');
   const [openInvoiceId, setOpenInvoiceId] = useState('');
   const [settingsTab, setSettingsTab] = useState('account');
+  const [settingsNotice, setSettingsNotice] = useState('');
+  const [settingsError, setSettingsError] = useState('');
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [lenderSettings, setLenderSettings] = useState(null);
+  const [accountForm, setAccountForm] = useState({ firstName: '', lastName: '', companyName: '', email: '', phone: '' });
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [billingEmail, setBillingEmail] = useState('');
+  const [wireForm, setWireForm] = useState({ wire_bank_name: '', wire_routing_number: '', wire_account_number: '', wire_account_name: '', wire_bank_address: '' });
   const [liveData, setLiveData] = useState(null);
   const [liveLoading, setLiveLoading] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -1062,9 +1071,29 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     if (!email) return;
     async function fetchLenderName() {
       try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/lenders?email=eq.${encodeURIComponent(email)}&select=company_name&limit=1`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/lenders?email=eq.${encodeURIComponent(email)}&select=*&limit=1`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
         const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) setLenderName(data[0].company_name || '');
+        if (Array.isArray(data) && data.length > 0) {
+          const lender = data[0];
+          const [firstName = user?.firstName || '', ...lastParts] = String(lender.full_name || user?.fullName || '').split(' ');
+          setLenderSettings(lender);
+          setLenderName(lender.company_name || '');
+          setAccountForm({
+            firstName,
+            lastName: lastParts.join(' ') || user?.lastName || '',
+            companyName: lender.company_name || '',
+            email: lender.email || email,
+            phone: lender.phone || '',
+          });
+          setBillingEmail(lender.billing_email || lender.email || email);
+          setWireForm({
+            wire_bank_name: lender.wire_bank_name || '',
+            wire_routing_number: lender.wire_routing_number || '',
+            wire_account_number: lender.wire_account_number || '',
+            wire_account_name: lender.wire_account_name || '',
+            wire_bank_address: lender.wire_bank_address || '',
+          });
+        }
       } catch (e) { console.error(e); }
     }
     fetchLenderName();
@@ -1634,6 +1663,104 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       <input {...props} style={{ ...settingsInput, ...(props.style || {}) }} />
     </div>
   );
+  const showSettingsNotice = (message) => {
+    setSettingsNotice(message);
+    setSettingsError('');
+    window.setTimeout(() => setSettingsNotice(''), 2600);
+  };
+  const resetAccountForm = () => {
+    const [firstName = user?.firstName || '', ...lastParts] = String(lenderSettings?.full_name || user?.fullName || '').split(' ');
+    setAccountForm({
+      firstName,
+      lastName: lastParts.join(' ') || user?.lastName || '',
+      companyName: lenderSettings?.company_name || '',
+      email: lenderSettings?.email || email || '',
+      phone: lenderSettings?.phone || '',
+    });
+    showSettingsNotice('Account changes discarded.');
+  };
+  const patchLenderSettings = async (payload) => {
+    setSavingSettings(true);
+    setSettingsError('');
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/lenders?email=eq.${encodeURIComponent(email)}`, {
+        method: 'PATCH',
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+          Prefer: 'return=representation',
+        },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const updated = await res.json();
+      const next = Array.isArray(updated) && updated[0] ? updated[0] : { ...lenderSettings, ...payload };
+      setLenderSettings(next);
+      if (payload.company_name) setLenderName(payload.company_name);
+      return next;
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+  const saveAccountSettings = async () => {
+    try {
+      await patchLenderSettings({
+        full_name: `${accountForm.firstName} ${accountForm.lastName}`.trim(),
+        company_name: accountForm.companyName,
+        phone: accountForm.phone,
+      });
+      showSettingsNotice('Account changes saved.');
+    } catch {
+      setSettingsError('Account changes could not be saved.');
+    }
+  };
+  const saveBillingEmail = async () => {
+    try {
+      await patchLenderSettings({ billing_email: billingEmail });
+      showSettingsNotice('Billing email saved.');
+    } catch {
+      setSettingsError('Billing email could not be saved. The database may need a billing_email field.');
+    }
+  };
+  const resetWireForm = () => {
+    setWireForm({
+      wire_bank_name: lenderSettings?.wire_bank_name || '',
+      wire_routing_number: lenderSettings?.wire_routing_number || '',
+      wire_account_number: lenderSettings?.wire_account_number || '',
+      wire_account_name: lenderSettings?.wire_account_name || '',
+      wire_bank_address: lenderSettings?.wire_bank_address || '',
+    });
+    showSettingsNotice('Wire instruction changes discarded.');
+  };
+  const saveWireSettings = async () => {
+    try {
+      await patchLenderSettings(wireForm);
+      showSettingsNotice('Wire instructions saved.');
+    } catch {
+      setSettingsError('Wire instructions could not be saved.');
+    }
+  };
+  const updatePassword = async () => {
+    if (!passwordForm.newPassword || passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setSettingsError('New passwords do not match.');
+      return;
+    }
+    setSavingSettings(true);
+    setSettingsError('');
+    try {
+      await user.updatePassword({
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword,
+      });
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      showSettingsNotice('Password updated.');
+    } catch {
+      setSettingsError('Password could not be updated.');
+    } finally {
+      setSavingSettings(false);
+    }
+  };
   const toggleRow = (title, desc, checked = true) => (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, padding: '15px 0', borderTop: '0.5px solid #222' }}>
       <div>
@@ -1660,9 +1787,11 @@ export default function Portal({ onSubmitRequest, resetToken }) {
         <div style={{ fontSize: 24, fontWeight: 600, color: '#fff', marginBottom: 22 }}>Settings</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 18, overflow: 'visible', borderBottom: '0.5px solid #222', marginBottom: 24 }}>
           {settingsTabs.map(([id, label]) => (
-            <button key={id} onClick={() => setSettingsTab(id)} style={{ background: 'transparent', border: 'none', borderBottom: settingsTab === id ? '2px solid #FFD700' : '2px solid transparent', color: settingsTab === id ? '#FFD700' : '#666', padding: '10px 2px', marginBottom: -1, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>{label}</button>
+            <button key={id} onClick={() => { setSettingsTab(id); setSettingsNotice(''); }} style={{ background: 'transparent', border: 'none', borderBottom: settingsTab === id ? '2px solid #FFD700' : '2px solid transparent', color: settingsTab === id ? '#FFD700' : '#666', padding: '10px 2px', marginBottom: -1, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>{label}</button>
           ))}
         </div>
+        {settingsNotice && <div style={{ color: '#34d399', fontSize: 12, margin: '-10px 0 16px' }}>{settingsNotice}</div>}
+        {settingsError && <div style={{ color: '#ff6b6b', fontSize: 12, margin: '-10px 0 16px' }}>{settingsError}</div>}
 
         {settingsTab === 'account' && (
           <div style={{ display: 'grid', gap: 16 }}>
@@ -1670,30 +1799,30 @@ export default function Portal({ onSubmitRequest, resetToken }) {
               <div style={{ color: '#fff', fontSize: 14, fontWeight: 700 }}>Account information</div>
               <div style={{ color: '#555', fontSize: 12, marginTop: 5, marginBottom: 20 }}>Update your name, company, and contact details.</div>
               <div style={{ display: 'grid', gridTemplateColumns: shellNarrow ? '1fr' : '1fr 1fr', gap: 14 }}>
-                {settingField('First name', { defaultValue: user?.firstName || 'Brandon' })}
-                {settingField('Last name', { defaultValue: user?.lastName || 'Mitchell' })}
+                {settingField('First name', { value: accountForm.firstName, onChange: e => setAccountForm(f => ({ ...f, firstName: e.target.value })) })}
+                {settingField('Last name', { value: accountForm.lastName, onChange: e => setAccountForm(f => ({ ...f, lastName: e.target.value })) })}
               </div>
               <div style={{ display: 'grid', gap: 14, marginTop: 14 }}>
-                {settingField('Company / entity name', { defaultValue: 'CL-LM RESI PURCHASER TRUST 1' })}
-                {settingField('Email address', { defaultValue: user?.primaryEmailAddress?.emailAddress || 'brandon@clmlending.com' })}
-                {settingField('Phone number', { defaultValue: '+1 (203) 555-0192' })}
+                {settingField('Company / entity name', { value: accountForm.companyName, onChange: e => setAccountForm(f => ({ ...f, companyName: e.target.value })) })}
+                {settingField('Email address', { value: accountForm.email, readOnly: true, style: { color: '#666' } })}
+                {settingField('Phone number', { value: accountForm.phone, onChange: e => setAccountForm(f => ({ ...f, phone: e.target.value })) })}
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 16 }}>
-                <button className="swiftdeed-settings-secondary" style={settingsSecondary}>Cancel</button>
-                <button className="swiftdeed-settings-primary" style={settingsPrimary}>Save changes</button>
+                <button onClick={resetAccountForm} className="swiftdeed-settings-secondary" style={settingsSecondary}>Cancel</button>
+                <button disabled={savingSettings} onClick={saveAccountSettings} className="swiftdeed-settings-primary" style={settingsPrimary}>Save changes</button>
               </div>
             </div>
             <div style={settingsCard}>
               <div style={{ color: '#fff', fontSize: 14, fontWeight: 700 }}>Change password</div>
               <div style={{ color: '#555', fontSize: 12, marginTop: 5, marginBottom: 20 }}>Update your login password.</div>
               <div style={{ display: 'grid', gap: 14 }}>
-                {settingField('Current password', { type: 'password', defaultValue: 'passwordxx' })}
+                {settingField('Current password', { type: 'password', value: passwordForm.currentPassword, onChange: e => setPasswordForm(f => ({ ...f, currentPassword: e.target.value })) })}
                 <div style={{ display: 'grid', gridTemplateColumns: shellNarrow ? '1fr' : '1fr 1fr', gap: 14 }}>
-                  {settingField('New password', { type: 'password', placeholder: 'Min. 8 characters' })}
-                  {settingField('Confirm new password', { type: 'password', placeholder: 'Re-enter password' })}
+                  {settingField('New password', { type: 'password', placeholder: 'Min. 8 characters', value: passwordForm.newPassword, onChange: e => setPasswordForm(f => ({ ...f, newPassword: e.target.value })) })}
+                  {settingField('Confirm new password', { type: 'password', placeholder: 'Re-enter password', value: passwordForm.confirmPassword, onChange: e => setPasswordForm(f => ({ ...f, confirmPassword: e.target.value })) })}
                 </div>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}><button className="swiftdeed-settings-primary" style={settingsPrimary}>Update password</button></div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}><button disabled={savingSettings} onClick={updatePassword} className="swiftdeed-settings-primary" style={settingsPrimary}>Update password</button></div>
             </div>
           </div>
         )}
@@ -1715,8 +1844,8 @@ export default function Portal({ onSubmitRequest, resetToken }) {
             <div style={settingsCard}>
               <div style={{ color: '#fff', fontSize: 14, fontWeight: 700 }}>Billing email</div>
               <div style={{ color: '#555', fontSize: 12, marginTop: 5, marginBottom: 18 }}>Invoices and billing notifications will be sent to this address.</div>
-              {settingField('Billing email', { defaultValue: user?.primaryEmailAddress?.emailAddress || 'brandon@clmlending.com' })}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}><button className="swiftdeed-settings-primary" style={settingsPrimary}>Save</button></div>
+              {settingField('Billing email', { value: billingEmail, onChange: e => setBillingEmail(e.target.value) })}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}><button disabled={savingSettings} onClick={saveBillingEmail} className="swiftdeed-settings-primary" style={settingsPrimary}>Save</button></div>
             </div>
           </div>
         )}
@@ -1726,17 +1855,17 @@ export default function Portal({ onSubmitRequest, resetToken }) {
             <div style={{ color: '#fff', fontSize: 14, fontWeight: 700 }}>Wire instructions</div>
             <div style={{ color: '#555', fontSize: 12, marginTop: 5, marginBottom: 20 }}>Borrower payments will be wired to the account below. Keep this accurate and up to date.</div>
             <div style={{ display: 'grid', gap: 14 }}>
-              {settingField('Bank name', { defaultValue: 'Wells Fargo' })}
-              {settingField('Account name', { defaultValue: 'CL-LM RESI PURCHASER TRUST 1' })}
+              {settingField('Bank name', { value: wireForm.wire_bank_name, onChange: e => setWireForm(f => ({ ...f, wire_bank_name: e.target.value })) })}
+              {settingField('Account name', { value: wireForm.wire_account_name, onChange: e => setWireForm(f => ({ ...f, wire_account_name: e.target.value })) })}
               <div style={{ display: 'grid', gridTemplateColumns: shellNarrow ? '1fr' : '1fr 1fr', gap: 14 }}>
-                {settingField('Routing number', { defaultValue: '121000248' })}
-                {settingField('Account number', { defaultValue: '••••••7291' })}
+                {settingField('Routing number', { value: wireForm.wire_routing_number, onChange: e => setWireForm(f => ({ ...f, wire_routing_number: e.target.value.replace(/\D/g, '').slice(0, 9) })) })}
+                {settingField('Account number', { value: wireForm.wire_account_number, onChange: e => setWireForm(f => ({ ...f, wire_account_number: e.target.value })) })}
               </div>
-              {settingField('Reference / memo (optional)', { placeholder: 'e.g. loan ID or borrower name' })}
+              {settingField('Bank address', { value: wireForm.wire_bank_address, onChange: e => setWireForm(f => ({ ...f, wire_bank_address: e.target.value })) })}
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 16 }}>
-              <button className="swiftdeed-settings-secondary" style={settingsSecondary}>Cancel</button>
-              <button className="swiftdeed-settings-primary" style={settingsPrimary}>Save wire instructions</button>
+              <button onClick={resetWireForm} className="swiftdeed-settings-secondary" style={settingsSecondary}>Cancel</button>
+              <button disabled={savingSettings} onClick={saveWireSettings} className="swiftdeed-settings-primary" style={settingsPrimary}>Save wire instructions</button>
             </div>
           </div>
         )}
@@ -1764,9 +1893,9 @@ export default function Portal({ onSubmitRequest, resetToken }) {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '14px 0', borderTop: '0.5px solid #222' }}>
                 <div><div style={{ color: '#fff', fontSize: 13 }}>Safari - iPhone - Westport, CT</div><div style={{ color: '#555', fontSize: 11, marginTop: 3 }}>Last active 2 hours ago</div></div>
-                <button className="swiftdeed-settings-secondary" style={settingsDanger}>Log out</button>
+                <button onClick={() => signOut()} className="swiftdeed-settings-secondary" style={settingsDanger}>Log out</button>
               </div>
-              <div style={{ borderTop: '0.5px solid #222', paddingTop: 14 }}><button className="swiftdeed-settings-secondary" style={settingsDanger}>Log out of all devices</button></div>
+              <div style={{ borderTop: '0.5px solid #222', paddingTop: 14 }}><button onClick={() => signOut()} className="swiftdeed-settings-secondary" style={settingsDanger}>Log out of all devices</button></div>
             </div>
             <div style={settingsCard}>
               <div style={{ color: '#fff', fontSize: 14, fontWeight: 700 }}>Two-factor authentication</div>
