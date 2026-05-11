@@ -103,6 +103,17 @@ export default function LenderOnboarding({ onComplete }) {
         return;
       }
 
+      fetch('/api/lender-welcome', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lenderEmail: email,
+          lenderName: fullName.trim(),
+          companyName: companyName.trim(),
+          portalUrl: window.location.origin,
+        }),
+      }).catch(err => console.error('Welcome email failed:', err));
+
       onComplete();
     } catch {
       setError('Something went wrong. Please try again.');

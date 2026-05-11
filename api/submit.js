@@ -1,10 +1,8 @@
 import Anthropic from '@anthropic-ai/sdk';
 import formidable from 'formidable';
-import fs from 'fs';
 import { upsertBorrower } from './lib/borrowers.js';
-import { sendInternalSubmissionEmail, sendLenderPayoffEmail } from './lib/email.js';
+import { sendInternalSubmissionEmail } from './lib/email.js';
 import { preparePostRequest } from './lib/http.js';
-import { generateInvoicePDF, generatePayoffPDF } from './lib/submit-pdfs.js';
 import { supabase } from './lib/supabase.js';
 
 export const config = { api: { bodyParser: false, responseLimit: false } };
@@ -91,19 +89,6 @@ export default async function handler(req, res) {
     const turnaround = Array.isArray(fields.turnaround)    ? fields.turnaround[0]    : fields.turnaround;
     const borrowerEmail = Array.isArray(fields.borrowerEmail) ? fields.borrowerEmail[0] : fields.borrowerEmail;
     const borrowerName  = Array.isArray(fields.borrowerName)  ? fields.borrowerName[0]  : fields.borrowerName;
-
-    // Fetch lender wire details
-    let wireDetails = {};
-    if (email) {
-      const { data: lenderRows } = await supabase
-        .from('lenders')
-        .select('wire_bank_name, wire_routing_number, wire_account_number, wire_account_name, wire_bank_address')
-        .eq('email', email)
-        .limit(1);
-      if (lenderRows && lenderRows.length > 0) {
-        wireDetails = lenderRows[0];
-      }
-    }
 
     const fileUrlsRaw = Array.isArray(fields.fileUrls) ? fields.fileUrls[0] : fields.fileUrls;
     const fileUrls = fileUrlsRaw ? JSON.parse(fileUrlsRaw) : [];
@@ -248,40 +233,7 @@ Borrower ID provided by submitter: ${borrowerId || 'none'}`;
     const internalLoanId = 'SD-' + new Date().getFullYear() + '-' + String(Date.now()).slice(-6);
     const activationBaseUrl = `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers.host || 'www.theswiftdeed.com'}`;
 
-    const pdfBuffer = await generatePayoffPDF({
-      ...loanData,
-      unpaid_principal_balance: principal,
-      note_interest_rate: rate,
-      note_rate_interest_due: useStatedPayoff ? null : interestDue,
-      estimated_payoff_charges: servicerFee,
-      total_due: totalDue,
-      daily_interest: dailyRateForPDF,
-      late_charge: loanData.late_charge,
-      interest_period: `${loanData.interest_paid_to_date} to ${loanData.payoff_date || loanData.maturity_date || 'payoff date'}`,
-      loan_id_internal: internalLoanId,
-      account_number: internalLoanId,
-      statement_date: new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }),
-      wire: wireDetails,
-    });
-
-    const invoiceBuffer = await generateInvoicePDF({
-      internalLoanId,
-      name,
-      email,
-      company,
-      phone,
-      turnaround,
-      totalCharged: turnaround === 'rush' ? 50 : 40,
-      borrowerName: loanData.borrower_name,
-    });
-
     const loanDocumentUrls = fileUrls;
-
-    const borrowerSlug = (loanData.borrower_name || 'unknown').replace(/[^a-zA-Z0-9]/g, '-');
-    const statementFileName = `${internalLoanId}_${borrowerSlug}.pdf`;
-    await supabase.storage.from('payoff-statements').upload(statementFileName, pdfBuffer, { contentType: 'application/pdf' });
-    const { data: urlData } = supabase.storage.from('payoff-statements').getPublicUrl(statementFileName);
-    const statementUrl = urlData?.publicUrl || null;
 
     const loanStartDate = loanData.loan_origination_date || loanData.interest_paid_to_date || loanData.statement_date || null;
 
@@ -293,7 +245,7 @@ Borrower ID provided by submitter: ${borrowerId || 'none'}`;
       loan_id_internal: internalLoanId,
       total_due: parseFloat(totalDue.toFixed(2)),
       status: 'completed',
-      payoff_statement_url: statementUrl,
+      payoff_statement_url: null,
       completed_at: new Date().toISOString(),
       loan_document_urls: loanDocumentUrls.join(','),
       source: 'web',
@@ -321,16 +273,6 @@ Borrower ID provided by submitter: ${borrowerId || 'none'}`;
       borrowerEmail: borrowerEmail || null,
       borrowerName: borrowerName || null,
       activationBaseUrl,
-    });
-
-    await sendLenderPayoffEmail({
-      lenderEmail: email,
-      lenderName: name,
-      borrowerName: loanData.borrower_name,
-      totalDue,
-      internalLoanId,
-      pdfBuffer,
-      invoiceBuffer,
     });
 
     const paymentIntentId = Array.isArray(fields.paymentIntentId) ? fields.paymentIntentId[0] : fields.paymentIntentId;

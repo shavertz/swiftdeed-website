@@ -15,6 +15,78 @@ export async function sendPostmarkEmail(payload, label) {
   }
 }
 
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, char => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  }[char]));
+}
+
+export async function sendLenderWelcomeEmail({
+  lenderEmail,
+  lenderName,
+  companyName,
+  portalUrl,
+}) {
+  if (!lenderEmail) return;
+
+  const displayName = lenderName || companyName || 'there';
+  const safeName = escapeHtml(displayName);
+  const safePortalUrl = escapeHtml(portalUrl || 'https://www.theswiftdeed.com');
+
+  await sendPostmarkEmail({
+    From: 'SwiftDeed <hello@theswiftdeed.com>',
+    To: lenderEmail,
+    Subject: 'Welcome to SwiftDeed',
+    HtmlBody: `
+      <div style="background:#f4f4f4; padding:2rem; min-height:400px;">
+        <div style="max-width:560px; margin:0 auto; background:#fff; border-radius:8px; overflow:hidden; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">
+          <div style="background:#0f0f0f; padding:24px 32px;">
+            <div style="font-size:22px; font-weight:700; letter-spacing:-0.5px;">
+              <span style="color:#fff;">Swift</span><span style="color:#E9A800;">Deed</span>
+            </div>
+          </div>
+
+          <div style="padding:36px 32px;">
+            <p style="font-size:15px; color:#111; margin:0 0 12px; font-weight:700;">Welcome to SwiftDeed.</p>
+            <p style="font-size:14px; color:#444; line-height:1.7; margin:0 0 20px;">Hi ${safeName}, your account is ready. SwiftDeed helps handle loan administration for your private loans - payments, statements, delinquency monitoring, documents, and payoff generation - so you can focus on closing deals.</p>
+            <p style="font-size:14px; color:#444; line-height:1.7; margin:0 0 28px;">To get started, log in and onboard your first loan. Upload your loan documents and SwiftDeed will extract the loan terms automatically.</p>
+            <a href="${safePortalUrl}" style="display:inline-block; background:#E9A800; color:#0f0f0f; font-size:14px; font-weight:700; text-decoration:none; padding:12px 28px; border-radius:6px;">Onboard your first loan -&gt;</a>
+          </div>
+
+          <div style="border-top:1px solid #eee; padding:20px 32px;">
+            <p style="font-size:13px; color:#444; line-height:1.7; margin:0 0 8px;">Here's what's included with your account:</p>
+            <table style="width:100%; border-collapse:collapse;">
+              ${[
+                'Borrower and lender portals',
+                'Payment tracking and ACH collection when enabled',
+                'Monthly loan statements',
+                'Delinquency monitoring and alerts',
+                'Payoff statement generation',
+              ].map(item => `
+                <tr>
+                  <td style="padding:5px 0; font-size:13px; color:#555; vertical-align:top; width:20px;">-&gt;</td>
+                  <td style="padding:5px 0; font-size:13px; color:#555;">${escapeHtml(item)}</td>
+                </tr>
+              `).join('')}
+            </table>
+          </div>
+
+          <div style="background:#f9f9f9; border-top:1px solid #eee; padding:20px 32px;">
+            <p style="font-size:12px; color:#888; margin:0 0 4px;">Questions? Reply to this email or reach us at <span style="color:#555;">hello@theswiftdeed.com</span></p>
+            <p style="font-size:12px; color:#888; margin:0;">SwiftDeed Services, Inc. - <span style="color:#555;">www.theswiftdeed.com</span></p>
+          </div>
+        </div>
+      </div>
+    `,
+    TextBody: `Welcome to SwiftDeed.\n\nHi ${displayName}, your account is ready. SwiftDeed helps handle loan administration for your private loans - payments, statements, delinquency monitoring, documents, and payoff generation.\n\nTo get started, log in and onboard your first loan: ${portalUrl || 'https://www.theswiftdeed.com'}\n\nIncluded with your account:\n- Borrower and lender portals\n- Payment tracking and ACH collection when enabled\n- Monthly loan statements\n- Delinquency monitoring and alerts\n- Payoff statement generation\n\nQuestions? Reply to this email or reach us at hello@theswiftdeed.com\n\nSwiftDeed Services, Inc.`,
+    MessageStream: 'outbound',
+  }, 'Lender welcome');
+}
+
 export async function sendLenderPayoffEmail({
   lenderEmail,
   lenderName,
