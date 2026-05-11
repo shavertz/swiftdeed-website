@@ -985,7 +985,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const [docSearch, setDocSearch] = useState('');
   const [docTab, setDocTab] = useState('monthly');
   const [selectedDocLoanId, setSelectedDocLoanId] = useState('');
-  const [docSort, setDocSort] = useState('borrower');
+  const [docSort, setDocSort] = useState('recent');
   const [sortConfig, setSortConfig] = useState({ key: 'created_at', direction: 'desc' });
   const [page, setPage] = useState(1);
   const [activeView, setActiveView] = useState('dashboard');
@@ -1038,7 +1038,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     setDocSearch('');
     setDocTab('monthly');
     setSelectedDocLoanId('');
-    setDocSort('borrower');
+    setDocSort('recent');
     setPage(1);
   }, [resetToken]);
 
@@ -2033,8 +2033,8 @@ export default function Portal({ onSubmitRequest, resetToken }) {
               />
               <label style={{ display: 'block', color: '#555', fontSize: 10, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 7 }}>Sort loans</label>
               <select value={docSort} onChange={e => setDocSort(e.target.value)} style={{ width: '100%', background: '#111', border: '0.5px solid #2a2a2a', borderRadius: 7, color: '#ccc', fontSize: 12, padding: '8px 9px', fontFamily: 'inherit' }}>
-                <option value="borrower">Borrower A-Z</option>
                 <option value="recent">Recent activity</option>
+                <option value="borrower">Borrower A-Z</option>
                 <option value="maturity">Maturity date</option>
                 <option value="delinquency">Delinquency</option>
                 <option value="most_docs">Most documents</option>
