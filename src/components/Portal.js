@@ -2198,6 +2198,34 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       </div>
     </>
   );
+  const downloadInvoicePDF = async (invoice, event) => {
+    event.stopPropagation();
+    try {
+      const response = await fetch('/api/generate-invoice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          invoice,
+          lender: {
+            name: user?.fullName || user?.primaryEmailAddress?.emailAddress || '',
+            email: user?.primaryEmailAddress?.emailAddress || '',
+          },
+        }),
+      });
+      if (!response.ok) throw new Error('Invoice download failed');
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${invoice.id || 'swiftdeed-invoice'}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      alert(error.message || 'Unable to download invoice.');
+    }
+  };
   const invoicesView = (
     <div style={{ padding: contentPad }}>
       <div style={{ ...contentWrap, maxWidth: 1160 }}>
@@ -2229,7 +2257,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
                   <div style={{ color: '#555', fontSize: 11, gridColumn: shellNarrow ? '1 / -1' : 'auto' }}>{invoice.lineCount} line items - {(invoice.servicing?.length || invoice.servicingCount || 0)} loans{(invoice.additional?.length || invoice.payoffCount || 0) ? ` + ${(invoice.additional?.length || invoice.payoffCount)} payoff statement${(invoice.additional?.length || invoice.payoffCount) === 1 ? '' : 's'}` : ''}</div>
                   <span style={{ justifySelf: shellNarrow ? 'start' : 'auto', background: invoice.status === 'paid' ? 'rgba(22,101,52,0.3)' : 'rgba(255,215,0,0.15)', color: invoice.status === 'paid' ? '#4ade80' : '#FFD700', borderRadius: 999, padding: '4px 12px', fontSize: 11, fontWeight: 700 }}>{invoice.badge}</span>
                   <span style={{ color: '#fff', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap' }}>{formatCurrency(invoice.total)}</span>
-                  <span style={{ color: '#777', background: '#1e1e1e', border: '0.5px solid #2a2a2a', borderRadius: 5, padding: '6px 10px', fontSize: 11, whiteSpace: 'nowrap' }}>Download</span>
+                  <span onClick={(event) => downloadInvoicePDF(invoice, event)} style={{ color: '#777', background: '#1e1e1e', border: '0.5px solid #2a2a2a', borderRadius: 5, padding: '6px 10px', fontSize: 11, whiteSpace: 'nowrap' }}>Download</span>
                   <span style={{ color: '#555', fontSize: 16 }}>{open ? '⌃' : '⌄'}</span>
                 </button>
                 {open && (
