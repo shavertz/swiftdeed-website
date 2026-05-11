@@ -1001,6 +1001,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const [invoiceYear, setInvoiceYear] = useState('2026');
   const [invoiceStatus, setInvoiceStatus] = useState('all');
   const [openInvoiceId, setOpenInvoiceId] = useState('may-2026');
+  const [settingsTab, setSettingsTab] = useState('account');
   const [liveData, setLiveData] = useState(null);
   const [liveLoading, setLiveLoading] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -1608,6 +1609,173 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const placeholder = (title) => (
     <div style={{ padding: contentPad }}>
       <div style={{ fontSize: 24, fontWeight: 500, color: '#fff' }}>{title}</div>
+    </div>
+  );
+  const settingsInput = {
+    background: '#0f0f0f',
+    border: '0.5px solid #252525',
+    borderRadius: 6,
+    color: '#aaa',
+    fontSize: 12,
+    fontFamily: 'inherit',
+    padding: '10px 12px',
+    width: '100%',
+    boxSizing: 'border-box',
+    outline: 'none',
+  };
+  const settingsLabel = { color: '#aaa', fontSize: 12, marginBottom: 7 };
+  const settingsCard = { background: '#151515', border: '0.5px solid #252525', borderRadius: 9, padding: 20 };
+  const settingsPrimary = { background: '#FFD700', color: '#0f0f0f', border: 'none', borderRadius: 6, padding: '9px 16px', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' };
+  const settingsSecondary = { background: '#111', color: '#777', border: '0.5px solid #2a2a2a', borderRadius: 6, padding: '9px 16px', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' };
+  const settingsDanger = { ...settingsSecondary, color: '#ff6b6b', borderColor: '#3a1d1d' };
+  const settingField = (label, props = {}) => (
+    <div>
+      <div style={settingsLabel}>{label}</div>
+      <input {...props} style={{ ...settingsInput, ...(props.style || {}) }} />
+    </div>
+  );
+  const toggleRow = (title, desc, checked = true) => (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, padding: '15px 0', borderTop: '0.5px solid #222' }}>
+      <div>
+        <div style={{ color: '#fff', fontSize: 13, fontWeight: 600 }}>{title}</div>
+        <div style={{ color: '#555', fontSize: 12, marginTop: 4 }}>{desc}</div>
+      </div>
+      <label style={{ position: 'relative', display: 'inline-block', width: 42, height: 22, flex: '0 0 auto' }}>
+        <input type="checkbox" defaultChecked={checked} style={{ opacity: 0, width: 0, height: 0 }} />
+        <span style={{ position: 'absolute', inset: 0, borderRadius: 999, background: checked ? '#FFD700' : '#2a2a2a' }} />
+        <span style={{ position: 'absolute', width: 18, height: 18, left: checked ? 22 : 2, top: 2, borderRadius: '50%', background: checked ? '#0f0f0f' : '#777' }} />
+      </label>
+    </div>
+  );
+  const settingsTabs = [
+    ['account', 'Account'],
+    ['billing', 'Billing'],
+    ['wire', 'Wire instructions'],
+    ['notifications', 'Notifications'],
+    ['security', 'Security'],
+  ];
+  const settingsView = (
+    <div style={{ padding: contentPad }}>
+      <div style={{ ...contentWrap, maxWidth: 1280 }}>
+        <div style={{ fontSize: 24, fontWeight: 600, color: '#fff', marginBottom: 22 }}>Settings</div>
+        <div style={{ display: 'flex', gap: 18, overflowX: 'auto', borderBottom: '0.5px solid #222', marginBottom: 24 }} className="swiftdeed-table-scroll">
+          {settingsTabs.map(([id, label]) => (
+            <button key={id} onClick={() => setSettingsTab(id)} style={{ background: 'transparent', border: 'none', borderBottom: settingsTab === id ? '2px solid #FFD700' : '2px solid transparent', color: settingsTab === id ? '#FFD700' : '#666', padding: '10px 2px', marginBottom: -1, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>{label}</button>
+          ))}
+        </div>
+
+        {settingsTab === 'account' && (
+          <div style={{ display: 'grid', gap: 16 }}>
+            <div style={settingsCard}>
+              <div style={{ color: '#fff', fontSize: 14, fontWeight: 700 }}>Account information</div>
+              <div style={{ color: '#555', fontSize: 12, marginTop: 5, marginBottom: 20 }}>Update your name, company, and contact details.</div>
+              <div style={{ display: 'grid', gridTemplateColumns: shellNarrow ? '1fr' : '1fr 1fr', gap: 14 }}>
+                {settingField('First name', { defaultValue: user?.firstName || 'Brandon' })}
+                {settingField('Last name', { defaultValue: user?.lastName || 'Mitchell' })}
+              </div>
+              <div style={{ display: 'grid', gap: 14, marginTop: 14 }}>
+                {settingField('Company / entity name', { defaultValue: 'CL-LM RESI PURCHASER TRUST 1' })}
+                {settingField('Email address', { defaultValue: user?.primaryEmailAddress?.emailAddress || 'brandon@clmlending.com' })}
+                {settingField('Phone number', { defaultValue: '+1 (203) 555-0192' })}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 16 }}>
+                <button style={settingsSecondary}>Cancel</button>
+                <button style={settingsPrimary}>Save changes</button>
+              </div>
+            </div>
+            <div style={settingsCard}>
+              <div style={{ color: '#fff', fontSize: 14, fontWeight: 700 }}>Change password</div>
+              <div style={{ color: '#555', fontSize: 12, marginTop: 5, marginBottom: 20 }}>Update your login password.</div>
+              <div style={{ display: 'grid', gap: 14 }}>
+                {settingField('Current password', { type: 'password', defaultValue: 'passwordxx' })}
+                <div style={{ display: 'grid', gridTemplateColumns: shellNarrow ? '1fr' : '1fr 1fr', gap: 14 }}>
+                  {settingField('New password', { type: 'password', placeholder: 'Min. 8 characters' })}
+                  {settingField('Confirm new password', { type: 'password', placeholder: 'Re-enter password' })}
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}><button style={settingsPrimary}>Update password</button></div>
+            </div>
+          </div>
+        )}
+
+        {settingsTab === 'billing' && (
+          <div style={{ display: 'grid', gap: 16 }}>
+            <div style={settingsCard}>
+              <div style={{ color: '#fff', fontSize: 14, fontWeight: 700 }}>Payment method</div>
+              <div style={{ color: '#555', fontSize: 12, marginTop: 5, marginBottom: 18 }}>Charged on the 1st of each month for active loans and any additional charges.</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 14, border: '0.5px solid #252525', borderRadius: 8, padding: 14, marginBottom: 12 }}>
+                <div>
+                  <div style={{ color: '#fff', fontSize: 13, fontWeight: 600 }}>Visa ending in 4242 <span style={{ color: '#34d399', background: '#0a2416', borderRadius: 999, padding: '3px 8px', fontSize: 10, marginLeft: 8 }}>Active</span></div>
+                  <div style={{ color: '#555', fontSize: 12, marginTop: 4 }}>Expires 09/2028 - Added Jan 12, 2026</div>
+                </div>
+                <button style={settingsSecondary}>Update</button>
+              </div>
+              <button style={settingsSecondary}>+ Add payment method</button>
+            </div>
+            <div style={settingsCard}>
+              <div style={{ color: '#fff', fontSize: 14, fontWeight: 700 }}>Billing email</div>
+              <div style={{ color: '#555', fontSize: 12, marginTop: 5, marginBottom: 18 }}>Invoices and billing notifications will be sent to this address.</div>
+              {settingField('Billing email', { defaultValue: user?.primaryEmailAddress?.emailAddress || 'brandon@clmlending.com' })}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}><button style={settingsPrimary}>Save</button></div>
+            </div>
+          </div>
+        )}
+
+        {settingsTab === 'wire' && (
+          <div style={settingsCard}>
+            <div style={{ color: '#fff', fontSize: 14, fontWeight: 700 }}>Wire instructions</div>
+            <div style={{ color: '#555', fontSize: 12, marginTop: 5, marginBottom: 20 }}>Borrower payments will be wired to the account below. Keep this accurate and up to date.</div>
+            <div style={{ display: 'grid', gap: 14 }}>
+              {settingField('Bank name', { defaultValue: 'Wells Fargo' })}
+              {settingField('Account name', { defaultValue: 'CL-LM RESI PURCHASER TRUST 1' })}
+              <div style={{ display: 'grid', gridTemplateColumns: shellNarrow ? '1fr' : '1fr 1fr', gap: 14 }}>
+                {settingField('Routing number', { defaultValue: '121000248' })}
+                {settingField('Account number', { defaultValue: '••••••7291' })}
+              </div>
+              {settingField('Reference / memo (optional)', { placeholder: 'e.g. loan ID or borrower name' })}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 16 }}>
+              <button style={settingsSecondary}>Cancel</button>
+              <button style={settingsPrimary}>Save wire instructions</button>
+            </div>
+          </div>
+        )}
+
+        {settingsTab === 'notifications' && (
+          <div style={settingsCard}>
+            <div style={{ color: '#fff', fontSize: 14, fontWeight: 700 }}>Email notifications</div>
+            <div style={{ color: '#555', fontSize: 12, marginTop: 5, marginBottom: 10 }}>Choose which events trigger an email to your account.</div>
+            {toggleRow('Payment received', "When a borrower's ACH payment clears")}
+            {toggleRow('Payment missed', 'When a payment is not received by the due date')}
+            {toggleRow('Maturity approaching', '60 and 30 days before a loan matures')}
+            {toggleRow('Loan onboarded', 'Confirmation when a new loan goes live')}
+            {toggleRow('Payoff statement generated', 'When a payoff statement is created and charged', false)}
+            {toggleRow('Monthly invoice ready', 'When your monthly invoice is generated')}
+          </div>
+        )}
+
+        {settingsTab === 'security' && (
+          <div style={{ display: 'grid', gap: 16 }}>
+            <div style={settingsCard}>
+              <div style={{ color: '#fff', fontSize: 14, fontWeight: 700 }}>Active sessions</div>
+              <div style={{ color: '#555', fontSize: 12, marginTop: 5, marginBottom: 12 }}>Devices currently logged into your account.</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '14px 0', borderTop: '0.5px solid #222' }}>
+                <div><div style={{ color: '#fff', fontSize: 13 }}>Chrome - macOS - New York, NY</div><div style={{ color: '#34d399', fontSize: 11, marginTop: 3 }}>Current session</div></div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '14px 0', borderTop: '0.5px solid #222' }}>
+                <div><div style={{ color: '#fff', fontSize: 13 }}>Safari - iPhone - Westport, CT</div><div style={{ color: '#555', fontSize: 11, marginTop: 3 }}>Last active 2 hours ago</div></div>
+                <button style={settingsDanger}>Log out</button>
+              </div>
+              <div style={{ borderTop: '0.5px solid #222', paddingTop: 14 }}><button style={settingsDanger}>Log out of all devices</button></div>
+            </div>
+            <div style={settingsCard}>
+              <div style={{ color: '#fff', fontSize: 14, fontWeight: 700 }}>Two-factor authentication</div>
+              <div style={{ color: '#555', fontSize: 12, marginTop: 5, marginBottom: 16 }}>Add an extra layer of security to your account. Coming soon.</div>
+              <button disabled style={{ ...settingsSecondary, opacity: 0.4, cursor: 'not-allowed' }}>Enable 2FA - coming soon</button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
   const openLoanDocuments = (loan) => {
@@ -2431,6 +2599,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     : activeView === 'loans' ? loansView
     : activeView === 'documents' ? documentsView
     : activeView === 'invoices' ? invoicesView
+    : activeView === 'settings' ? settingsView
     : placeholder('Settings');
 
   return (
