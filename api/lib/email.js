@@ -96,21 +96,27 @@ export async function sendLenderPayoffEmail({
   pdfBuffer,
   invoiceBuffer,
 }) {
+  const attachments = [{
+    Name: `${internalLoanId}_payoff-statement.pdf`,
+    Content: pdfBuffer.toString('base64'),
+    ContentType: 'application/pdf',
+  }];
+
+  if (invoiceBuffer) {
+    attachments.push({
+      Name: `${internalLoanId}_invoice.pdf`,
+      Content: invoiceBuffer.toString('base64'),
+      ContentType: 'application/pdf',
+    });
+  }
+
   await sendPostmarkEmail({
     From: 'scott@theswiftdeed.com',
     To: lenderEmail,
     Subject: `Payoff Statement - ${borrowerName || 'Your Loan'}`,
-    TextBody: `Hi ${lenderName},\n\nYour payoff statement is ready. Please see the attached PDFs.\n\nTotal payoff amount: $${totalDue.toLocaleString('en-US', { minimumFractionDigits: 2 })}\nReference ID: ${internalLoanId}\n\nThank you,\nSwiftDeed`,
-    HtmlBody: `<p>Hi ${lenderName},</p><p>Your payoff statement is ready. Please see the attached PDFs.</p><p><strong>Total payoff amount:</strong> $${totalDue.toLocaleString('en-US', { minimumFractionDigits: 2 })}<br><strong>Reference ID:</strong> ${internalLoanId}</p><p>Thank you,<br>SwiftDeed</p>`,
-    Attachments: [{
-      Name: `${internalLoanId}_payoff-statement.pdf`,
-      Content: pdfBuffer.toString('base64'),
-      ContentType: 'application/pdf',
-    }, {
-      Name: `${internalLoanId}_invoice.pdf`,
-      Content: invoiceBuffer.toString('base64'),
-      ContentType: 'application/pdf',
-    }],
+    TextBody: `Hi ${lenderName || 'there'},\n\nYour payoff statement is ready. Please see the attached PDF.\n\nTotal payoff amount: $${totalDue.toLocaleString('en-US', { minimumFractionDigits: 2 })}\nReference ID: ${internalLoanId}\n\nThank you,\nSwiftDeed`,
+    HtmlBody: `<p>Hi ${lenderName || 'there'},</p><p>Your payoff statement is ready. Please see the attached PDF.</p><p><strong>Total payoff amount:</strong> $${totalDue.toLocaleString('en-US', { minimumFractionDigits: 2 })}<br><strong>Reference ID:</strong> ${internalLoanId}</p><p>Thank you,<br>SwiftDeed</p>`,
+    Attachments: attachments,
   }, 'Lender payoff');
 }
 

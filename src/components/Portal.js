@@ -163,11 +163,29 @@ function RecordPaymentModal({ borrower, lenderEmail, lenderName, onClose, onSucc
   );
 }
 
-function PayoffStatementModal({ loan, goodThroughDate, onDateChange, onClose, onGenerate }) {
+function PayoffStatementModal({ loan, goodThroughDate, onDateChange, onClose, onGenerate, generating, error, successUrl, onDone }) {
   if (!loan) return null;
+  const buttonBase = { flex: 1, fontSize: 13, fontWeight: 700, padding: '10px 12px', borderRadius: 7, cursor: 'pointer', fontFamily: 'inherit' };
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 18 }}>
       <div style={{ width: '100%', maxWidth: 430, background: '#121212', border: '0.5px solid #2a2a2a', borderRadius: 11, padding: 24, boxShadow: '0 18px 60px rgba(0,0,0,0.45)' }}>
+        {successUrl ? (
+          <>
+            <div style={{ width: 42, height: 42, borderRadius: 9, background: '#221c00', border: '0.5px solid #FFD70066', color: '#FFD700', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, marginBottom: 16 }}>✓</div>
+            <div style={{ fontSize: 19, color: '#fff', fontWeight: 600, marginBottom: 6 }}>Payoff statement generated</div>
+            <div style={{ fontSize: 12, color: '#666', lineHeight: 1.5, marginBottom: 18 }}>The PDF was emailed to the lender and added to Documents under Payoff Statements.</div>
+            <div style={{ background: '#0f0f0f', border: '0.5px solid #252525', borderRadius: 8, padding: 14, marginBottom: 18 }}>
+              <div style={{ color: '#FFD700', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{loan.loan_id_internal || loan.loan_id || '-'}</div>
+              <div style={{ color: '#fff', fontSize: 13 }}>{loan.borrower_name || '-'}</div>
+              <div style={{ color: '#555', fontSize: 12, marginTop: 4 }}>{loan.property_address || '-'}</div>
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => window.open(successUrl, '_blank', 'noopener,noreferrer')} style={{ ...buttonBase, background: '#FFD700', color: '#0f0f0f', border: 'none' }}>View statement -&gt;</button>
+              <button onClick={onDone} style={{ ...buttonBase, background: 'transparent', color: '#fff', border: '0.5px solid #2a2a2a' }}>Done</button>
+            </div>
+          </>
+        ) : (
+          <>
         <div style={{ fontSize: 19, color: '#fff', fontWeight: 600, marginBottom: 6 }}>Generate payoff statement</div>
         <div style={{ fontSize: 12, color: '#666', lineHeight: 1.5, marginBottom: 18 }}>Loan is already selected. Choose the good-through date for the payoff PDF.</div>
 
@@ -186,10 +204,13 @@ function PayoffStatementModal({ loan, goodThroughDate, onDateChange, onClose, on
           style={{ width: '100%', background: '#0f0f0f', border: '0.5px solid #2a2a2a', borderRadius: 7, padding: '10px 12px', color: '#fff', fontSize: 13, fontFamily: 'inherit', boxSizing: 'border-box', marginBottom: 18 }}
         />
 
+        {error && <div style={{ color: '#f87171', fontSize: 12, marginBottom: 14 }}>{error}</div>}
         <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={onGenerate} style={{ flex: 1, background: '#FFD700', color: '#0f0f0f', fontSize: 13, fontWeight: 700, padding: '10px 12px', borderRadius: 7, border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Generate PDF</button>
-          <button onClick={onClose} style={{ flex: 1, background: 'transparent', color: '#fff', fontSize: 13, padding: '10px 12px', borderRadius: 7, border: '0.5px solid #2a2a2a', cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
+          <button onClick={onGenerate} disabled={generating} style={{ ...buttonBase, background: '#FFD700', color: '#0f0f0f', border: 'none', cursor: generating ? 'not-allowed' : 'pointer', opacity: generating ? 0.75 : 1 }}>{generating ? 'Generating...' : 'Generate PDF'}</button>
+          <button onClick={onClose} disabled={generating} style={{ ...buttonBase, fontWeight: 400, background: 'transparent', color: '#fff', border: '0.5px solid #2a2a2a', cursor: generating ? 'not-allowed' : 'pointer', opacity: generating ? 0.75 : 1 }}>Cancel</button>
         </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -981,6 +1002,9 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [payoffLoan, setPayoffLoan] = useState(null);
   const [payoffGoodThrough, setPayoffGoodThrough] = useState(defaultGoodThroughDate());
+  const [generatingPayoff, setGeneratingPayoff] = useState(false);
+  const [payoffError, setPayoffError] = useState('');
+  const [payoffSuccessUrl, setPayoffSuccessUrl] = useState('');
   const [monthlyStatementDoc, setMonthlyStatementDoc] = useState(null);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [lenderName, setLenderName] = useState('');
@@ -1004,6 +1028,9 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     setPaymentSuccess(false);
     setPayoffLoan(null);
     setPayoffGoodThrough(defaultGoodThroughDate());
+    setGeneratingPayoff(false);
+    setPayoffError('');
+    setPayoffSuccessUrl('');
     setMonthlyStatementDoc(null);
     setActiveView('dashboard');
     setLoanFilter({ id: 'all', label: 'All active loans', accent: '#FFD700' });
@@ -1588,16 +1615,57 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const openPayoffModal = (loan) => {
     setPayoffLoan(loan);
     setPayoffGoodThrough(defaultGoodThroughDate());
+    setPayoffError('');
+    setPayoffSuccessUrl('');
   };
   const closePayoffModal = () => {
+    if (generatingPayoff) return;
     setPayoffLoan(null);
+    setPayoffError('');
+    setPayoffSuccessUrl('');
   };
-  const handleGeneratePayoff = () => {
+  const finishPayoffModal = () => {
     setPayoffLoan(null);
+    setPayoffError('');
+    setPayoffSuccessUrl('');
+  };
+  const handleGeneratePayoff = async () => {
+    if (!payoffLoan) return;
+    setGeneratingPayoff(true);
+    setPayoffError('');
+    try {
+      const loanIdInternal = payoffLoan.loan_id_internal || payoffLoan.loan_id;
+      const res = await fetch('/api/generate-payoff-statement', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          loanIdInternal,
+          goodThroughDate: payoffGoodThrough,
+          lenderEmail: email,
+          lenderName,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to generate payoff statement');
+
+      const patch = {
+        payoff_statement_url: data.statementUrl,
+        total_due: data.totalDue,
+        completed_at: data.completedAt,
+        status: 'completed',
+      };
+      setRequests(prev => prev.map(r => (r.loan_id_internal || r.loan_id) === loanIdInternal ? { ...r, ...patch } : r));
+      setSelected(prev => prev && (prev.loan_id_internal || prev.loan_id) === loanIdInternal ? { ...prev, ...patch } : prev);
+      setPayoffSuccessUrl(data.statementUrl || '');
+    } catch (error) {
+      setPayoffError(error.message || 'Could not generate payoff statement.');
+    } finally {
+      setGeneratingPayoff(false);
+    }
   };
   const modals = (
     <>
-      <PayoffStatementModal loan={payoffLoan} goodThroughDate={payoffGoodThrough} onDateChange={setPayoffGoodThrough} onClose={closePayoffModal} onGenerate={handleGeneratePayoff} />
+      <PayoffStatementModal loan={payoffLoan} goodThroughDate={payoffGoodThrough} onDateChange={setPayoffGoodThrough} onClose={closePayoffModal} onGenerate={handleGeneratePayoff} generating={generatingPayoff} error={payoffError} successUrl={payoffSuccessUrl} onDone={finishPayoffModal} />
       <MonthlyStatementPreviewModal doc={monthlyStatementDoc} borrower={monthlyStatementDoc?.loan ? getBorrower(monthlyStatementDoc.loan) : null} lenderName={lenderName} onClose={() => setMonthlyStatementDoc(null)} />
       {showPaymentModal && liveData && (
         <RecordPaymentModal borrower={liveData} lenderEmail={email} lenderName={lenderName} onClose={() => setShowPaymentModal(false)} onSuccess={(updates) => { setShowPaymentModal(false); setPaymentSuccess(true); setLiveData(prev => ({ ...prev, ...updates })); setTimeout(() => setPaymentSuccess(false), 5000); }} />
@@ -1774,8 +1842,9 @@ export default function Portal({ onSubmitRequest, resetToken }) {
         loan,
         borrower: loan.borrower_name || b.legal_name || '-',
         period: loan.payoff_statement_url ? 'Good-through date' : 'Not generated',
-        date: loan.payoff_statement_url ? formatDate(loan.created_at) : '-',
+        date: loan.payoff_statement_url ? formatDate(loan.completed_at || loan.created_at) : '-',
         action: 'View',
+        url: loan.payoff_statement_url,
       };
     }),
     ...requests.flatMap(loan => {
