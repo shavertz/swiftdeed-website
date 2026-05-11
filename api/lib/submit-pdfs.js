@@ -468,17 +468,19 @@ export async function generateInvoicePDF({
 
     const drawTable = (title, rows, firstHeader) => {
       if (!rows.length) return;
+      const amountX = ML + CW - 92;
+      const amountW = 80;
       doc.save().rect(ML, y, CW, 20).fill(DGRAY).strokeColor(LGRAY).lineWidth(0.5).stroke().restore();
       smallCaps(title.toUpperCase(), ML + 12, y + 7, { size: 7 });
       y += 20;
       doc.save().rect(ML, y, CW, 24).fill(HGRAY).strokeColor(LGRAY).lineWidth(0.5).stroke().restore();
       smallCaps(firstHeader, ML + 12, y + 9, { size: 7, color: MGRAY });
-      smallCaps('AMOUNT', ML + CW - 80, y + 9, { size: 7, color: MGRAY });
+      smallCaps('AMOUNT', amountX, y + 9, { size: 7, color: MGRAY, width: amountW, align: 'right' });
       y += 24;
       rows.forEach(item => {
         const details = item.details || item.loan || item.label || `${item.loanId || internalLoanId || ''}${item.borrower ? ` - ${item.borrower}` : ''}`;
         doc.font('Helvetica').fontSize(8).fillColor(GRAY).text(details, ML + 12, y + 10, { width: CW - 120 });
-        doc.font('Helvetica').fontSize(8).fillColor(BLACK).text(fmtMoney(item.amount), ML, y + 10, { width: CW - 12, align: 'right' });
+        doc.font('Helvetica').fontSize(8).fillColor(BLACK).text(fmtMoney(item.amount), amountX, y + 10, { width: amountW, align: 'right' });
         y += 24;
         hr(y, '#eeeeee');
       });
@@ -488,10 +490,12 @@ export async function generateInvoicePDF({
     drawTable(`Loan servicing - ${serviceRows.length} loans @ $35.00/mo`, serviceRows, 'LOAN');
     drawTable('Additional charges', chargeRows, 'DETAILS');
 
-    const totalsX = ML + CW - 240;
+    const totalsX = ML + CW - 250;
+    doc.save().lineWidth(1.25).strokeColor(BLACK).rect(totalsX, y - 6, 250, 66).stroke().restore();
+    y += 5;
     const totalRow = (label, value, bold = false) => {
-      doc.font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(bold ? 9 : 8).fillColor(bold ? BLACK : MGRAY).text(label, totalsX, y, { width: 130 });
-      doc.font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(bold ? 9 : 8).fillColor(BLACK).text(value, totalsX, y, { width: 240, align: 'right' });
+      doc.font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(bold ? 9 : 8).fillColor(bold ? BLACK : MGRAY).text(label, totalsX + 14, y, { width: 120 });
+      doc.font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(bold ? 9 : 8).fillColor(BLACK).text(value, totalsX + 140, y, { width: 96, align: 'right' });
       y += 16;
     };
     totalRow('Subtotal', fmtMoney(subtotal));
