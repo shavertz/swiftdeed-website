@@ -997,6 +997,9 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const [hoveredCard, setHoveredCard] = useState(null);
   const [hoveredDocLoan, setHoveredDocLoan] = useState(null);
   const [hoveredDocTab, setHoveredDocTab] = useState(null);
+  const [invoiceYear, setInvoiceYear] = useState('2026');
+  const [invoiceStatus, setInvoiceStatus] = useState('all');
+  const [openInvoiceId, setOpenInvoiceId] = useState('may-2026');
   const [liveData, setLiveData] = useState(null);
   const [liveLoading, setLiveLoading] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -1039,6 +1042,9 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     setDocTab('loan');
     setSelectedDocLoanId('');
     setDocSort('recent');
+    setInvoiceYear('2026');
+    setInvoiceStatus('all');
+    setOpenInvoiceId('may-2026');
     setPage(1);
   }, [resetToken]);
 
@@ -2108,6 +2114,138 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     </div>
   );
 
+  const servicingLineItems = (activeLoans.length ? activeLoans : requests).slice(0, 10).map(loan => ({
+    type: 'Loan servicing',
+    details: `${loan.loan_id_internal || loan.loan_id || '-'} - ${loan.borrower_name || 'Borrower'}`,
+    amount: 35,
+  }));
+  const payoffLineItems = requests
+    .filter(loan => loan.payoff_statement_url)
+    .slice(0, 2)
+    .map(loan => ({
+      type: 'Payoff statement',
+      details: `${loan.loan_id_internal || loan.loan_id || '-'} - ${loan.borrower_name || 'Borrower'}`,
+      amount: 30,
+    }));
+  const invoiceRows = [
+    {
+      id: 'may-2026',
+      month: 'May',
+      year: '2026',
+      status: 'due',
+      badge: 'Due Jun 1',
+      servicing: servicingLineItems,
+      additional: payoffLineItems.length ? payoffLineItems : [
+        { type: 'Payoff statement', details: 'SD-2026-7782 - K. Patel', amount: 30 },
+        { type: 'Payoff statement', details: 'SD-2026-4421 - J. Martinez', amount: 30 },
+      ],
+    },
+    { id: 'apr-2026', month: 'April', year: '2026', status: 'paid', badge: 'Paid', servicingCount: 10, payoffCount: 1, total: 380 },
+    { id: 'mar-2026', month: 'March', year: '2026', status: 'paid', badge: 'Paid', servicingCount: 10, payoffCount: 0, total: 350 },
+    { id: 'feb-2026', month: 'February', year: '2026', status: 'paid', badge: 'Paid', servicingCount: 8, payoffCount: 0, total: 280 },
+  ].map(row => {
+    const servicingTotal = row.servicing ? row.servicing.reduce((sum, item) => sum + item.amount, 0) : (row.servicingCount || 0) * 35;
+    const additionalTotal = row.additional ? row.additional.reduce((sum, item) => sum + item.amount, 0) : (row.payoffCount || 0) * 30;
+    const lineCount = row.servicing ? row.servicing.length + row.additional.length : (row.servicingCount || 0) + (row.payoffCount || 0);
+    return { ...row, servicingTotal, additionalTotal, lineCount, total: row.total || servicingTotal + additionalTotal };
+  });
+  const filteredInvoices = invoiceRows.filter(invoice => (
+    invoice.year === invoiceYear &&
+    (invoiceStatus === 'all' || invoice.status === invoiceStatus)
+  ));
+  const invoicePill = (active) => ({
+    background: active ? '#1e1a00' : '#161616',
+    border: `0.5px solid ${active ? 'rgba(255,215,0,0.45)' : '#2a2a2a'}`,
+    color: active ? '#FFD700' : '#777',
+    borderRadius: 999,
+    padding: '6px 14px',
+    fontSize: 12,
+    cursor: 'pointer',
+    fontFamily: 'inherit',
+    whiteSpace: 'nowrap',
+  });
+  const invoiceLineTable = (title, items, totalLabel = 'Subtotal') => (
+    <>
+      <div style={{ color: '#FFD700', fontSize: 10, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', padding: '12px 0 8px' }}>{title}</div>
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 520 }}>
+          <thead>
+            <tr>
+              {['Service type', 'Details', 'Amount'].map((heading, i) => (
+                <th key={heading} style={{ color: '#555', fontSize: 10, letterSpacing: 0.7, textTransform: 'uppercase', padding: '6px 0', borderBottom: '0.5px solid #252525', textAlign: i === 2 ? 'right' : 'left' }}>{heading}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((item, index) => (
+              <tr key={`${item.details}-${index}`}>
+                <td style={{ color: '#888', fontSize: 12, padding: '8px 0', borderBottom: '0.5px solid #1c1c1c' }}>{item.type}</td>
+                <td style={{ color: '#888', fontSize: 12, padding: '8px 0', borderBottom: '0.5px solid #1c1c1c' }}>{item.details}</td>
+                <td style={{ color: '#aaa', fontSize: 12, padding: '8px 0', borderBottom: '0.5px solid #1c1c1c', textAlign: 'right' }}>{formatCurrency(item.amount)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 11, borderTop: '0.5px solid #333', marginTop: 4 }}>
+        <span style={{ color: '#fff', fontSize: 12, fontWeight: 700 }}>{totalLabel}</span>
+        <span style={{ color: '#fff', fontSize: 12, fontWeight: 700 }}>{formatCurrency(items.reduce((sum, item) => sum + item.amount, 0))}</span>
+      </div>
+    </>
+  );
+  const invoicesView = (
+    <div style={{ padding: contentPad }}>
+      <div style={{ ...contentWrap, maxWidth: 1160 }}>
+        <div style={{ fontSize: 24, fontWeight: 500, color: '#fff', marginBottom: 22 }}>Invoices</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, marginBottom: 22 }}>
+          <span style={{ color: '#555', fontSize: 12 }}>Year</span>
+          {['2026', '2025', '2024'].map(year => (
+            <button key={year} onClick={() => setInvoiceYear(year)} style={invoicePill(invoiceYear === year)}>{year}</button>
+          ))}
+          <span style={{ width: 1, height: 22, background: '#2a2a2a', margin: '0 4px' }} />
+          <span style={{ color: '#555', fontSize: 12 }}>Status</span>
+          {[
+            ['all', 'All'],
+            ['paid', 'Paid'],
+            ['due', 'Unpaid'],
+          ].map(([id, label]) => (
+            <button key={id} onClick={() => setInvoiceStatus(id)} style={invoicePill(invoiceStatus === id)}>{label}</button>
+          ))}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+          {filteredInvoices.length === 0 ? (
+            <div style={{ ...s.empty, border: '0.5px solid #252525', borderRadius: 9 }}>No invoices found.</div>
+          ) : filteredInvoices.map(invoice => {
+            const open = openInvoiceId === invoice.id;
+            return (
+              <div key={invoice.id} style={{ background: '#161616', border: '0.5px solid #252525', borderRadius: 8, overflow: 'hidden' }}>
+                <button onClick={() => setOpenInvoiceId(open ? '' : invoice.id)} style={{ width: '100%', display: 'grid', gridTemplateColumns: shellNarrow ? '1fr auto' : '80px minmax(0, 1fr) auto auto auto auto', gap: 14, alignItems: 'center', background: 'transparent', border: 'none', padding: '14px 16px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+                  <div style={{ color: '#fff', fontSize: 14, fontWeight: 700, lineHeight: 1.3 }}>{invoice.month}<br />{invoice.year}</div>
+                  <div style={{ color: '#555', fontSize: 11, gridColumn: shellNarrow ? '1 / -1' : 'auto' }}>{invoice.lineCount} line items - {(invoice.servicing?.length || invoice.servicingCount || 0)} loans{(invoice.additional?.length || invoice.payoffCount || 0) ? ` + ${(invoice.additional?.length || invoice.payoffCount)} payoff statement${(invoice.additional?.length || invoice.payoffCount) === 1 ? '' : 's'}` : ''}</div>
+                  <span style={{ justifySelf: shellNarrow ? 'start' : 'auto', background: invoice.status === 'paid' ? 'rgba(22,101,52,0.3)' : 'rgba(255,215,0,0.15)', color: invoice.status === 'paid' ? '#4ade80' : '#FFD700', borderRadius: 999, padding: '4px 12px', fontSize: 11, fontWeight: 700 }}>{invoice.badge}</span>
+                  <span style={{ color: '#fff', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap' }}>{formatCurrency(invoice.total)}</span>
+                  <span style={{ color: '#777', background: '#1e1e1e', border: '0.5px solid #2a2a2a', borderRadius: 5, padding: '6px 10px', fontSize: 11, whiteSpace: 'nowrap' }}>Download</span>
+                  <span style={{ color: '#555', fontSize: 16 }}>{open ? '⌃' : '⌄'}</span>
+                </button>
+                {open && (
+                  <div style={{ borderTop: '0.5px solid #1e1e1e', padding: '0 16px 16px' }}>
+                    {invoice.servicing?.length ? invoiceLineTable(`Loan servicing - ${invoice.servicing.length} loans @ $35.00`, invoice.servicing) : null}
+                    {invoice.additional?.length ? (
+                      <>
+                        <hr style={{ border: 'none', borderTop: '0.5px solid #1e1e1e', margin: '12px 0' }} />
+                        {invoiceLineTable('Additional line items', invoice.additional, 'Total')}
+                      </>
+                    ) : null}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+
   const loanColumns = [
     { key: 'loan_id', label: 'Loan ID', sortable: false },
     { key: 'borrower', label: 'Borrower', sortable: true },
@@ -2257,7 +2395,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     : activeView === 'dashboard' ? dashboardView
     : activeView === 'loans' ? loansView
     : activeView === 'documents' ? documentsView
-    : activeView === 'invoices' ? placeholder('Invoices')
+    : activeView === 'invoices' ? invoicesView
     : placeholder('Settings');
 
   return (
