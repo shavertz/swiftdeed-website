@@ -2154,6 +2154,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     invoice.year === invoiceYear &&
     (invoiceStatus === 'all' || invoice.status === invoiceStatus)
   ));
+  const invoiceYears = Array.from(new Set(invoiceRows.map(invoice => invoice.year)));
   const invoicePill = (active) => ({
     background: active ? '#1e1a00' : '#161616',
     border: `0.5px solid ${active ? 'rgba(255,215,0,0.45)' : '#2a2a2a'}`,
@@ -2233,7 +2234,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
         <div style={{ fontSize: 24, fontWeight: 500, color: '#fff', marginBottom: 22 }}>Invoices</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, marginBottom: 22 }}>
           <span style={{ color: '#555', fontSize: 12 }}>Year</span>
-          {['2026', '2025', '2024'].map(year => (
+          {invoiceYears.map(year => (
             <button key={year} onClick={() => setInvoiceYear(year)} style={invoicePill(invoiceYear === year)}>{year}</button>
           ))}
           <span style={{ width: 1, height: 22, background: '#2a2a2a', margin: '0 4px' }} />
@@ -2258,7 +2259,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
                   <div style={{ color: '#555', fontSize: 11, gridColumn: shellNarrow ? '1 / -1' : 'auto' }}>{invoice.lineCount} line items - {(invoice.servicing?.length || invoice.servicingCount || 0)} loans{(invoice.additional?.length || invoice.payoffCount || 0) ? ` + ${(invoice.additional?.length || invoice.payoffCount)} payoff statement${(invoice.additional?.length || invoice.payoffCount) === 1 ? '' : 's'}` : ''}</div>
                   <span style={{ justifySelf: shellNarrow ? 'start' : 'auto', background: invoice.status === 'paid' ? 'rgba(22,101,52,0.3)' : 'rgba(255,215,0,0.15)', color: invoice.status === 'paid' ? '#4ade80' : '#FFD700', borderRadius: 999, padding: '4px 12px', fontSize: 11, fontWeight: 700 }}>{invoice.badge}</span>
                   <span style={{ color: '#fff', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap' }}>{formatCurrency(invoice.total)}</span>
-                  <span onClick={(event) => downloadInvoicePDF(invoice, event)} style={{ color: '#777', background: '#1e1e1e', border: '0.5px solid #2a2a2a', borderRadius: 5, padding: '6px 10px', fontSize: 11, whiteSpace: 'nowrap' }}>Download</span>
+                  <span onClick={(event) => downloadInvoicePDF(invoice, event)} style={{ color: '#FFD700', fontSize: 12, whiteSpace: 'nowrap', cursor: 'pointer' }}>View -&gt;</span>
                   <span style={{ color: '#555', fontSize: 16 }}>{open ? '⌃' : '⌄'}</span>
                 </button>
                 {open && (
