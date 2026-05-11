@@ -1000,7 +1000,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const [hoveredDocTab, setHoveredDocTab] = useState(null);
   const [invoiceYear, setInvoiceYear] = useState('2026');
   const [invoiceStatus, setInvoiceStatus] = useState('all');
-  const [openInvoiceId, setOpenInvoiceId] = useState('may-2026');
+  const [openInvoiceId, setOpenInvoiceId] = useState('');
   const [settingsTab, setSettingsTab] = useState('account');
   const [liveData, setLiveData] = useState(null);
   const [liveLoading, setLiveLoading] = useState(false);
@@ -1561,7 +1561,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     return (
       <button
         key={id}
-        onClick={() => { setActiveView(id); setSelected(null); if (id === 'loans') setLoansView('all'); }}
+        onClick={() => { setActiveView(id); setSelected(null); if (id === 'loans') setLoansView('all'); if (id === 'invoices') setOpenInvoiceId(''); }}
         onMouseEnter={() => setHoveredNav(id)}
         onMouseLeave={() => setHoveredNav(null)}
         style={{
