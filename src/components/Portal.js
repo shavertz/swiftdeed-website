@@ -195,9 +195,8 @@ function PayoffStatementModal({ loan, goodThroughDate, onDateChange, onClose, on
   );
 }
 
-function MonthlyStatementPreviewModal({ doc, borrower, lenderName, onClose }) {
+function getMonthlyStatementData(doc, borrower, lenderName) {
   if (!doc) return null;
-
   const loan = doc.loan || {};
   const accountNumber = loan.loan_id_internal || loan.loan_id || '-';
   const borrowerName = loan.borrower_name || borrower?.legal_name || '-';
@@ -216,6 +215,176 @@ function MonthlyStatementPreviewModal({ doc, borrower, lenderName, onClose }) {
   const principalApplied = parseFloat(borrower?.last_payment_principal || Math.max(0, paymentReceived - interestApplied));
   const paymentReceivedDate = borrower?.last_payment_date ? new Date(borrower.last_payment_date).toLocaleDateString('en-US') : '04/28/2026';
   const paymentStatus = borrower?.payment_status || 'Paid';
+  const servicerName = lenderName || 'SwiftDeed Services, Inc.';
+
+  return {
+    accountNumber,
+    borrowerName,
+    propertyAddress,
+    statementDate,
+    paymentDueDate,
+    maturityDate,
+    originalBalance,
+    endingBalance,
+    principalReduction,
+    rate,
+    perDiem,
+    monthlyPayment,
+    paymentReceived,
+    interestApplied,
+    principalApplied,
+    paymentReceivedDate,
+    paymentStatus,
+    servicerName,
+  };
+}
+
+function monthlyStatementHtml(data) {
+  if (!data) return '';
+  const money = value => '$' + Number(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const safe = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+
+  return `<!doctype html>
+<html>
+<head>
+  <title>Monthly Statement - ${safe(data.accountNumber)}</title>
+  <meta charset="utf-8" />
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #ececec; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; color: #111; }
+    .toolbar { position: sticky; top: 0; background: #111; color: #fff; padding: 12px 18px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; }
+    .toolbar button { background: #FFD700; color: #0f0f0f; border: 0; border-radius: 7px; padding: 9px 14px; font-weight: 700; cursor: pointer; }
+    .page { background: #fff; width: min(760px, calc(100vw - 28px)); margin: 22px auto; padding: 2rem 2.5rem; font-size: 13px; box-shadow: 0 12px 45px rgba(0,0,0,0.12); }
+    .top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; gap: 20px; }
+    .brand { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+    .title { text-align: right; }
+    .title h1 { font-size: 17px; margin: 0 0 2px; }
+    .meta { font-size: 11px; color: #444; }
+    .rule { border-top: 2.5px solid #111; margin-bottom: 14px; }
+    .parties { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin-bottom: 16px; }
+    .eyebrow { font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+    .name { font-weight: 700; font-size: 13px; }
+    .summary { display: grid; grid-template-columns: repeat(4, 1fr); background: #f4f4f4; border: 0.5px solid #ddd; margin-bottom: 16px; }
+    .summary > div { padding: 8px 10px; border-right: 0.5px solid #ddd; }
+    .summary > div:last-child { border-right: 0; }
+    .summary-label { font-size: 9px; color: #555; text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 3px; }
+    .summary-value { font-weight: 700; font-size: 12px; }
+    .section { margin-bottom: 14px; }
+    .section-title { font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; background: #f4f4f4; border: 0.5px solid #ddd; border-bottom: none; padding: 5px 8px; }
+    table { width: 100%; border-collapse: collapse; border: 0.5px solid #ddd; }
+    td { padding: 5px 8px; font-size: 12px; border-bottom: 0.5px solid #eee; }
+    tr:last-child td { border-bottom: 0; }
+    td:last-child { text-align: right; }
+    .muted { color: #555; padding-left: 20px; }
+    .due { border: 1px solid #111; padding: 10px 12px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; }
+    .small { font-size: 10px; color: #555; }
+    .footer { border-top: 0.5px solid #ccc; padding-top: 8px; display: flex; justify-content: space-between; gap: 18px; font-size: 9.5px; color: #555; }
+    @media print {
+      body { background: #fff; }
+      .toolbar { display: none; }
+      .page { width: 100%; margin: 0; box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <div>Monthly statement preview</div>
+    <button onclick="window.print()">Print / save PDF</button>
+  </div>
+  <div class="page">
+    <div class="top">
+      <div class="brand"><span>Swift</span><span style="color:#E9A800;">Deed</span></div>
+      <div class="title">
+        <h1>Monthly Loan Statement</h1>
+        <div class="meta">Statement Date: ${safe(data.statementDate)} &nbsp;-&nbsp; Account: ${safe(data.accountNumber)}</div>
+      </div>
+    </div>
+    <div class="rule"></div>
+    <div class="parties">
+      <div>
+        <div class="eyebrow">Borrower</div>
+        <div class="name">${safe(data.borrowerName)}</div>
+        <div>${safe(data.propertyAddress)}</div>
+      </div>
+      <div>
+        <div class="eyebrow">Servicer</div>
+        <div class="name">${safe(data.servicerName)}</div>
+        <div>Processed by SwiftDeed Services, Inc.</div>
+        <div>www.theswiftdeed.com</div>
+      </div>
+    </div>
+    <div class="summary">
+      <div><div class="summary-label">Statement period</div><div class="summary-value">Apr 1 - Apr 30, 2026</div></div>
+      <div><div class="summary-label">Payment due date</div><div class="summary-value">${safe(data.paymentDueDate)}</div></div>
+      <div><div class="summary-label">Loan maturity date</div><div class="summary-value">${safe(data.maturityDate)}</div></div>
+      <div><div class="summary-label">Payment status</div><div class="summary-value" style="color:#1a7a3f;">${safe(data.paymentStatus)}</div></div>
+    </div>
+    <div class="section">
+      <div class="section-title">Principal</div>
+      <table>
+        <tr><td>Beginning principal balance</td><td>${money(data.originalBalance)}</td></tr>
+        <tr><td>Principal reduction this period</td><td>(${money(data.principalReduction)})</td></tr>
+        <tr><td><strong>Ending principal balance</strong></td><td><strong>${money(data.endingBalance)}</strong></td></tr>
+      </table>
+    </div>
+    <div class="section">
+      <div class="section-title">Interest</div>
+      <table>
+        <tr><td>Note interest rate</td><td>${Number(data.rate || 0).toFixed(4)}%</td></tr>
+        <tr><td>Interest charged this period</td><td>${money(data.interestApplied)}</td></tr>
+        <tr><td>Daily interest (per diem)</td><td>${money(data.perDiem)} / day</td></tr>
+      </table>
+    </div>
+    <div class="section">
+      <div class="section-title">Payment detail</div>
+      <table>
+        <tr><td>Scheduled monthly payment</td><td>${money(data.monthlyPayment)}</td></tr>
+        <tr><td>Payment received</td><td>${money(data.paymentReceived)}</td></tr>
+        <tr><td class="muted">Interest applied</td><td class="muted">${money(data.interestApplied)}</td></tr>
+        <tr><td class="muted">Principal applied</td><td class="muted">${money(data.principalApplied)}</td></tr>
+        <tr><td>Late fees charged</td><td>$0.00</td></tr>
+        <tr><td>Date payment received</td><td>${safe(data.paymentReceivedDate)}</td></tr>
+      </table>
+    </div>
+    <div class="due">
+      <div><div class="small">Next payment due</div><strong style="font-size:14px;">${safe(data.paymentDueDate)}</strong></div>
+      <div style="text-align:right;"><div class="small">Amount due</div><strong style="font-size:14px;">${money(data.monthlyPayment)}</strong></div>
+    </div>
+    <div style="font-size:10px; color:#444; line-height:1.6; margin-bottom:14px;">This statement is generated by SwiftDeed as Loan Servicer and reflects all activity for the period indicated above. Please retain this statement for your records. Contact SwiftDeed if you believe any information is inaccurate.</div>
+    <div class="footer">
+      <span>Property: ${safe(data.propertyAddress)}</span>
+      <span>Processed by SwiftDeed Services, Inc. - www.theswiftdeed.com</span>
+    </div>
+    <div style="font-size:9.5px; color:#555; margin-top:4px;">Prepared by SwiftDeed Processing Team</div>
+  </div>
+</body>
+</html>`;
+}
+
+function MonthlyStatementPreviewModal({ doc, borrower, lenderName, onClose }) {
+  if (!doc) return null;
+  const data = getMonthlyStatementData(doc, borrower, lenderName);
+
+  const {
+    accountNumber,
+    borrowerName,
+    propertyAddress,
+    statementDate,
+    paymentDueDate,
+    maturityDate,
+    originalBalance,
+    endingBalance,
+    principalReduction,
+    rate,
+    perDiem,
+    monthlyPayment,
+    paymentReceived,
+    interestApplied,
+    principalApplied,
+    paymentReceivedDate,
+    paymentStatus,
+    servicerName,
+  } = data;
 
   const money = value => '$' + Number(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const row = (label, value, strong = false, muted = false) => (
@@ -261,7 +430,7 @@ function MonthlyStatementPreviewModal({ doc, borrower, lenderName, onClose }) {
             </div>
             <div>
               <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: '#111', marginBottom: 4 }}>Servicer</div>
-              <div style={{ fontWeight: 700, fontSize: 13 }}>{lenderName || 'SwiftDeed Services, Inc.'}</div>
+              <div style={{ fontWeight: 700, fontSize: 13 }}>{servicerName}</div>
               <div style={{ fontSize: 12 }}>Processed by SwiftDeed Services, Inc.</div>
               <div style={{ fontSize: 12 }}>www.theswiftdeed.com</div>
             </div>
@@ -1698,6 +1867,15 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   });
   const selectedDocLoan = sortedDocumentLoans.find(loan => loanDocId(loan) === selectedDocLoanId) || sortedDocumentLoans[0] || null;
   const selectedDocRecords = selectedDocLoan ? docsForLoan(selectedDocLoan).filter(doc => docTab !== 'payoff' || doc.generated) : [];
+  const openMonthlyStatementTab = (doc) => {
+    const html = monthlyStatementHtml(getMonthlyStatementData(doc, doc?.loan ? getBorrower(doc.loan) : null, lenderName));
+    const tab = window.open('', '_blank');
+    if (!tab) return;
+    tab.opener = null;
+    tab.document.open();
+    tab.document.write(html);
+    tab.document.close();
+  };
   const documentRow = (doc) => {
     const accent = docAccent[doc.tab] || '#FFD700';
     const visibleDate = doc.date && doc.date !== '-' && doc.date !== 'Ready' ? doc.date : '';
@@ -1714,7 +1892,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
         {!shellNarrow && <span style={{ color: '#777', fontSize: 12, textAlign: 'right' }}>{visibleDate}</span>}
         <button
           onClick={() => {
-            if (doc.tab === 'monthly') setMonthlyStatementDoc(doc);
+            if (doc.tab === 'monthly') openMonthlyStatementTab(doc);
             if (doc.url) window.open(doc.url, '_blank', 'noopener,noreferrer');
           }}
           style={{ background: 'transparent', border: 'none', color: '#FFD700', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'right', whiteSpace: 'nowrap', justifySelf: 'end' }}
