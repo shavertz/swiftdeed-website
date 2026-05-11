@@ -2168,7 +2168,12 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     <>
       <div style={{ color: '#FFD700', fontSize: 10, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', padding: '12px 0 8px' }}>{title}</div>
       <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 520 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 520, tableLayout: 'fixed' }}>
+          <colgroup>
+            <col style={{ width: '34%' }} />
+            <col style={{ width: '48%' }} />
+            <col style={{ width: '18%' }} />
+          </colgroup>
           <thead>
             <tr>
               {['Service type', 'Details', 'Amount'].map((heading, i) => (
