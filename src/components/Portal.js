@@ -1656,9 +1656,9 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   ];
   const settingsView = (
     <div style={{ padding: contentPad }}>
-      <div style={{ ...contentWrap, maxWidth: 1280 }}>
+      <div style={{ ...contentWrap, maxWidth: 1160 }}>
         <div style={{ fontSize: 24, fontWeight: 600, color: '#fff', marginBottom: 22 }}>Settings</div>
-        <div style={{ display: 'flex', gap: 18, overflowX: 'auto', borderBottom: '0.5px solid #222', marginBottom: 24 }} className="swiftdeed-table-scroll">
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 18, overflow: 'visible', borderBottom: '0.5px solid #222', marginBottom: 24 }}>
           {settingsTabs.map(([id, label]) => (
             <button key={id} onClick={() => setSettingsTab(id)} style={{ background: 'transparent', border: 'none', borderBottom: settingsTab === id ? '2px solid #FFD700' : '2px solid transparent', color: settingsTab === id ? '#FFD700' : '#666', padding: '10px 2px', marginBottom: -1, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>{label}</button>
           ))}
@@ -1679,8 +1679,8 @@ export default function Portal({ onSubmitRequest, resetToken }) {
                 {settingField('Phone number', { defaultValue: '+1 (203) 555-0192' })}
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 16 }}>
-                <button style={settingsSecondary}>Cancel</button>
-                <button style={settingsPrimary}>Save changes</button>
+                <button className="swiftdeed-settings-secondary" style={settingsSecondary}>Cancel</button>
+                <button className="swiftdeed-settings-primary" style={settingsPrimary}>Save changes</button>
               </div>
             </div>
             <div style={settingsCard}>
@@ -1693,7 +1693,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
                   {settingField('Confirm new password', { type: 'password', placeholder: 'Re-enter password' })}
                 </div>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}><button style={settingsPrimary}>Update password</button></div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}><button className="swiftdeed-settings-primary" style={settingsPrimary}>Update password</button></div>
             </div>
           </div>
         )}
@@ -1708,15 +1708,15 @@ export default function Portal({ onSubmitRequest, resetToken }) {
                   <div style={{ color: '#fff', fontSize: 13, fontWeight: 600 }}>Visa ending in 4242 <span style={{ color: '#34d399', background: '#0a2416', borderRadius: 999, padding: '3px 8px', fontSize: 10, marginLeft: 8 }}>Active</span></div>
                   <div style={{ color: '#555', fontSize: 12, marginTop: 4 }}>Expires 09/2028 - Added Jan 12, 2026</div>
                 </div>
-                <button style={settingsSecondary}>Update</button>
+                <button className="swiftdeed-settings-secondary" style={settingsSecondary}>Update</button>
               </div>
-              <button style={settingsSecondary}>+ Add payment method</button>
+              <button className="swiftdeed-settings-secondary" style={settingsSecondary}>+ Add payment method</button>
             </div>
             <div style={settingsCard}>
               <div style={{ color: '#fff', fontSize: 14, fontWeight: 700 }}>Billing email</div>
               <div style={{ color: '#555', fontSize: 12, marginTop: 5, marginBottom: 18 }}>Invoices and billing notifications will be sent to this address.</div>
               {settingField('Billing email', { defaultValue: user?.primaryEmailAddress?.emailAddress || 'brandon@clmlending.com' })}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}><button style={settingsPrimary}>Save</button></div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}><button className="swiftdeed-settings-primary" style={settingsPrimary}>Save</button></div>
             </div>
           </div>
         )}
@@ -1735,8 +1735,8 @@ export default function Portal({ onSubmitRequest, resetToken }) {
               {settingField('Reference / memo (optional)', { placeholder: 'e.g. loan ID or borrower name' })}
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 16 }}>
-              <button style={settingsSecondary}>Cancel</button>
-              <button style={settingsPrimary}>Save wire instructions</button>
+              <button className="swiftdeed-settings-secondary" style={settingsSecondary}>Cancel</button>
+              <button className="swiftdeed-settings-primary" style={settingsPrimary}>Save wire instructions</button>
             </div>
           </div>
         )}
@@ -1764,9 +1764,9 @@ export default function Portal({ onSubmitRequest, resetToken }) {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '14px 0', borderTop: '0.5px solid #222' }}>
                 <div><div style={{ color: '#fff', fontSize: 13 }}>Safari - iPhone - Westport, CT</div><div style={{ color: '#555', fontSize: 11, marginTop: 3 }}>Last active 2 hours ago</div></div>
-                <button style={settingsDanger}>Log out</button>
+                <button className="swiftdeed-settings-secondary" style={settingsDanger}>Log out</button>
               </div>
-              <div style={{ borderTop: '0.5px solid #222', paddingTop: 14 }}><button style={settingsDanger}>Log out of all devices</button></div>
+              <div style={{ borderTop: '0.5px solid #222', paddingTop: 14 }}><button className="swiftdeed-settings-secondary" style={settingsDanger}>Log out of all devices</button></div>
             </div>
             <div style={settingsCard}>
               <div style={{ color: '#fff', fontSize: 14, fontWeight: 700 }}>Two-factor authentication</div>
@@ -2628,8 +2628,20 @@ export default function Portal({ onSubmitRequest, resetToken }) {
           background: #0f0f0f;
           border: 0.5px solid #FFD700;
         }
+        .swiftdeed-settings-primary,
+        .swiftdeed-settings-secondary {
+          transition: box-shadow 0.15s, background 0.15s, color 0.15s, border-color 0.15s;
+        }
+        .swiftdeed-settings-primary:hover {
+          box-shadow: 0 0 14px rgba(255, 215, 0, 0.36);
+        }
+        .swiftdeed-settings-secondary:hover {
+          color: #fff !important;
+          border-color: #FFD700 !important;
+          background: #171717 !important;
+        }
       `}</style>
-      <aside style={{ background: '#0b0b0b', borderRight: shellNarrow ? 'none' : '0.5px solid #222', borderBottom: shellNarrow ? '0.5px solid #222' : 'none', minHeight: shellNarrow ? 'auto' : 'calc(100vh - 65px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <aside style={{ background: '#0b0b0b', borderRight: shellNarrow ? 'none' : '0.5px solid #222', borderBottom: shellNarrow ? '0.5px solid #222' : 'none', minHeight: shellNarrow ? 'auto' : 'calc(100vh - 65px)', height: shellNarrow ? 'auto' : 'calc(100vh - 65px)', position: shellNarrow ? 'static' : 'sticky', top: shellNarrow ? 'auto' : 65, alignSelf: 'start', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ padding: shellNarrow ? '14px 22px 8px' : `24px 18px 34px ${sidebarGutter}px`, borderBottom: shellNarrow ? 'none' : '0.5px solid #1d1d1d' }}>
           <div style={{ color: '#FFD700', fontSize: 12, fontWeight: 500, letterSpacing: 0.6, textTransform: 'uppercase' }}>Lender Portal</div>
         </div>
