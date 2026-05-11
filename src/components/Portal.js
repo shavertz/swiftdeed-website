@@ -2349,7 +2349,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
               <button
                 key={column.key}
                 onClick={() => toggleSort(column)}
-                style={{ background: 'transparent', border: 'none', color: column.sortable ? '#FFD700' : '#666', padding: 0, textAlign: 'left', fontFamily: 'inherit', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.7, cursor: column.sortable ? 'pointer' : 'default', whiteSpace: 'nowrap' }}
+                style={{ background: 'transparent', border: 'none', color: '#FFD700', padding: 0, textAlign: 'left', fontFamily: 'inherit', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.7, cursor: column.sortable ? 'pointer' : 'default', whiteSpace: 'nowrap' }}
               >
                 {column.label}{sortMarker(column)}
               </button>
@@ -2373,7 +2373,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
                 onClick={() => setSelected(r)}
                 onMouseEnter={() => setHoveredId(r.id)}
                 onMouseLeave={() => setHoveredId(null)}>
-                <span style={{ color: '#FFD700', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.loan_id_internal || r.loan_id || '-'}</span>
+                <span style={{ color: '#777', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.loan_id_internal || r.loan_id || '-'}</span>
                 <span style={{ color: '#fff', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.borrower_name || '-'}</span>
                 <span style={{ color: '#777', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{loc.city}</span>
                 <span style={{ color: '#777' }}>{loc.state}</span>
