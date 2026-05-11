@@ -983,7 +983,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [docSearch, setDocSearch] = useState('');
-  const [docTab, setDocTab] = useState('monthly');
+  const [docTab, setDocTab] = useState('loan');
   const [selectedDocLoanId, setSelectedDocLoanId] = useState('');
   const [docSort, setDocSort] = useState('recent');
   const [sortConfig, setSortConfig] = useState({ key: 'created_at', direction: 'desc' });
@@ -1036,7 +1036,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     setLoanFilter({ id: 'all', label: 'All active loans', accent: '#FFD700' });
     setSearch('');
     setDocSearch('');
-    setDocTab('monthly');
+    setDocTab('loan');
     setSelectedDocLoanId('');
     setDocSort('recent');
     setPage(1);
