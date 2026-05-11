@@ -368,7 +368,27 @@ export async function generatePayoffPDF(data) {
   });
 }
 
-export async function generateInvoicePDF({ internalLoanId, name, email, company, phone, turnaround, totalCharged, borrowerName }) {
+export async function generateInvoicePDF({
+  internalLoanId,
+  name,
+  email,
+  company,
+  phone,
+  turnaround,
+  totalCharged,
+  borrowerName,
+  invoiceNumber,
+  invoiceDate,
+  dueDate,
+  billingPeriod,
+  lenderName,
+  contactName,
+  billingEmail,
+  billingAddress = [],
+  servicingItems = [],
+  additionalItems = [],
+  paymentDate,
+}) {
   const PDFDocument = (await import('pdfkit')).default;
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'LETTER', margin: 0, compress: true });
@@ -380,136 +400,113 @@ export async function generateInvoicePDF({ internalLoanId, name, email, company,
     const PW = 612;
     const PH = 792;
     const ML = 44;
-    const MR = 44;
-    const CW = PW - ML - MR;
-    const BLACK  = '#111111';
+    const CW = PW - ML - 44;
+    const BLACK = '#111111';
     const YELLOW = '#D4A017';
-    const LGRAY  = '#dddddd';
-    const DGRAY  = '#f5f5f5';
+    const GRAY = '#444444';
+    const MGRAY = '#555555';
+    const LGRAY = '#dddddd';
+    const DGRAY = '#f4f4f4';
+    const HGRAY = '#fafafa';
 
-    const hr = (y, color = LGRAY, weight = 0.5) => {
-      doc.save().strokeColor(color).lineWidth(weight)
-         .moveTo(ML, y).lineTo(ML + CW, y).stroke().restore();
-    };
+    const fmtMoney = value => '$' + Number(value || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    const shortDate = value => value || new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+    const hr = (y, color = LGRAY, weight = 0.5) => doc.save().strokeColor(color).lineWidth(weight).moveTo(ML, y).lineTo(ML + CW, y).stroke().restore();
+    const vline = (x, y1, y2) => doc.save().strokeColor(LGRAY).lineWidth(0.5).moveTo(x, y1).lineTo(x, y2).stroke().restore();
+    const smallCaps = (text, x, y, opts = {}) => doc.save().font('Helvetica-Bold').fontSize(opts.size || 7).fillColor(opts.color || BLACK).text(text, x, y, { characterSpacing: 1, lineBreak: false, ...opts }).restore();
 
-    const issueDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-    const serviceLabel = turnaround === 'rush'
-      ? 'Payoff Statement — Rush Processing (within 15 min)'
-      : 'Payoff Statement — Standard Processing (within 24 hrs)';
-    const amount = turnaround === 'rush' ? 50.00 : 40.00;
-    const fmt$ = v => '$' + parseFloat(v).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    const invNumber = invoiceNumber || `INV-${new Date().getFullYear()}-${String(internalLoanId || Date.now()).slice(-4)}`;
+    const invDate = shortDate(invoiceDate);
+    const invDueDate = shortDate(dueDate || invoiceDate);
+    const period = billingPeriod || 'Billing period';
+    const billToName = lenderName || company || name || 'SwiftDeed customer';
+    const billToContact = contactName || (company ? name : '');
+    const billToEmail = billingEmail || email || '';
+    const billToAddress = Array.isArray(billingAddress) ? billingAddress : [billingAddress].filter(Boolean);
+    const fallbackAmount = Number(totalCharged || (turnaround === 'rush' ? 50 : 40));
+    const serviceRows = servicingItems.map(item => ({ ...item, amount: item.amount ?? 35 }));
+    const chargeRows = additionalItems.length ? additionalItems : [{
+      details: `Payoff statement - ${internalLoanId || 'loan'}${borrowerName ? ` - ${borrowerName}` : ''}${paymentDate ? ` - Generated ${paymentDate}` : ''}`,
+      amount: fallbackAmount,
+    }];
+    const subtotal = serviceRows.reduce((sum, item) => sum + Number(item.amount || 0), 0) + chargeRows.reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
-    let y = 36;
+    let y = 40;
+    doc.font('Helvetica-Bold').fontSize(20).fillColor(BLACK).text('Swift', ML, y, { continued: true, lineBreak: false });
+    doc.fillColor(YELLOW).text('Deed', { lineBreak: false });
+    doc.font('Helvetica-Bold').fontSize(17).fillColor(BLACK).text('Invoice', ML, y, { width: CW, align: 'right', lineBreak: false });
+    doc.font('Helvetica').fontSize(8).fillColor(GRAY).text(`${invNumber} - ${period}`, ML, y + 20, { width: CW, align: 'right', lineBreak: false });
 
-    doc.save().font('Helvetica-Bold').fontSize(20).fillColor(BLACK)
-       .text('Swift', ML, y, { continued: true, lineBreak: false });
-    doc.fillColor(YELLOW).text('Deed', { lineBreak: false }).restore();
-    doc.save().font('Helvetica-Bold').fontSize(14).fillColor(BLACK)
-       .text('Invoice', ML, y, { width: CW, align: 'right', lineBreak: false }).restore();
-    doc.save().font('Helvetica').fontSize(8).fillColor(BLACK)
-       .text(`Invoice #: ${internalLoanId}  ·  Date: ${issueDate}`,
-             ML, y + 18, { width: CW, align: 'right', lineBreak: false }).restore();
-
-    y += 32;
-    hr(y, BLACK, 1.5);
-    y += 14;
-
-    const colW = CW / 2 - 10;
-    doc.save().font('Helvetica-Bold').fontSize(6.5).fillColor(BLACK)
-       .text('BILLED TO', ML, y, { characterSpacing: 0.6, lineBreak: false }).restore();
-    doc.save().font('Helvetica-Bold').fontSize(6.5).fillColor(BLACK)
-       .text('FROM', ML + colW + 20, y, { characterSpacing: 0.6, lineBreak: false }).restore();
-    y += 10;
-
-    doc.save().font('Helvetica-Bold').fontSize(9).fillColor(BLACK)
-       .text(name || '—', ML, y, { width: colW, lineBreak: false }).restore();
-    doc.save().font('Helvetica-Bold').fontSize(9).fillColor(BLACK)
-       .text('SwiftDeed Services', ML + colW + 20, y, { width: colW, lineBreak: false }).restore();
-    y += 13;
-
-    if (company) {
-      doc.save().font('Helvetica').fontSize(8).fillColor(BLACK)
-         .text(company, ML, y, { width: colW, lineBreak: false }).restore();
-      doc.save().font('Helvetica').fontSize(8).fillColor(BLACK)
-         .text('www.theswiftdeed.com', ML + colW + 20, y, { width: colW, lineBreak: false }).restore();
-      y += 11;
-    }
-    doc.save().font('Helvetica').fontSize(8).fillColor(BLACK)
-       .text(email || '—', ML, y, { width: colW, lineBreak: false }).restore();
-    doc.save().font('Helvetica').fontSize(8).fillColor(BLACK)
-       .text('support@theswiftdeed.com', ML + colW + 20, y, { width: colW, lineBreak: false }).restore();
-    y += 11;
-
-    if (phone) {
-      doc.save().font('Helvetica').fontSize(8).fillColor(BLACK)
-         .text(phone, ML, y, { width: colW, lineBreak: false }).restore();
-      y += 11;
-    }
-
-    y += 10;
-    hr(y);
-    y += 14;
-
-    doc.save().rect(ML, y, CW, 18).fill(BLACK).restore();
-    doc.save().font('Helvetica-Bold').fontSize(7.5).fillColor('#ffffff')
-       .text('Description', ML + 8, y + 5, { lineBreak: false }).restore();
-    doc.save().font('Helvetica-Bold').fontSize(7.5).fillColor('#ffffff')
-       .text('Borrower', ML + 260, y + 5, { lineBreak: false }).restore();
-    doc.save().font('Helvetica-Bold').fontSize(7.5).fillColor('#ffffff')
-       .text('Amount', ML, y + 5, { width: CW - 8, align: 'right', lineBreak: false }).restore();
+    y += 38;
+    hr(y, BLACK, 2.5);
     y += 18;
 
-    doc.save().rect(ML, y, CW, 24).fill(DGRAY).restore();
-    doc.save().font('Helvetica').fontSize(8).fillColor(BLACK)
-       .text(serviceLabel, ML + 8, y + 8, { lineBreak: false }).restore();
-    doc.save().font('Helvetica').fontSize(8).fillColor(BLACK)
-       .text(borrowerName || '—', ML + 260, y + 8, { lineBreak: false }).restore();
-    doc.save().font('Helvetica-Bold').fontSize(8).fillColor(BLACK)
-       .text(fmt$(amount), ML, y + 8, { width: CW - 8, align: 'right', lineBreak: false }).restore();
-    y += 24;
-    hr(y);
-    y += 10;
+    const colW = CW / 2 - 10;
+    smallCaps('BILL TO', ML, y);
+    smallCaps('BILL FROM', ML + colW + 20, y);
+    y += 12;
+    doc.font('Helvetica-Bold').fontSize(9).fillColor(BLACK).text(billToName, ML, y, { width: colW });
+    doc.text('SwiftDeed Services, Inc.', ML + colW + 20, y, { width: colW });
+    y += 13;
+    [billToContact, billToEmail, ...billToAddress, phone].filter(Boolean).slice(0, 5).forEach((line, index) => {
+      doc.font('Helvetica').fontSize(8).fillColor(GRAY).text(line, ML, y + index * 11, { width: colW });
+    });
+    doc.font('Helvetica').fontSize(8).fillColor(GRAY).text('hello@theswiftdeed.com', ML + colW + 20, y, { width: colW });
+    doc.text('www.theswiftdeed.com', ML + colW + 20, y + 11, { width: colW });
+    y += 64;
 
-    const totRow = (label, value, bold = false) => {
-      doc.save().font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(8).fillColor(BLACK)
-         .text(label, ML, y, { width: CW - 8 - 120, align: 'right', lineBreak: false }).restore();
-      doc.save().font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(8).fillColor(BLACK)
-         .text(value, ML, y, { width: CW - 8, align: 'right', lineBreak: false }).restore();
+    const metaW = CW / 3;
+    doc.save().rect(ML, y, CW, 40).fill(DGRAY).strokeColor(LGRAY).lineWidth(0.5).stroke().restore();
+    vline(ML + metaW, y, y + 40);
+    vline(ML + metaW * 2, y, y + 40);
+    [['INVOICE DATE', invDate], ['DUE DATE', invDueDate], ['INVOICE NUMBER', invNumber]].forEach(([label, value], index) => {
+      const x = ML + metaW * index + 12;
+      doc.font('Helvetica').fontSize(7).fillColor(MGRAY).text(label, x, y + 9, { characterSpacing: 0.7 });
+      doc.font('Helvetica-Bold').fontSize(8).fillColor(BLACK).text(value, x, y + 23);
+    });
+    y += 68;
+
+    const drawTable = (title, rows, firstHeader) => {
+      if (!rows.length) return;
+      doc.save().rect(ML, y, CW, 20).fill(DGRAY).strokeColor(LGRAY).lineWidth(0.5).stroke().restore();
+      smallCaps(title.toUpperCase(), ML + 12, y + 7, { size: 7 });
+      y += 20;
+      doc.save().rect(ML, y, CW, 24).fill(HGRAY).strokeColor(LGRAY).lineWidth(0.5).stroke().restore();
+      smallCaps(firstHeader, ML + 12, y + 9, { size: 7, color: MGRAY });
+      smallCaps('AMOUNT', ML + CW - 80, y + 9, { size: 7, color: MGRAY });
+      y += 24;
+      rows.forEach(item => {
+        const details = item.details || item.loan || item.label || `${item.loanId || internalLoanId || ''}${item.borrower ? ` - ${item.borrower}` : ''}`;
+        doc.font('Helvetica').fontSize(8).fillColor(GRAY).text(details, ML + 12, y + 10, { width: CW - 120 });
+        doc.font('Helvetica').fontSize(8).fillColor(BLACK).text(fmtMoney(item.amount), ML, y + 10, { width: CW - 12, align: 'right' });
+        y += 24;
+        hr(y, '#eeeeee');
+      });
       y += 14;
     };
 
-    totRow('Subtotal', fmt$(amount));
-    totRow('Tax', '$0.00');
-    hr(y - 4);
-    y += 2;
-    totRow('Total', fmt$(amount), true);
-    y += 4;
+    drawTable(`Loan servicing - ${serviceRows.length} loans @ $35.00/mo`, serviceRows, 'LOAN');
+    drawTable('Additional charges', chargeRows, 'DETAILS');
 
-    doc.save().roundedRect(ML, y, CW, 28, 4).fill(DGRAY).restore();
-    doc.save().font('Helvetica-Bold').fontSize(10).fillColor(BLACK)
-       .text('PAID', ML + 10, y + 9, { lineBreak: false }).restore();
-    doc.save().font('Helvetica').fontSize(8).fillColor(BLACK)
-       .text(`Payment collected at submission · Reference: ${internalLoanId}`,
-             ML + 46, y + 11, { lineBreak: false }).restore();
-    y += 38;
+    const totalsX = ML + CW - 240;
+    const totalRow = (label, value, bold = false) => {
+      doc.font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(bold ? 9 : 8).fillColor(bold ? BLACK : MGRAY).text(label, totalsX, y, { width: 130 });
+      doc.font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(bold ? 9 : 8).fillColor(BLACK).text(value, totalsX, y, { width: 240, align: 'right' });
+      y += 16;
+    };
+    totalRow('Subtotal', fmtMoney(subtotal));
+    totalRow('Tax', '$0.00');
+    totalRow('Total due', fmtMoney(subtotal), true);
+    y += 18;
 
-    hr(y);
-    y += 10;
-
-    doc.save().font('Helvetica').fontSize(7).fillColor('#888888')
-       .text(
-         `This invoice confirms payment for payoff statement processing services rendered on ${issueDate}. ` +
-         `For questions, contact support@theswiftdeed.com. Thank you for using SwiftDeed.`,
-         ML, y, { width: CW, lineBreak: true }
-       ).restore();
+    doc.save().rect(ML, y, CW, 48).fill(DGRAY).strokeColor(LGRAY).lineWidth(0.5).stroke().restore();
+    doc.font('Helvetica').fontSize(8).fillColor(MGRAY).text(`Payment will be automatically charged to the card on file on ${invDueDate}. To update your payment method, log in to your SwiftDeed account. For billing questions, contact `, ML + 14, y + 14, { width: CW - 28, continued: true });
+    doc.font('Helvetica-Bold').fillColor(BLACK).text('hello@theswiftdeed.com', { continued: false });
 
     const footerY = PH - 38;
-    hr(footerY);
-    doc.save().font('Helvetica').fontSize(7).fillColor(BLACK)
-       .text('SwiftDeed Services, Inc.  ·  www.theswiftdeed.com  ·  support@theswiftdeed.com',
-             ML, footerY + 10, { lineBreak: false }).restore();
-    doc.save().font('Helvetica').fontSize(7).fillColor(BLACK)
-       .text(internalLoanId, ML, footerY + 10, { width: CW, align: 'right', lineBreak: false }).restore();
+    hr(footerY, '#cccccc');
+    doc.font('Helvetica').fontSize(7).fillColor(MGRAY).text('SwiftDeed Services, Inc.', ML, footerY + 10, { lineBreak: false });
+    doc.text('NMLS # XXXXXX - www.theswiftdeed.com', ML, footerY + 10, { width: CW, align: 'right', lineBreak: false });
 
     doc.end();
   });
