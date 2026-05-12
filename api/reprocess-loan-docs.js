@@ -77,6 +77,12 @@ export default async function handler(req, res) {
 
     const prompt = `Extract the following fields from the attached loan document. Return ONLY a raw JSON object, no markdown, no backticks.
 
+Important:
+- Prioritize any table titled "Loan Terms Summary", "Loan Terms", "Note Terms", or similar.
+- If the table shows "First Payment Date", return that as next_payment_due_date.
+- If the table shows "Loan Type", return it as loan_type.
+- If the loan is interest only and no monthly_payment is stated, leave monthly_payment null.
+
 Fields to extract:
 - loan_id
 - borrower_name
@@ -84,6 +90,7 @@ Fields to extract:
 - property_address
 - unpaid_principal (number only, no $ or commas)
 - interest_rate (number only, no %)
+- loan_type
 - loan_origination_date (date string, format MM/DD/YYYY)
 - maturity_date (date string, format MM/DD/YYYY)
 - next_payment_due_date (date string, format MM/DD/YYYY)
@@ -119,13 +126,16 @@ Fields to extract:
     const loanStartDate = normalizeDate(loanData.loan_origination_date || loanData.statement_date);
     const maturityDate = normalizeDate(loanData.maturity_date);
     const nextPaymentDate = normalizeDate(loanData.next_payment_due_date);
+    const loanType = loanData.loan_type || null;
+    const monthlyPayment = numberOrNull(loanData.monthly_payment) ?? (loanType && String(loanType).toLowerCase().includes('interest') && principal && rate ? parseFloat(((principal * (rate / 100)) / 12).toFixed(2)) : null);
 
     const borrowerPatch = compact({
       legal_name: loanData.borrower_name,
       principal_balance: principal,
       interest_rate: rate,
       per_diem: perDiem ? parseFloat(perDiem.toFixed(2)) : null,
-      monthly_payment: numberOrNull(loanData.monthly_payment),
+      monthly_payment: monthlyPayment,
+      loan_type: loanType,
       property_address: loanData.property_address,
       next_payment_date: nextPaymentDate,
       loan_start_date: loanStartDate,
@@ -140,6 +150,8 @@ Fields to extract:
       total_due: principal,
       interest_rate: rate,
       per_diem: perDiem ? parseFloat(perDiem.toFixed(2)) : null,
+      monthly_payment: monthlyPayment,
+      loan_type: loanType,
       maturity_date: maturityDate,
       loan_start_date: loanStartDate,
       next_payment_date: nextPaymentDate,

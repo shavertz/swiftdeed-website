@@ -24,7 +24,8 @@ export async function upsertBorrower({
     if (!legalName) return;
 
     const perDiem = parseFloat(dailyRateForPDF.toFixed(2));
-    const monthlyPayment = parseFloat(loanData.monthly_payment);
+    const loanType = loanData.loan_type || null;
+    const monthlyPayment = parseFloat(loanData.monthly_payment) || (loanType && String(loanType).toLowerCase().includes('interest') && principal && rate ? parseFloat(((principal * (rate / 100)) / 12).toFixed(2)) : null);
     const nextPaymentDate = loanData.next_payment_due_date || null;
     const loanStartDate = loanData.loan_origination_date || loanData.interest_paid_to_date || loanData.statement_date || null;
     const token = generateToken();
@@ -46,7 +47,8 @@ export async function upsertBorrower({
           principal_balance: principal,
           interest_rate: rate,
           per_diem: perDiem,
-          monthly_payment: Number.isNaN(monthlyPayment) ? null : monthlyPayment,
+          monthly_payment: monthlyPayment,
+          loan_type: loanType,
           property_address: loanData.property_address || null,
           next_payment_date: nextPaymentDate,
           loan_start_date: loanStartDate,
@@ -64,7 +66,8 @@ export async function upsertBorrower({
           principal_balance: principal,
           interest_rate: rate,
           per_diem: perDiem,
-          monthly_payment: Number.isNaN(monthlyPayment) ? null : monthlyPayment,
+          monthly_payment: monthlyPayment,
+          loan_type: loanType,
           property_address: loanData.property_address || null,
           next_payment_date: nextPaymentDate,
           loan_start_date: loanStartDate,

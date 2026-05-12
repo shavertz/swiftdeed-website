@@ -1144,7 +1144,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
         setRequests(rows);
         const ids = rows.map(r => r.loan_id_internal).filter(Boolean);
         if (ids.length > 0) {
-          const bRes = await fetch(`${SUPABASE_URL}/rest/v1/borrowers?loan_id_internal=in.(${ids.map(id => `"${id}"`).join(',')})&select=loan_id_internal,borrower_email,principal_balance,next_payment_date,monthly_payment,payment_status,interest_rate,per_diem,original_loan_amount,total_interest_paid,total_payments_made,legal_name,guarantor_name,portal_access,loan_document_urls,last_payment_date,last_payment_amount,maturity_date,property_address,city,state`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
+          const bRes = await fetch(`${SUPABASE_URL}/rest/v1/borrowers?loan_id_internal=in.(${ids.map(id => `"${id}"`).join(',')})&select=loan_id_internal,borrower_email,principal_balance,next_payment_date,monthly_payment,payment_status,interest_rate,per_diem,original_loan_amount,total_interest_paid,total_payments_made,legal_name,guarantor_name,portal_access,loan_document_urls,last_payment_date,last_payment_amount,maturity_date,property_address,city,state,loan_type`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
           const bData = await bRes.json();
           if (Array.isArray(bData)) {
             const emailMap = {};
@@ -1453,26 +1453,17 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     if (!d) return null;
     return Math.ceil((d - today) / 86400000);
   };
-  const inferredNextPaymentDate = (request) => {
+  const storedNextPaymentDate = (request) => {
     const b = getBorrower(request);
-    if (b.next_payment_date || request.next_payment_date) return b.next_payment_date || request.next_payment_date;
-    const start = dateValue(b.loan_start_date || request.loan_start_date);
-    if (!start) return null;
-    const next = new Date(start);
-    while (next < today) next.setMonth(next.getMonth() + 1);
-    return next.toISOString().slice(0, 10);
+    return b.next_payment_date || request.next_payment_date || null;
   };
-  const inferredNextPaymentAmount = (request) => {
+  const storedNextPaymentAmount = (request) => {
     const b = getBorrower(request);
     const direct = parseFloat(b.monthly_payment || request.monthly_payment);
-    if (!isNaN(direct) && direct > 0) return direct;
-    const balance = parseFloat(b.principal_balance || request.total_due);
-    const rate = parseFloat(b.interest_rate || request.interest_rate);
-    if (!isNaN(balance) && balance > 0 && !isNaN(rate) && rate > 0) return parseFloat(((balance * (rate / 100)) / 12).toFixed(2));
-    return null;
+    return !isNaN(direct) && direct > 0 ? direct : null;
   };
   const daysPastDue = (request) => {
-    const diff = daysFromToday(inferredNextPaymentDate(request));
+    const diff = daysFromToday(storedNextPaymentDate(request));
     return diff == null || diff >= 0 ? 0 : Math.abs(diff);
   };
   const isThisMonth = (iso) => {
@@ -1509,7 +1500,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const matchesLoanFilter = (request, filterId) => {
     const b = getBorrower(request);
     const maturityDays = daysFromToday(b.maturity_date || request.maturity_date);
-    const nextPaymentDays = daysFromToday(inferredNextPaymentDate(request));
+    const nextPaymentDays = daysFromToday(storedNextPaymentDate(request));
     const pastDueDays = daysPastDue(request);
     switch (filterId) {
       case 'received_month': return isThisMonth(b.last_payment_date);
@@ -1557,8 +1548,8 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     if (key === 'rate') return parseFloat(b.interest_rate || request.interest_rate) || 0;
     if (key === 'original_balance') return parseFloat(b.original_loan_amount || request.original_loan_amount || request.total_due) || 0;
     if (key === 'current_balance') return parseFloat(b.principal_balance || request.total_due) || 0;
-    if (key === 'next_payment_date') return dateValue(inferredNextPaymentDate(request))?.getTime() || 0;
-    if (key === 'next_payment_amount') return inferredNextPaymentAmount(request) || 0;
+    if (key === 'next_payment_date') return dateValue(storedNextPaymentDate(request))?.getTime() || 0;
+    if (key === 'next_payment_amount') return storedNextPaymentAmount(request) || 0;
     if (key === 'days_past_due') return daysPastDue(request);
     if (key === 'status') return statusSeverity(request);
     return new Date(request.created_at).getTime() || 0;
@@ -2805,8 +2796,8 @@ export default function Portal({ onSubmitRequest, resetToken }) {
             const currentBalance = b.principal_balance || r.total_due;
             const days = daysPastDue(r);
             const bucket = statusBucket(r);
-            const nextDate = inferredNextPaymentDate(r);
-            const nextAmount = inferredNextPaymentAmount(r);
+            const nextDate = storedNextPaymentDate(r);
+            const nextAmount = storedNextPaymentAmount(r);
             return (
               <div key={r.id}
                 style={{ display: 'grid', gridTemplateColumns: LOAN_TABLE_COLS, gap: 8, minHeight: 44, padding: '0 14px', borderBottom: '0.5px solid #1b1b1b', alignItems: 'center', fontSize: 12, cursor: 'pointer', background: isHov ? '#171717' : '#111', boxShadow: isHov ? `inset 4px 0 0 ${loanFilter.accent}` : 'none', transition: 'background 0.1s, box-shadow 0.1s' }}

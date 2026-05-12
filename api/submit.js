@@ -132,6 +132,12 @@ export default async function handler(req, res) {
 
     const extractionPrompt = `Extract the following fields from the attached loan document. Return ONLY a raw JSON object, no markdown, no backticks.
 
+Important:
+- Prioritize any table titled "Loan Terms Summary", "Loan Terms", "Note Terms", or similar.
+- If the table shows "First Payment Date", return that as next_payment_due_date.
+- If the table shows "Loan Type", return it as loan_type.
+- If the loan is interest only and no monthly_payment is stated, leave monthly_payment null.
+
 Fields to extract:
 - loan_id
 - borrower_name (the borrowing entity or individual — look for "Borrower" label)
@@ -143,6 +149,7 @@ Fields to extract:
 - lender_phone
 - unpaid_principal (number only, no $ or commas)
 - interest_rate (number only, no %)
+- loan_type
 - servicer_fee (number only, no $ or commas)
 - loan_origination_date (the date the loan was made or agreement was signed, format MM/DD/YYYY)
 - interest_paid_to_date (date string, format MM/DD/YYYY)
@@ -238,6 +245,8 @@ Borrower ID provided by submitter: ${borrowerId || 'none'}`;
     const loanDocumentUrls = fileUrls;
 
     const loanStartDate = loanData.loan_origination_date || loanData.interest_paid_to_date || loanData.statement_date || null;
+    const loanType = loanData.loan_type || null;
+    const monthlyPayment = parseFloat(loanData.monthly_payment) || (loanType && String(loanType).toLowerCase().includes('interest') && principal && rate ? parseFloat(((principal * (rate / 100)) / 12).toFixed(2)) : null);
 
     await supabase.from('payoff_requests').insert({
       from_email: email,
@@ -258,6 +267,8 @@ Borrower ID provided by submitter: ${borrowerId || 'none'}`;
       notes: notes || null,
       interest_rate: rate || null,
       per_diem: parseFloat(dailyRateForPDF.toFixed(2)) || null,
+      monthly_payment: monthlyPayment,
+      loan_type: loanType,
       maturity_date: loanData.maturity_date || null,
       loan_start_date: loanStartDate,
       next_payment_date: loanData.next_payment_due_date || null,
