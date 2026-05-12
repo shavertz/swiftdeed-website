@@ -248,7 +248,7 @@ Borrower ID provided by submitter: ${borrowerId || 'none'}`;
     const loanType = loanData.loan_type || null;
     const monthlyPayment = parseFloat(loanData.monthly_payment) || (loanType && String(loanType).toLowerCase().includes('interest') && principal && rate ? parseFloat(((principal * (rate / 100)) / 12).toFixed(2)) : null);
 
-    await supabase.from('payoff_requests').insert({
+    const requestPayload = {
       from_email: email,
       borrower_name: loanData.borrower_name,
       property_address: loanData.property_address,
@@ -273,7 +273,36 @@ Borrower ID provided by submitter: ${borrowerId || 'none'}`;
       loan_start_date: loanStartDate,
       next_payment_date: loanData.next_payment_due_date || null,
       guarantor_name: loanData.guarantor_name || null,
-    });
+    };
+
+    const { error: requestInsertError } = await supabase.from('payoff_requests').insert(requestPayload);
+    if (requestInsertError) {
+      console.error('Payoff request insert error:', requestInsertError);
+      const fallbackPayload = {
+        from_email: requestPayload.from_email,
+        borrower_name: requestPayload.borrower_name,
+        property_address: requestPayload.property_address,
+        loan_id: requestPayload.loan_id,
+        loan_id_internal: requestPayload.loan_id_internal,
+        total_due: requestPayload.total_due,
+        status: requestPayload.status,
+        payoff_statement_url: requestPayload.payoff_statement_url,
+        completed_at: requestPayload.completed_at,
+        loan_document_urls: requestPayload.loan_document_urls,
+        source: requestPayload.source,
+        submitter_name: requestPayload.submitter_name,
+        submitter_phone: requestPayload.submitter_phone,
+        company_name: requestPayload.company_name,
+        borrower_id: requestPayload.borrower_id,
+        notes: requestPayload.notes,
+        interest_rate: requestPayload.interest_rate,
+        per_diem: requestPayload.per_diem,
+        maturity_date: requestPayload.maturity_date,
+        next_payment_date: requestPayload.next_payment_date,
+      };
+      const { error: fallbackError } = await supabase.from('payoff_requests').insert(fallbackPayload);
+      if (fallbackError) throw fallbackError;
+    }
 
     await upsertBorrower({
       supabase,
