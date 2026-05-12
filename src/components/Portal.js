@@ -921,16 +921,16 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
             <div style={fieldRow}>
               <span style={fieldKey}>Email</span>
               {!editingEmail ? (
-                <span style={{ ...fieldVal, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
-                  <span style={{ color: '#5b9bd5', overflow: 'hidden', textOverflow: 'ellipsis' }}>{panelBorrowerEmail}</span>
+                <span style={{ ...fieldVal, display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
+                  <span style={{ color: '#5b9bd5', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{panelBorrowerEmail}</span>
                   {emailSaved && <span style={{ color: '#34d399', fontSize: 11 }}>Saved</span>}
-                  <button onClick={() => { setEmailInput(panelBorrowerEmail === '-' ? '' : panelBorrowerEmail); setEditingEmail(true); }} style={{ background: 'transparent', border: 'none', color: '#FFD700', cursor: 'pointer', fontSize: 11, fontFamily: 'inherit', padding: 0 }}>Edit</button>
+                  <button onClick={() => { setEmailInput(panelBorrowerEmail === '-' ? '' : panelBorrowerEmail); setEditingEmail(true); }} style={{ background: 'transparent', border: 'none', color: '#FFD700', cursor: 'pointer', fontSize: 11, fontFamily: 'inherit', padding: 0, flexShrink: 0 }}>Edit</button>
                 </span>
               ) : (
-                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6, flex: 1 }}>
-                  <input value={emailInput} onChange={e => setEmailInput(e.target.value)} style={{ background: '#1a1a1a', border: '0.5px solid #2a2a2a', color: '#fff', borderRadius: 6, padding: '7px 9px', fontSize: 12, fontFamily: 'inherit', minWidth: 0, width: 190, outline: 'none' }} />
-                  <button disabled={savingEmail} onClick={handleSaveEmail} style={{ background: '#FFD700', border: 'none', color: '#0f0f0f', borderRadius: 6, padding: '7px 10px', fontSize: 11, fontWeight: 700, cursor: savingEmail ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>{savingEmail ? 'Saving' : 'Save'}</button>
-                  <button disabled={savingEmail} onClick={() => { setEditingEmail(false); setEmailInput(''); }} style={{ background: 'transparent', border: '0.5px solid #2a2a2a', color: '#777', borderRadius: 6, padding: '7px 10px', fontSize: 11, cursor: savingEmail ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>Cancel</button>
+                <span style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-end', gap: 6, flex: 1 }}>
+                  <input value={emailInput} onChange={e => setEmailInput(e.target.value)} style={{ background: '#1a1a1a', border: '0.5px solid #2a2a2a', color: '#fff', borderRadius: 6, padding: '7px 9px', fontSize: 12, fontFamily: 'inherit', minWidth: 0, flex: 1, outline: 'none' }} />
+                  <button disabled={savingEmail} onClick={handleSaveEmail} style={{ background: '#FFD700', border: 'none', color: '#0f0f0f', borderRadius: 6, padding: '7px 10px', fontSize: 11, fontWeight: 700, cursor: savingEmail ? 'not-allowed' : 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>{savingEmail ? 'Saving' : 'Save'}</button>
+                  <button disabled={savingEmail} onClick={() => { setEditingEmail(false); setEmailInput(''); }} style={{ background: 'transparent', border: '0.5px solid #2a2a2a', color: '#777', borderRadius: 6, padding: '7px 10px', fontSize: 11, cursor: savingEmail ? 'not-allowed' : 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>Cancel</button>
                 </span>
               )}
             </div>
