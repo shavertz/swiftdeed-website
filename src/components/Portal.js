@@ -520,7 +520,7 @@ function MonthlyStatementPreviewModal({ doc, borrower, lenderName, onClose }) {
 }
 
 //  Loan Detail Page 
-function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, docSuccess, uploadingDocs, pendingDocProcess, processingDocs, clearingLoanData, docFileRef, lenderEmail, lenderName, borrowerEmails, onBack, onRecordPayment, onRemoveDoc, onUploadDocs, onProcessDocs, onClearLoanData, onDeleteLoan, onViewDocuments, onGeneratePayoff, paymentSuccess }) {
+function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, docSuccess, uploadingDocs, docFileRef, lenderEmail, lenderName, borrowerEmails, onBack, onRecordPayment, onRemoveDoc, onUploadDocs, onDeleteLoan, onViewDocuments, onGeneratePayoff, paymentSuccess }) {
   const [showAllPayments, setShowAllPayments] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [loanNotes, setLoanNotes] = useState(liveData?.notes || selected?.notes || '');
@@ -662,25 +662,8 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
         <div style={{ fontSize: 12, color: '#555' }}>{uploadingDocs ? 'Uploading...' : 'Browse to upload - PDF only'}</div>
       </div>
       {docSuccess && <div style={{ color: docSuccess.startsWith('Could') ? '#f87171' : '#34d399', fontSize: 12, marginBottom: 12 }}>{docSuccess}</div>}
-      {pendingDocProcess && (
-        <div style={{ border: '0.5px solid #3a3300', background: '#171300', borderRadius: 8, padding: 13, marginBottom: 14, display: 'flex', justifyContent: 'space-between', gap: 14, alignItems: 'center' }}>
-          <div>
-            <div style={{ color: '#fff', fontSize: 13, fontWeight: 700 }}>{pendingDocProcess.newCount} document{pendingDocProcess.newCount === 1 ? '' : 's'} uploaded</div>
-            <div style={{ color: '#777', fontSize: 12, marginTop: 4 }}>Confirm to extract terms and update the loan data.</div>
-          </div>
-          <button onClick={onProcessDocs} disabled={processingDocs} style={{ background: '#FFD700', color: '#0f0f0f', border: 'none', borderRadius: 7, padding: '10px 14px', fontWeight: 700, cursor: processingDocs ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit' }}>
-            {processingDocs ? 'Processing...' : 'Confirm update ->'}
-          </button>
-        </div>
-      )}
       {docUrls.length === 0 ? (
-        <div style={{ border: '0.5px solid #3a3300', background: '#171300', borderRadius: 8, padding: 13 }}>
-          <div style={{ color: '#FFD700', fontSize: 13, fontWeight: 700 }}>No source documents on file.</div>
-          <div style={{ color: '#777', fontSize: 12, marginTop: 5 }}>Loan data is based on prior extraction.</div>
-          <button onClick={onClearLoanData} disabled={clearingLoanData} style={{ marginTop: 12, background: 'transparent', color: '#f87171', border: '0.5px solid #5a2020', borderRadius: 7, padding: '8px 12px', cursor: clearingLoanData ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
-            {clearingLoanData ? 'Clearing...' : 'Clear extracted loan data'}
-          </button>
-        </div>
+        <div style={{ color: '#444', fontSize: 13, padding: '8px 0 12px' }}>No documents on file.</div>
       ) : (
         <div style={{ borderTop: '0.5px solid #1a1a1a' }}>
           {isDocumentsTab && (
@@ -1054,9 +1037,6 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const [deleting, setDeleting] = useState(false);
   const [uploadingDocs, setUploadingDocs] = useState(false);
   const [docSuccess, setDocSuccess] = useState('');
-  const [pendingDocProcess, setPendingDocProcess] = useState(null);
-  const [processingDocs, setProcessingDocs] = useState(false);
-  const [clearingLoanData, setClearingLoanData] = useState(false);
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1600);
   const docFileRef = useRef();
 
@@ -1067,9 +1047,6 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     setLiveData(null);
     setLoanPayments([]);
     setDocUrls([]);
-    setPendingDocProcess(null);
-    setProcessingDocs(false);
-    setClearingLoanData(false);
     setPaymentSuccess(false);
     setPayoffLoan(null);
     setPayoffGoodThrough(defaultGoodThroughDate());
@@ -1281,8 +1258,8 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       const res = await fetch('/api/update-loan-docs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ loanIdInternal: selected.loan_id_internal, newDocUrls: combined, lenderEmail: email, lenderName, borrowerEmail, borrowerName: selected.borrower_name, docsAdded: newUrls.length > 0 }) });
       if (!res.ok) throw new Error('Document update failed');
       if (newUrls.length > 0) {
-        setPendingDocProcess({ urls: combined, newCount: newUrls.length });
-        setDocSuccess(`${newUrls.length} document${newUrls.length !== 1 ? 's' : ''} uploaded. Confirm to update loan data.`);
+        setDocSuccess(`${newUrls.length} document${newUrls.length !== 1 ? 's' : ''} uploaded.`);
+        setTimeout(() => setDocSuccess(''), 4000);
       } else {
         setDocSuccess('No PDF documents were uploaded.');
         setTimeout(() => setDocSuccess(''), 4000);
@@ -1292,82 +1269,6 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       setDocSuccess('Could not upload documents. Try again.');
       setTimeout(() => setDocSuccess(''), 5000);
     } finally { setUploadingDocs(false); }
-  }
-
-  async function handleProcessUploadedDocs() {
-    if (!selected?.loan_id_internal || !pendingDocProcess?.urls?.length) return;
-    setProcessingDocs(true);
-    setDocSuccess('Processing documents...');
-    try {
-      const res = await fetch('/api/reprocess-loan-docs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ loanIdInternal: selected.loan_id_internal, newDocUrls: pendingDocProcess.urls }),
-      });
-      if (!res.ok) throw new Error('Document processing failed');
-      const data = await res.json();
-      if (data.borrower) {
-        setLiveData(data.borrower);
-        setBorrowerData(prev => ({ ...prev, [selected.loan_id_internal]: data.borrower }));
-      }
-      if (data.request) {
-        setRequests(prev => prev.map(r => r.loan_id_internal === selected.loan_id_internal ? { ...r, ...data.request } : r));
-        setSelected(prev => prev?.loan_id_internal === selected.loan_id_internal ? { ...prev, ...data.request } : prev);
-      }
-      setPendingDocProcess(null);
-      setDocSuccess('Loan data updated from documents.');
-      setTimeout(() => setDocSuccess(''), 5000);
-    } catch (e) {
-      console.error('Process docs error:', e);
-      setDocSuccess('Could not process documents. Try again.');
-    } finally {
-      setProcessingDocs(false);
-    }
-  }
-
-  async function handleClearLoanData() {
-    if (!selected?.loan_id_internal) return;
-    setClearingLoanData(true);
-    setDocSuccess('');
-    try {
-      const patch = {
-        principal_balance: null,
-        interest_rate: null,
-        per_diem: null,
-        monthly_payment: null,
-        next_payment_date: null,
-        maturity_date: null,
-      };
-      const requestPatch = {
-        total_due: null,
-        interest_rate: null,
-        per_diem: null,
-        next_payment_date: null,
-        maturity_date: null,
-      };
-      const headers = { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=representation' };
-      const borrowerRes = await fetch(`${SUPABASE_URL}/rest/v1/borrowers?loan_id_internal=eq.${encodeURIComponent(selected.loan_id_internal)}`, { method: 'PATCH', headers, body: JSON.stringify(patch) });
-      if (!borrowerRes.ok) throw new Error('Clear borrower data failed');
-      const requestRes = await fetch(`${SUPABASE_URL}/rest/v1/payoff_requests?loan_id_internal=eq.${encodeURIComponent(selected.loan_id_internal)}`, { method: 'PATCH', headers, body: JSON.stringify(requestPatch) });
-      if (!requestRes.ok) throw new Error('Clear request data failed');
-      const borrowerRows = await borrowerRes.json();
-      const requestRows = await requestRes.json();
-      if (borrowerRows?.[0]) {
-        setLiveData(borrowerRows[0]);
-        setBorrowerData(prev => ({ ...prev, [selected.loan_id_internal]: borrowerRows[0] }));
-      }
-      if (requestRows?.[0]) {
-        setRequests(prev => prev.map(r => r.loan_id_internal === selected.loan_id_internal ? { ...r, ...requestRows[0] } : r));
-        setSelected(prev => prev?.loan_id_internal === selected.loan_id_internal ? { ...prev, ...requestRows[0] } : prev);
-      }
-      setDocSuccess('Extracted loan data cleared.');
-      setTimeout(() => setDocSuccess(''), 5000);
-    } catch (e) {
-      console.error('Clear loan data error:', e);
-      setDocSuccess('Could not clear extracted loan data.');
-    } finally {
-      setClearingLoanData(false);
-    }
   }
 
   async function handleDeleteLoan() {
@@ -1392,13 +1293,11 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     const raw = (b.payment_status || request.payment_status || '').toLowerCase();
     const balance = parseFloat(b.principal_balance || request.total_due);
     const maturityDays = daysFromToday(b.maturity_date || request.maturity_date);
-    const missingCoreTerms = !b.interest_rate || !b.maturity_date || !b.next_payment_date || !b.monthly_payment;
     if (raw.includes('default')) return 'Default';
     if (raw.includes('paid')) return 'Paid Off';
     if (raw.includes('late') || raw.includes('missed') || raw.includes('overdue') || raw.includes('past due')) return 'Past Due';
     if (!isNaN(balance) && balance <= 0) return 'Paid Off';
     if (maturityDays != null && maturityDays < 0) return 'Past maturity';
-    if (missingCoreTerms) return 'Needs review';
     return 'Active';
   };
 
@@ -1480,7 +1379,6 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     if (status === 'Default') return 'Default';
     if (status === 'Paid Off') return 'Paid Off';
     if (status === 'Past maturity') return 'Past maturity';
-    if (status === 'Needs review') return 'Needs review';
     if (days > 60) return '60+ days';
     if (days >= 31) return '31-60 days';
     if (days >= 1) return '1-30 days';
@@ -1490,7 +1388,6 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     const bucket = statusBucket(request);
     if (bucket === 'Default') return 5;
     if (bucket === 'Past maturity') return 5;
-    if (bucket === 'Needs review') return 4;
     if (bucket === '60+ days') return 4;
     if (bucket === '31-60 days') return 3;
     if (bucket === '1-30 days') return 2;
@@ -1499,7 +1396,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   };
   const isAttentionLoan = (request) => {
     const b = borrowerData[request.loan_id_internal];
-    return !b || !b.monthly_payment || isOverdueLoan(request) || ['Default', 'Past maturity', 'Needs review'].includes(getLoanStatus(request));
+    return !b || !b.monthly_payment || isOverdueLoan(request) || ['Default', 'Past maturity'].includes(getLoanStatus(request));
   };
   const matchesLoanFilter = (request, filterId) => {
     const b = getBorrower(request);
@@ -2742,7 +2639,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const statusBadge = (request) => {
     const bucket = statusBucket(request);
     const isCurrent = bucket === 'Current';
-    const isMinor = bucket === '1-30 days' || bucket === 'Needs review';
+    const isMinor = bucket === '1-30 days';
     const isSerious = bucket === '31-60 days' || bucket === '60+ days' || bucket === 'Default' || bucket === 'Past maturity';
     return {
       display: 'inline-flex',
@@ -2844,9 +2741,6 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       docUrls={docUrls}
       docSuccess={docSuccess}
       uploadingDocs={uploadingDocs}
-      pendingDocProcess={pendingDocProcess}
-      processingDocs={processingDocs}
-      clearingLoanData={clearingLoanData}
       docFileRef={docFileRef}
       lenderEmail={email}
       lenderName={lenderName}
@@ -2856,8 +2750,6 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       onRecordPayment={() => { setPaymentSuccess(false); setShowPaymentModal(true); }}
       onRemoveDoc={handleRemoveDoc}
       onUploadDocs={handleUploadDocs}
-      onProcessDocs={handleProcessUploadedDocs}
-      onClearLoanData={handleClearLoanData}
       onDeleteLoan={() => { setShowDeleteModal(true); setDeleteConfirmText(''); }}
       onViewDocuments={openLoanDocuments}
       onGeneratePayoff={openPayoffModal}
