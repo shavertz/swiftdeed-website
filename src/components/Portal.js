@@ -545,7 +545,7 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
   const totalPaid = (principalPaid + parseFloat(totalInterestPaid || 0));
   const panelBorrowerEmail = borrowerEmails[selected.loan_id_internal] || live.borrower_email || selected?.borrower_email || '-';
   const loanType = live.loan_type || selected?.loan_type || '-';
-  const monthlyPayment = live.monthly_payment || selected?.monthly_payment;
+  const monthlyPayment = live.monthly_payment || selected?.monthly_payment || (String(loanType).toLowerCase().includes('interest') && originalAmount && rate ? (parseFloat(originalAmount) * (parseFloat(rate) / 100)) / 12 : null);
   const principalProgress = originalAmount && parseFloat(originalAmount) > 0 ? Math.max(0, Math.min(100, (principalPaid / parseFloat(originalAmount)) * 100)) : 0;
   const displayPayments = activeTab === 'payments' || showAllPayments ? loanPayments : loanPayments.slice(0, 5);
   const isDocumentsTab = activeTab === 'documents';
@@ -1121,7 +1121,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
         setRequests(rows);
         const ids = rows.map(r => r.loan_id_internal).filter(Boolean);
         if (ids.length > 0) {
-          const bRes = await fetch(`${SUPABASE_URL}/rest/v1/borrowers?loan_id_internal=in.(${ids.map(id => `"${id}"`).join(',')})&select=loan_id_internal,borrower_email,principal_balance,next_payment_date,monthly_payment,payment_status,interest_rate,per_diem,original_loan_amount,total_interest_paid,total_payments_made,legal_name,guarantor_name,portal_access,loan_document_urls,last_payment_date,last_payment_amount,maturity_date,property_address,city,state,loan_type`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
+          const bRes = await fetch(`${SUPABASE_URL}/rest/v1/borrowers?loan_id_internal=in.(${ids.map(id => `"${id}"`).join(',')})&select=loan_id_internal,borrower_email,principal_balance,next_payment_date,monthly_payment,payment_status,interest_rate,per_diem,original_loan_amount,total_interest_paid,total_payments_made,legal_name,guarantor_name,portal_access,loan_document_urls,last_payment_date,last_payment_amount,maturity_date,loan_start_date,property_address,city,state,loan_type`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
           const bData = await bRes.json();
           if (Array.isArray(bData)) {
             const emailMap = {};
@@ -1385,7 +1385,11 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const storedNextPaymentAmount = (request) => {
     const b = getBorrower(request);
     const direct = parseFloat(b.monthly_payment || request.monthly_payment);
-    return !isNaN(direct) && direct > 0 ? direct : null;
+    if (!isNaN(direct) && direct > 0) return direct;
+    const principal = parseFloat(b.principal_balance || request.total_due);
+    const rate = parseFloat(b.interest_rate || request.interest_rate);
+    const loanType = String(b.loan_type || request.loan_type || '').toLowerCase();
+    return loanType.includes('interest') && !isNaN(principal) && !isNaN(rate) ? (principal * (rate / 100)) / 12 : null;
   };
   const daysPastDue = (request) => {
     const diff = daysFromToday(storedNextPaymentDate(request));

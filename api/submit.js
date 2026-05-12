@@ -134,9 +134,11 @@ export default async function handler(req, res) {
 
 Important:
 - Prioritize any table titled "Loan Terms Summary", "Loan Terms", "Note Terms", or similar.
+- If the document has a main date under the loan number or a "Close Date", return it as loan_origination_date.
 - If the table shows "First Payment Date", return that as next_payment_due_date.
-- If the table shows "Loan Type", return it as loan_type.
+- If the table shows "Loan Type", return it as loan_type. If it says "Interest Only", return exactly "Interest Only".
 - If the loan is interest only and no monthly_payment is stated, leave monthly_payment null.
+- Always extract guarantor_name from "Guarantor", "Guarantor(s)", or the Commercial Guaranty.
 
 Fields to extract:
 - loan_id

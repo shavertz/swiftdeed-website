@@ -10,8 +10,11 @@ const prompt = `Extract loan terms from these documents. Return ONLY raw JSON.
 Fields:
 borrower_name, property_address, unpaid_principal, interest_rate, loan_type,
 loan_origination_date, maturity_date, next_payment_due_date, monthly_payment,
-daily_interest, accrual_basis.
-Use numbers only for money/rates. Use dates as MM/DD/YYYY.`;
+daily_interest, accrual_basis, guarantor_name.
+Use numbers only for money/rates. Use dates as MM/DD/YYYY.
+If the table shows Loan Type as Interest Only, return exactly "Interest Only".
+If there is a Close Date or main date under the loan number, return it as loan_origination_date.
+Always extract Guarantor(s) when present.`;
 
 function merge(rows) {
   const out = {};
@@ -88,6 +91,7 @@ export default async function handler(req, res) {
     const borrowerPatch = clean({
       legal_name: data.borrower_name,
       property_address: data.property_address,
+      guarantor_name: data.guarantor_name,
       city: loc.city,
       state: loc.state,
       principal_balance: principal,
