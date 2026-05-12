@@ -1216,6 +1216,27 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     ));
   }
 
+  function syncExtractedLoanData(data) {
+    if (data?.borrower?.loan_id_internal) {
+      setLiveData(data.borrower);
+      setBorrowerData(prev => ({ ...prev, [data.borrower.loan_id_internal]: data.borrower }));
+    }
+    if (data?.request?.loan_id_internal) {
+      setRequests(prev => prev.map(r => r.loan_id_internal === data.request.loan_id_internal ? { ...r, ...data.request } : r));
+      setSelected(prev => prev?.loan_id_internal === data.request.loan_id_internal ? { ...prev, ...data.request } : prev);
+    }
+  }
+
+  async function reprocessLoanDocuments(urls) {
+    const res = await fetch('/api/reprocess-loan-docs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ loanIdInternal: selected.loan_id_internal, newDocUrls: urls }),
+    });
+    if (!res.ok) throw new Error('Document extraction failed');
+    syncExtractedLoanData(await res.json());
+  }
+
   async function handleRemoveDoc(urlToRemove) {
     const newUrls = docUrls.filter(u => u !== urlToRemove);
     const previousUrls = docUrls;
@@ -1225,6 +1246,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       const res = await fetch('/api/update-loan-docs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ loanIdInternal: selected.loan_id_internal, newDocUrls: newUrls, lenderEmail: email, lenderName, borrowerEmail, borrowerName: selected.borrower_name, docsAdded: false }) });
       if (!res.ok) throw new Error('Document removal failed');
       syncLoanDocumentState(selected.loan_id_internal, newUrls);
+      await reprocessLoanDocuments(newUrls);
       setDocSuccess('Document removed.');
       setTimeout(() => setDocSuccess(''), 4000);
     } catch (e) {
@@ -1258,8 +1280,10 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       const res = await fetch('/api/update-loan-docs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ loanIdInternal: selected.loan_id_internal, newDocUrls: combined, lenderEmail: email, lenderName, borrowerEmail, borrowerName: selected.borrower_name, docsAdded: newUrls.length > 0 }) });
       if (!res.ok) throw new Error('Document update failed');
       if (newUrls.length > 0) {
-        setDocSuccess(`${newUrls.length} document${newUrls.length !== 1 ? 's' : ''} uploaded.`);
-        setTimeout(() => setDocSuccess(''), 4000);
+        setDocSuccess('Documents uploaded. Updating loan data...');
+        await reprocessLoanDocuments(combined);
+        setDocSuccess(`${newUrls.length} document${newUrls.length !== 1 ? 's' : ''} uploaded. Loan data updated.`);
+        setTimeout(() => setDocSuccess(''), 5000);
       } else {
         setDocSuccess('No PDF documents were uploaded.');
         setTimeout(() => setDocSuccess(''), 4000);
