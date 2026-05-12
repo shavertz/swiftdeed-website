@@ -46,22 +46,25 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: requestError.message });
     }
 
-    await sendLenderDocsUpdatedEmail({
-      lenderEmail,
-      lenderName,
-      loanIdInternal,
-      documentCount: cleanedDocUrls.length,
-      docsAdded,
-    });
-
-    if (docsAdded && borrowerEmail) {
-      await sendBorrowerDocsAddedEmail({
-        borrowerEmail,
-        borrowerName,
+    try {
+      await sendLenderDocsUpdatedEmail({
+        lenderEmail,
+        lenderName,
+        loanIdInternal,
+        documentCount: cleanedDocUrls.length,
+        docsAdded,
       });
+      if (docsAdded && borrowerEmail) {
+        await sendBorrowerDocsAddedEmail({
+          borrowerEmail,
+          borrowerName,
+        });
+      }
+    } catch (emailError) {
+      console.error('Document email notification failed:', emailError);
     }
 
-    return res.status(200).json({ success: true, documentCount: cleanedDocUrls.length });
+    return res.status(200).json({ success: true, documentCount: cleanedDocUrls.length, loanDocumentUrls: docUrlValue });
   } catch (error) {
     console.error('Update loan docs error:', error);
     return res.status(500).json({ error: error.message });

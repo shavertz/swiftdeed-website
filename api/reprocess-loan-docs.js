@@ -150,8 +150,6 @@ Fields to extract:
       total_due: principal,
       interest_rate: rate,
       per_diem: perDiem ? parseFloat(perDiem.toFixed(2)) : null,
-      monthly_payment: monthlyPayment,
-      loan_type: loanType,
       maturity_date: maturityDate,
       loan_start_date: loanStartDate,
       next_payment_date: nextPaymentDate,

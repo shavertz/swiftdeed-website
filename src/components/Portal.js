@@ -1392,11 +1392,13 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     const raw = (b.payment_status || request.payment_status || '').toLowerCase();
     const balance = parseFloat(b.principal_balance || request.total_due);
     const maturityDays = daysFromToday(b.maturity_date || request.maturity_date);
+    const missingCoreTerms = !b.interest_rate || !b.maturity_date || !b.next_payment_date || !b.monthly_payment;
     if (raw.includes('default')) return 'Default';
     if (raw.includes('paid')) return 'Paid Off';
     if (raw.includes('late') || raw.includes('missed') || raw.includes('overdue') || raw.includes('past due')) return 'Past Due';
     if (!isNaN(balance) && balance <= 0) return 'Paid Off';
     if (maturityDays != null && maturityDays < 0) return 'Past maturity';
+    if (missingCoreTerms) return 'Needs review';
     return 'Active';
   };
 
@@ -1478,6 +1480,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     if (status === 'Default') return 'Default';
     if (status === 'Paid Off') return 'Paid Off';
     if (status === 'Past maturity') return 'Past maturity';
+    if (status === 'Needs review') return 'Needs review';
     if (days > 60) return '60+ days';
     if (days >= 31) return '31-60 days';
     if (days >= 1) return '1-30 days';
@@ -1487,6 +1490,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     const bucket = statusBucket(request);
     if (bucket === 'Default') return 5;
     if (bucket === 'Past maturity') return 5;
+    if (bucket === 'Needs review') return 4;
     if (bucket === '60+ days') return 4;
     if (bucket === '31-60 days') return 3;
     if (bucket === '1-30 days') return 2;
@@ -1495,7 +1499,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   };
   const isAttentionLoan = (request) => {
     const b = borrowerData[request.loan_id_internal];
-    return !b || !b.monthly_payment || isOverdueLoan(request) || getLoanStatus(request) === 'Default' || getLoanStatus(request) === 'Past maturity';
+    return !b || !b.monthly_payment || isOverdueLoan(request) || ['Default', 'Past maturity', 'Needs review'].includes(getLoanStatus(request));
   };
   const matchesLoanFilter = (request, filterId) => {
     const b = getBorrower(request);
@@ -2738,7 +2742,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const statusBadge = (request) => {
     const bucket = statusBucket(request);
     const isCurrent = bucket === 'Current';
-    const isMinor = bucket === '1-30 days';
+    const isMinor = bucket === '1-30 days' || bucket === 'Needs review';
     const isSerious = bucket === '31-60 days' || bucket === '60+ days' || bucket === 'Default' || bucket === 'Past maturity';
     return {
       display: 'inline-flex',
