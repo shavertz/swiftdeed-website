@@ -7,7 +7,8 @@ const SUPABASE_ANON_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY;
 
 function formatDate(iso) {
   if (!iso) return '-';
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const value = typeof iso === 'string' && /^\d{4}-\d{2}-\d{2}/.test(iso) ? `${iso.slice(0, 10)}T00:00:00` : iso;
+  return new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 function formatCurrency(val) {
@@ -535,6 +536,9 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
   const maturity = live.maturity_date || selected?.maturity_date;
   const paymentStatus = live.payment_status || selected?.payment_status;
   const nextPaymentDate = live.next_payment_date || selected?.next_payment_date;
+  const maturityDateValue = maturity ? new Date(`${String(maturity).slice(0, 10)}T00:00:00`) : null;
+  const isPastMaturity = maturityDateValue && !isNaN(maturityDateValue.getTime()) && maturityDateValue < new Date(new Date().setHours(0, 0, 0, 0)) && parseFloat(balance || 0) > 0;
+  const displayStatus = isPastMaturity ? 'Past maturity' : (paymentStatus || '-');
   const totalInterestPaid = live.total_interest_paid || 0;
   const lateCharges = live.late_charges || selected?.late_charges || 0;
   const otherCharges = live.other_charges || selected?.other_charges || 0;
@@ -547,6 +551,7 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
   const isDocumentsTab = activeTab === 'documents';
 
   const statusColor = () => {
+    if (isPastMaturity) return '#f87171';
     if (!paymentStatus) return '#555';
     const st = paymentStatus.toLowerCase();
     if (st === 'current' || st === 'on time') return '#34d399';
@@ -656,6 +661,7 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
         <div style={{ fontSize: isDocumentsTab ? 15 : 13, color: '#ddd' }}>{isDocumentsTab ? 'Drag and drop loan documents here' : 'Drag and drop additional loan documents'}</div>
         <div style={{ fontSize: 12, color: '#555' }}>{uploadingDocs ? 'Uploading...' : 'Browse to upload - PDF only'}</div>
       </div>
+      {docSuccess && <div style={{ color: docSuccess.startsWith('Could') ? '#f87171' : '#34d399', fontSize: 12, marginBottom: 12 }}>{docSuccess}</div>}
       {docUrls.length === 0 ? (
         <div style={{ color: '#444', fontSize: 13, padding: '8px 0 12px' }}>No documents on file.</div>
       ) : (
@@ -665,7 +671,8 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
               {['Document', 'Type', 'Uploaded', 'Action'].map(h => <div key={h} style={{ fontSize: 10, color: '#555', textTransform: 'uppercase', letterSpacing: 0.8 }}>{h}</div>)}
             </div>
           )}
-          {docUrls.slice(0, isDocumentsTab ? docUrls.length : 4).map((url, i) => {
+          <div className="swiftdeed-yellow-scroll" style={{ maxHeight: isDocumentsTab ? 'none' : 260, overflowY: isDocumentsTab ? 'visible' : 'auto', paddingRight: isDocumentsTab ? 0 : 6 }}>
+          {docUrls.map((url, i) => {
         const name = documentName(url);
         return (
           <div key={i} style={isDocumentsTab ? { display: 'grid', gridTemplateColumns: 'minmax(220px, 1.7fr) minmax(120px, 0.8fr) minmax(110px, 0.7fr) 150px', gap: 12, alignItems: 'center', padding: '12px 0', borderBottom: '0.5px solid #1a1a1a' } : { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: '0.5px solid #1a1a1a' }}>
@@ -685,6 +692,7 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
           </div>
         );
           })}
+          </div>
         </div>
       )}
     </div>
@@ -832,8 +840,8 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
           { label: 'Current balance', value: formatCurrency(balance), gold: true, hint: originalAmount ? `of ${formatCurrency(originalAmount)} original` : '' },
           { label: 'Rate', value: rate ? rate + '%' : '-' },
           { label: 'Per diem', value: perDiem ? formatCurrency(perDiem) : '-' },
-          { label: 'Next payment', value: formatDate(nextPaymentDate), hint: monthlyPayment ? `${formatCurrency(monthlyPayment)} due` : '' },
-          { label: 'Status', value: paymentStatus || '-', custom: statusColor() },
+          { label: 'Next payment', value: isPastMaturity ? 'Past maturity' : formatDate(nextPaymentDate), hint: isPastMaturity ? 'Loan is past maturity' : (monthlyPayment ? `${formatCurrency(monthlyPayment)} due` : '') },
+          { label: 'Status', value: displayStatus, custom: statusColor() },
         ].map(({ label, value, gold, custom, hint }) => (
           <div key={label} style={{ background: '#111', padding: '16px 18px' }}>
             <div style={{ fontSize: 10, color: '#555', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 7 }}>{label}</div>
@@ -886,7 +894,7 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
             {[
               { k: 'Origination date', v: formatDate(loanStart) },
               { k: 'Maturity date', v: formatDate(maturity) },
-              { k: 'Next payment date', v: formatDate(nextPaymentDate) },
+              { k: 'Next payment date', v: isPastMaturity ? 'Past maturity' : formatDate(nextPaymentDate) },
               { k: 'Loan type', v: loanType.replace('_', ' ') },
               { k: 'Monthly payment', v: formatCurrency(monthlyPayment) },
             ].map(({ k, v }) => (
@@ -1249,6 +1257,14 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       if (!res.ok) throw new Error('Document update failed');
       setDocUrls(combined);
       syncLoanDocumentState(selected.loan_id_internal, combined);
+      const refreshed = await fetch(`${SUPABASE_URL}/rest/v1/borrowers?loan_id_internal=eq.${encodeURIComponent(selected.loan_id_internal)}&limit=1&select=*`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
+      if (refreshed.ok) {
+        const refreshedData = await refreshed.json();
+        if (Array.isArray(refreshedData) && refreshedData[0]) {
+          setLiveData(refreshedData[0]);
+          setBorrowerData(prev => ({ ...prev, [selected.loan_id_internal]: refreshedData[0] }));
+        }
+      }
       setDocSuccess(`${newUrls.length} document${newUrls.length !== 1 ? 's' : ''} uploaded.`);
       setTimeout(() => setDocSuccess(''), 4000);
     } catch (e) {
@@ -1279,10 +1295,12 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     const b = borrowerData[request.loan_id_internal] || {};
     const raw = (b.payment_status || request.payment_status || '').toLowerCase();
     const balance = parseFloat(b.principal_balance || request.total_due);
+    const maturityDays = daysFromToday(b.maturity_date || request.maturity_date);
     if (raw.includes('default')) return 'Default';
     if (raw.includes('paid')) return 'Paid Off';
     if (raw.includes('late') || raw.includes('missed') || raw.includes('overdue') || raw.includes('past due')) return 'Past Due';
     if (!isNaN(balance) && balance <= 0) return 'Paid Off';
+    if (maturityDays != null && maturityDays < 0) return 'Past maturity';
     return 'Active';
   };
 
@@ -1294,7 +1312,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
 
   const filterConfig = {
     all: { id: 'all', label: 'All active loans', accent: '#FFD700' },
-    received_month: { id: 'received_month', label: 'Received this month', accent: '#FFD700' },
+    received_month: { id: 'received_month', label: 'Payments this month', accent: '#FFD700' },
     attention: { id: 'attention', label: 'Loans needing attention', accent: '#FFD700' },
     maturing_90: { id: 'maturing_90', label: 'Maturing within 90 days', accent: '#FFD700' },
     maturity: { id: 'maturity', label: 'Maturity', accent: '#FFD700' },
@@ -1352,6 +1370,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     const days = daysPastDue(request);
     if (status === 'Default') return 'Default';
     if (status === 'Paid Off') return 'Paid Off';
+    if (status === 'Past maturity') return 'Past maturity';
     if (days > 60) return '60+ days';
     if (days >= 31) return '31-60 days';
     if (days >= 1) return '1-30 days';
@@ -1360,6 +1379,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const statusSeverity = (request) => {
     const bucket = statusBucket(request);
     if (bucket === 'Default') return 5;
+    if (bucket === 'Past maturity') return 5;
     if (bucket === '60+ days') return 4;
     if (bucket === '31-60 days') return 3;
     if (bucket === '1-30 days') return 2;
@@ -1368,7 +1388,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   };
   const isAttentionLoan = (request) => {
     const b = borrowerData[request.loan_id_internal];
-    return !b || !b.monthly_payment || isOverdueLoan(request) || getLoanStatus(request) === 'Default';
+    return !b || !b.monthly_payment || isOverdueLoan(request) || getLoanStatus(request) === 'Default' || getLoanStatus(request) === 'Past maturity';
   };
   const matchesLoanFilter = (request, filterId) => {
     const b = getBorrower(request);
@@ -1382,7 +1402,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       case 'maturity': return maturityDays != null && maturityDays >= 0 && maturityDays <= 90;
       case 'overdue': return isOverdueLoan(request);
       case 'upcoming': return nextPaymentDays != null && nextPaymentDays >= 0 && nextPaymentDays <= 7;
-      case 'current': return isActiveLoan(request) && !isOverdueLoan(request);
+      case 'current': return statusBucket(request) === 'Current';
       case 'bucket_1_30': return pastDueDays >= 1 && pastDueDays <= 30;
       case 'bucket_31_60': return pastDueDays >= 31 && pastDueDays <= 60;
       case 'bucket_60_plus': return pastDueDays > 60;
@@ -2057,7 +2077,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
 
       <div style={{ display: 'grid', gridTemplateColumns: dashboardStatCols, gap: 12, marginBottom: 28 }}>
         <button style={statCard('principal')} onClick={() => setLoansView('all')} onMouseEnter={() => setHoveredCard('principal')} onMouseLeave={() => setHoveredCard(null)}><div style={sl}>Principal Outstanding</div><div style={sv}>{formatCurrency(principalOutstanding)}</div><div style={ss}>{activeLoans.length} active loans</div></button>
-        <button style={statCard('received')} onClick={() => setLoansView('received_month')} onMouseEnter={() => setHoveredCard('received')} onMouseLeave={() => setHoveredCard(null)}><div style={sl}>Received This Month</div><div style={sv}>{formatCurrency(receivedThisMonthTotal)}</div><div style={ss}>{receivedThisMonth.length} loans with payments</div></button>
+        <button style={statCard('received')} onClick={() => setLoansView('received_month')} onMouseEnter={() => setHoveredCard('received')} onMouseLeave={() => setHoveredCard(null)}><div style={sl}>Payments This Month</div><div style={sv}>{formatCurrency(receivedThisMonthTotal)}</div><div style={ss}>{receivedThisMonth.length} loans with payments</div></button>
         <button style={statCard('attention')} onClick={() => setLoansView('attention')} onMouseEnter={() => setHoveredCard('attention')} onMouseLeave={() => setHoveredCard(null)}><div style={sl}>Loans Needing Attention</div><div style={sv}>{loansNeedingAttentionCount}</div><div style={ss}>Review flagged loans</div></button>
         <button style={statCard('maturing')} onClick={() => setLoansView('maturing_90')} onMouseEnter={() => setHoveredCard('maturing')} onMouseLeave={() => setHoveredCard(null)}><div style={sl}>Maturing Within 90 Days</div><div style={sv}>{maturingSoon.length}</div><div style={ss}>{nextMaturity ? `${formatDate(nextMaturityBorrower.maturity_date || nextMaturity.maturity_date)} - ${formatCurrency(nextMaturityBorrower.principal_balance || nextMaturity.total_due)}` : '-'}</div></button>
       </div>
@@ -2612,7 +2632,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     const bucket = statusBucket(request);
     const isCurrent = bucket === 'Current';
     const isMinor = bucket === '1-30 days';
-    const isSerious = bucket === '31-60 days' || bucket === '60+ days' || bucket === 'Default';
+    const isSerious = bucket === '31-60 days' || bucket === '60+ days' || bucket === 'Default' || bucket === 'Past maturity';
     return {
       display: 'inline-flex',
       alignItems: 'center',
