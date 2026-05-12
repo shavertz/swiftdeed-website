@@ -537,8 +537,10 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
   const paymentStatus = live.payment_status || selected?.payment_status;
   const nextPaymentDate = live.next_payment_date || selected?.next_payment_date;
   const maturityDateValue = maturity ? new Date(`${String(maturity).slice(0, 10)}T00:00:00`) : null;
+  const nextPaymentDateValue = nextPaymentDate ? new Date(`${String(nextPaymentDate).slice(0, 10)}T00:00:00`) : null;
+  const nextPaymentDaysLate = nextPaymentDateValue && !isNaN(nextPaymentDateValue.getTime()) ? Math.floor((new Date(new Date().setHours(0, 0, 0, 0)) - nextPaymentDateValue) / 86400000) : 0;
   const isPastMaturity = maturityDateValue && !isNaN(maturityDateValue.getTime()) && maturityDateValue < new Date(new Date().setHours(0, 0, 0, 0)) && parseFloat(balance || 0) > 0;
-  const displayStatus = isPastMaturity ? 'Past maturity' : (paymentStatus || '-');
+  const displayStatus = isPastMaturity ? 'Past maturity' : (nextPaymentDaysLate > 0 ? `${nextPaymentDaysLate} days past due` : (paymentStatus || 'Current'));
   const totalInterestPaid = live.total_interest_paid || 0;
   const lateCharges = live.late_charges || selected?.late_charges || 0;
   const otherCharges = live.other_charges || selected?.other_charges || 0;
@@ -552,7 +554,8 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
 
   const statusColor = () => {
     if (isPastMaturity) return '#f87171';
-    if (!paymentStatus) return '#555';
+    if (nextPaymentDaysLate > 0) return nextPaymentDaysLate > 30 ? '#f87171' : '#FFD700';
+    if (!paymentStatus) return '#34d399';
     const st = paymentStatus.toLowerCase();
     if (st === 'current' || st === 'on time') return '#34d399';
     if (st === 'late' || st === 'missed' || st === 'overdue') return '#f87171';

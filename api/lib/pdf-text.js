@@ -11,17 +11,46 @@ function decodePdfString(value = '') {
     .replace(/\\(.)/g, '$1');
 }
 
+function ascii85Decode(input = '') {
+  const source = input.replace(/<~/g, '').replace(/~>/g, '').replace(/\s/g, '');
+  const bytes = [];
+  let group = [];
+  for (const ch of source) {
+    if (ch === 'z' && group.length === 0) {
+      bytes.push(0, 0, 0, 0);
+      continue;
+    }
+    const code = ch.charCodeAt(0);
+    if (code < 33 || code > 117) continue;
+    group.push(code - 33);
+    if (group.length === 5) {
+      let value = 0;
+      for (const digit of group) value = value * 85 + digit;
+      bytes.push((value >>> 24) & 255, (value >>> 16) & 255, (value >>> 8) & 255, value & 255);
+      group = [];
+    }
+  }
+  if (group.length) {
+    const missing = 5 - group.length;
+    while (group.length < 5) group.push(84);
+    let value = 0;
+    for (const digit of group) value = value * 85 + digit;
+    const chunk = [(value >>> 24) & 255, (value >>> 16) & 255, (value >>> 8) & 255, value & 255];
+    bytes.push(...chunk.slice(0, 4 - missing));
+  }
+  return Buffer.from(bytes);
+}
+
 export function extractReportLabTextFromPdfBuffer(buffer) {
   const pdf = Buffer.from(buffer).toString('latin1');
   const pieces = [];
-  const streamRegex = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
+  const streamRegex = /stream\r?\n([\s\S]*?)endstream/g;
   let match;
   while ((match = streamRegex.exec(pdf))) {
     let stream = Buffer.from(match[1], 'latin1');
     try {
-      if (stream[0] === 0x47 && stream[1] === 0x61) stream = Buffer.from(stream.toString('latin1').replace(/\s+$/g, '~>'), 'ascii');
-      if (stream.includes(0x7e)) stream = Buffer.from(stream.toString('ascii').replace(/\s/g, ''), 'ascii');
-      const decoded = zlib.inflateSync(stream[0] === 0x47 ? Buffer.from(stream.toString('ascii'), 'ascii') : stream).toString('latin1');
+      if (stream[0] !== 0x78) stream = ascii85Decode(stream.toString('latin1'));
+      const decoded = zlib.inflateSync(stream).toString('latin1');
       const textRuns = decoded.matchAll(/\((?:\\.|[^\\)])*\)\s*Tj|\[(.*?)\]\s*TJ/gs);
       for (const run of textRuns) {
         const source = run[0];
@@ -47,20 +76,22 @@ function cleanMoney(value) {
 
 export function deriveLoanFieldsFromText(text = '') {
   const normalized = text.replace(/\r/g, '\n');
+  const afterLabel = label => first(normalized, [new RegExp(`${label}:\\s*\\n\\s*([^\\n]+)`, 'i'), new RegExp(`${label}:\\s*([^\\n]+)`, 'i')]);
+  const loanAmount = afterLabel('Loan Amount') || first(normalized, [/principal amount of[\s\S]{0,160}?\(\$?([\d,]+(?:\.\d{2})?)\)/i]);
   const property = first(normalized, [
-    /Collateral\s*\n?\s*([^\n]+)/i,
-    /Property Address\s*\n?\s*([^\n]+)/i,
+    /Collateral:\s*\n\s*([^\n]+)/i,
+    /Property Address:\s*\n\s*([^\n]+)/i,
     /property located at\s+([^.\n(]+)/i,
   ]);
 
   return {
-    unpaid_principal: cleanMoney(first(normalized, [/Loan Amount\s*\n?\s*(\$?[\d,]+(?:\.\d{2})?)/i, /principal amount of\s+([A-Za-z -]+(?:\s+and\s+)?[\w -]+ Dollars?)\s*\(\$?([\d,]+(?:\.\d{2})?)\)/i])) || first(normalized, [/principal amount of[\s\S]{0,120}?\(\$?([\d,]+(?:\.\d{2})?)\)/i]),
-    interest_rate: first(normalized, [/Interest Rate\s*\n?\s*([\d.]+)\s*%/i, /at the rate of\s+([\d.]+)\s*%/i]),
-    loan_type: first(normalized, [/Loan Type\s*\n?\s*([^\n]+)/i]),
-    loan_origination_date: first(normalized, [/Close Date\s*\n?\s*([A-Za-z]+ \d{1,2}, \d{4})/i, /Loan No\.[^\n]*\n\s*([A-Za-z]+ \d{1,2}, \d{4})/i, /made as of\s+([A-Za-z]+ \d{1,2}, \d{4})/i]),
-    maturity_date: first(normalized, [/Maturity Date\s*\n?\s*([A-Za-z]+ \d{1,2}, \d{4})/i]),
-    next_payment_due_date: first(normalized, [/First Payment Date\s*\n?\s*([A-Za-z]+ \d{1,2}, \d{4})/i, /First Payment\s*\n?\s*([A-Za-z]+ \d{1,2}, \d{4})/i]),
-    guarantor_name: first(normalized, [/Guarantor\(s\)\s*\n?\s*([^\n]+)/i, /guaranteed by\s+([A-Z][A-Za-z .'-]+)(?:\s+\(|\.)/i]),
+    unpaid_principal: cleanMoney(loanAmount),
+    interest_rate: first(normalized, [/Interest Rate:\s*\n\s*([\d.]+)\s*%/i, /at the rate of\s+([\d.]+)\s*%/i]),
+    loan_type: afterLabel('Loan Type'),
+    loan_origination_date: first(normalized, [/Close Date:\s*\n\s*([A-Za-z]+ \d{1,2}, \d{4})/i, /Loan No\.[^\n]*\n\s*([A-Za-z]+ \d{1,2}, \d{4})/i, /made as of\s+([A-Za-z]+ \d{1,2}, \d{4})/i]),
+    maturity_date: first(normalized, [/Maturity Date:\s*\n\s*([A-Za-z]+ \d{1,2}, \d{4})/i]),
+    next_payment_due_date: first(normalized, [/First Payment Date:\s*\n\s*([A-Za-z]+ \d{1,2}, \d{4})/i, /First Payment:\s*\n\s*([A-Za-z]+ \d{1,2}, \d{4})/i]),
+    guarantor_name: first(normalized, [/Guarantor\(s\):\s*\n\s*([^\n]+)/i, /guaranteed by\s+([A-Z][A-Za-z .'-]+)(?:\s+\(|\.)/i]),
     property_address: property,
   };
 }
