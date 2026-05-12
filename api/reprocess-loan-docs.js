@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { preparePostRequest } from './lib/http.js';
+import { deriveLoanFieldsFromText, extractReportLabTextFromPdfBuffer, mergeMissingFields } from './lib/pdf-text.js';
 import { supabase } from './lib/supabase.js';
 
 export const maxDuration = 60;
@@ -62,10 +63,13 @@ export default async function handler(req, res) {
     }
 
     const extractedRows = [];
+    let pdfTextFallback = '';
     for (const url of newDocUrls) {
       const pdf = await fetch(url);
       if (!pdf.ok) continue;
-      const data = Buffer.from(await pdf.arrayBuffer()).toString('base64');
+      const buffer = Buffer.from(await pdf.arrayBuffer());
+      pdfTextFallback += `${extractReportLabTextFromPdfBuffer(buffer)}\n`;
+      const data = buffer.toString('base64');
       const response = await anthropic.messages.create({
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 1200,
@@ -79,11 +83,11 @@ export default async function handler(req, res) {
       try { extractedRows.push(JSON.parse(json)); } catch {}
     }
 
-    const data = merge(extractedRows);
+    const data = mergeMissingFields(merge(extractedRows), deriveLoanFieldsFromText(pdfTextFallback));
     const principal = num(data.unpaid_principal);
     const rate = num(data.interest_rate);
     const loanType = data.loan_type || null;
-    const monthlyPayment = num(data.monthly_payment) || (loanType && String(loanType).toLowerCase().includes('interest') && principal && rate ? Number(((principal * (rate / 100)) / 12).toFixed(2)) : null);
+    const monthlyPayment = num(data.monthly_payment) || (principal && rate ? Number(((principal * (rate / 100)) / 12).toFixed(2)) : null);
     const perDiem = num(data.daily_interest) || (principal && rate ? Number(((principal * (rate / 100)) / 365).toFixed(2)) : null);
     const loc = location(data.property_address);
     const docUrlValue = newDocUrls.join(',');

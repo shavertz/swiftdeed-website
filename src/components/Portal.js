@@ -545,7 +545,7 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
   const totalPaid = (principalPaid + parseFloat(totalInterestPaid || 0));
   const panelBorrowerEmail = borrowerEmails[selected.loan_id_internal] || live.borrower_email || selected?.borrower_email || '-';
   const loanType = live.loan_type || selected?.loan_type || '-';
-  const monthlyPayment = live.monthly_payment || selected?.monthly_payment || (String(loanType).toLowerCase().includes('interest') && originalAmount && rate ? (parseFloat(originalAmount) * (parseFloat(rate) / 100)) / 12 : null);
+  const monthlyPayment = live.monthly_payment || selected?.monthly_payment || (originalAmount && rate ? (parseFloat(originalAmount) * (parseFloat(rate) / 100)) / 12 : null);
   const principalProgress = originalAmount && parseFloat(originalAmount) > 0 ? Math.max(0, Math.min(100, (principalPaid / parseFloat(originalAmount)) * 100)) : 0;
   const displayPayments = activeTab === 'payments' || showAllPayments ? loanPayments : loanPayments.slice(0, 5);
   const isDocumentsTab = activeTab === 'documents';
@@ -1412,8 +1412,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     if (!isNaN(direct) && direct > 0) return direct;
     const principal = parseFloat(b.principal_balance || request.total_due);
     const rate = parseFloat(b.interest_rate || request.interest_rate);
-    const loanType = String(b.loan_type || request.loan_type || '').toLowerCase();
-    return loanType.includes('interest') && !isNaN(principal) && !isNaN(rate) ? (principal * (rate / 100)) / 12 : null;
+    return !isNaN(principal) && principal > 0 && !isNaN(rate) && rate > 0 ? (principal * (rate / 100)) / 12 : null;
   };
   const daysPastDue = (request) => {
     const diff = daysFromToday(storedNextPaymentDate(request));

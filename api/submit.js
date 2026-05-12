@@ -3,6 +3,7 @@ import formidable from 'formidable';
 import { upsertBorrower } from './lib/borrowers.js';
 import { sendInternalSubmissionEmail } from './lib/email.js';
 import { preparePostRequest } from './lib/http.js';
+import { deriveLoanFieldsFromText, extractReportLabTextFromPdfBuffer, mergeMissingFields } from './lib/pdf-text.js';
 import { supabase } from './lib/supabase.js';
 
 export const config = { api: { bodyParser: false, responseLimit: false } };
@@ -93,10 +94,12 @@ export default async function handler(req, res) {
 
     const fileUrlsRaw = Array.isArray(fields.fileUrls) ? fields.fileUrls[0] : fields.fileUrls;
     const fileUrls = fileUrlsRaw ? JSON.parse(fileUrlsRaw) : [];
+    let pdfTextFallback = '';
     const pdfContents = await Promise.all(fileUrls.map(async (url) => {
       const r = await fetch(url);
-      const buffer = await r.arrayBuffer();
-      return { name: url.split('/').pop(), data: Buffer.from(buffer).toString('base64') };
+      const buffer = Buffer.from(await r.arrayBuffer());
+      pdfTextFallback += `${extractReportLabTextFromPdfBuffer(buffer)}\n`;
+      return { name: url.split('/').pop(), data: buffer.toString('base64') };
     }));
 
     const { PDFDocument } = await import('pdf-lib');
@@ -199,7 +202,7 @@ Borrower ID provided by submitter: ${borrowerId || 'none'}`;
       }
     }
 
-    const loanData = mergeExtractions(allExtractions);
+    const loanData = mergeMissingFields(mergeExtractions(allExtractions), deriveLoanFieldsFromText(pdfTextFallback));
 
     const principal   = parseFloat(loanData.unpaid_principal) || 0;
     const rate        = parseFloat(loanData.interest_rate) || 0;
@@ -248,7 +251,7 @@ Borrower ID provided by submitter: ${borrowerId || 'none'}`;
 
     const loanStartDate = loanData.loan_origination_date || loanData.interest_paid_to_date || loanData.statement_date || null;
     const loanType = loanData.loan_type || null;
-    const monthlyPayment = parseFloat(loanData.monthly_payment) || (loanType && String(loanType).toLowerCase().includes('interest') && principal && rate ? parseFloat(((principal * (rate / 100)) / 12).toFixed(2)) : null);
+    const monthlyPayment = parseFloat(loanData.monthly_payment) || (principal && rate ? parseFloat(((principal * (rate / 100)) / 12).toFixed(2)) : null);
 
     const requestPayload = {
       from_email: email,
