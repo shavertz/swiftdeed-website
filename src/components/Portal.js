@@ -1135,7 +1135,19 @@ export default function Portal({ onSubmitRequest, resetToken }) {
             rows.forEach(r => {
               if (!r.loan_id_internal) return;
               dataMap[r.loan_id_internal] = {
+                ...r,
                 ...(dataMap[r.loan_id_internal] || {}),
+                legal_name: dataMap[r.loan_id_internal]?.legal_name || r.borrower_name,
+                principal_balance: dataMap[r.loan_id_internal]?.principal_balance || r.total_due,
+                original_loan_amount: dataMap[r.loan_id_internal]?.original_loan_amount || r.total_due,
+                interest_rate: dataMap[r.loan_id_internal]?.interest_rate || r.interest_rate,
+                per_diem: dataMap[r.loan_id_internal]?.per_diem || r.per_diem,
+                monthly_payment: dataMap[r.loan_id_internal]?.monthly_payment || r.monthly_payment,
+                loan_type: dataMap[r.loan_id_internal]?.loan_type || r.loan_type,
+                loan_start_date: dataMap[r.loan_id_internal]?.loan_start_date || r.loan_start_date,
+                maturity_date: dataMap[r.loan_id_internal]?.maturity_date || r.maturity_date,
+                next_payment_date: dataMap[r.loan_id_internal]?.next_payment_date || r.next_payment_date,
+                guarantor_name: dataMap[r.loan_id_internal]?.guarantor_name || r.guarantor_name,
                 loan_document_urls: dataMap[r.loan_id_internal]?.loan_document_urls || r.loan_document_urls || '',
               };
             });
@@ -1218,8 +1230,20 @@ export default function Portal({ onSubmitRequest, resetToken }) {
 
   function syncExtractedLoanData(data) {
     if (data?.borrower?.loan_id_internal) {
-      setLiveData(data.borrower);
-      setBorrowerData(prev => ({ ...prev, [data.borrower.loan_id_internal]: data.borrower }));
+      const requestFallback = data?.request || {};
+      const mergedBorrower = {
+        ...requestFallback,
+        ...data.borrower,
+        legal_name: data.borrower.legal_name || requestFallback.borrower_name,
+        principal_balance: data.borrower.principal_balance || requestFallback.total_due,
+        original_loan_amount: data.borrower.original_loan_amount || requestFallback.total_due,
+        monthly_payment: data.borrower.monthly_payment || requestFallback.monthly_payment,
+        loan_type: data.borrower.loan_type || requestFallback.loan_type,
+        loan_start_date: data.borrower.loan_start_date || requestFallback.loan_start_date,
+        guarantor_name: data.borrower.guarantor_name || requestFallback.guarantor_name,
+      };
+      setLiveData(mergedBorrower);
+      setBorrowerData(prev => ({ ...prev, [data.borrower.loan_id_internal]: mergedBorrower }));
     }
     if (data?.request?.loan_id_internal) {
       setRequests(prev => prev.map(r => r.loan_id_internal === data.request.loan_id_internal ? { ...r, ...data.request } : r));
