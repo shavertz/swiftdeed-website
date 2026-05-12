@@ -520,11 +520,15 @@ function MonthlyStatementPreviewModal({ doc, borrower, lenderName, onClose }) {
 }
 
 //  Loan Detail Page 
-function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, docSuccess, uploadingDocs, docFileRef, lenderEmail, lenderName, borrowerEmails, onBack, onRecordPayment, onRemoveDoc, onUploadDocs, onDeleteLoan, onViewDocuments, onGeneratePayoff, paymentSuccess }) {
+function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, docSuccess, uploadingDocs, docFileRef, lenderEmail, lenderName, borrowerEmails, setBorrowerEmails, onBack, onRecordPayment, onRemoveDoc, onUploadDocs, onDeleteLoan, onViewDocuments, onGeneratePayoff, paymentSuccess }) {
   const [showAllPayments, setShowAllPayments] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [loanNotes, setLoanNotes] = useState(liveData?.notes || selected?.notes || '');
   const [notesSaved, setNotesSaved] = useState(false);
+  const [editingEmail, setEditingEmail] = useState(false);
+  const [emailInput, setEmailInput] = useState('');
+  const [savingEmail, setSavingEmail] = useState(false);
+  const [emailSaved, setEmailSaved] = useState(false);
 
   const live = liveData || {};
   const balance = live.principal_balance != null ? live.principal_balance : selected?.total_due;
@@ -630,6 +634,31 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
       )}
     </div>
   );
+
+  const handleSaveEmail = async () => {
+    const nextEmail = emailInput.trim();
+    setSavingEmail(true);
+    try {
+      const headers = { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
+      const borrowerRes = await fetch(`${SUPABASE_URL}/rest/v1/borrowers?loan_id_internal=eq.${encodeURIComponent(selected.loan_id_internal)}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ borrower_email: nextEmail || null }),
+      });
+      if (!borrowerRes.ok) throw new Error('Borrower email save failed');
+      await fetch(`${SUPABASE_URL}/rest/v1/payoff_requests?loan_id_internal=eq.${encodeURIComponent(selected.loan_id_internal)}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ borrower_email: nextEmail || null }),
+      }).catch(() => {});
+      setBorrowerEmails(prev => ({ ...prev, [selected.loan_id_internal]: nextEmail || null }));
+      setEditingEmail(false);
+      setEmailSaved(true);
+      setTimeout(() => setEmailSaved(false), 3000);
+    } finally {
+      setSavingEmail(false);
+    }
+  };
 
   const documentsPanel = (
     <div style={card}>
@@ -884,12 +913,27 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
             {[
               { k: 'Legal name', v: live.legal_name || selected.borrower_name || '-' },
               { k: 'Guarantor', v: live.guarantor_name || selected.guarantor_name || '-' },
-              { k: 'Email', v: panelBorrowerEmail, link: true },
               { k: 'Property', v: selected.property_address || '-' },
               { k: 'Portal access', v: live.portal_access || 'Active', green: true },
             ].map(({ k, v, link, green }) => (
               <div key={k} style={fieldRow}><span style={fieldKey}>{k}</span><span style={{ ...fieldVal, color: link ? '#5b9bd5' : green ? '#34d399' : '#ccc' }}>{v}</span></div>
             ))}
+            <div style={fieldRow}>
+              <span style={fieldKey}>Email</span>
+              {!editingEmail ? (
+                <span style={{ ...fieldVal, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
+                  <span style={{ color: '#5b9bd5', overflow: 'hidden', textOverflow: 'ellipsis' }}>{panelBorrowerEmail}</span>
+                  {emailSaved && <span style={{ color: '#34d399', fontSize: 11 }}>Saved</span>}
+                  <button onClick={() => { setEmailInput(panelBorrowerEmail === '-' ? '' : panelBorrowerEmail); setEditingEmail(true); }} style={{ background: 'transparent', border: 'none', color: '#FFD700', cursor: 'pointer', fontSize: 11, fontFamily: 'inherit', padding: 0 }}>Edit</button>
+                </span>
+              ) : (
+                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6, flex: 1 }}>
+                  <input value={emailInput} onChange={e => setEmailInput(e.target.value)} style={{ background: '#1a1a1a', border: '0.5px solid #2a2a2a', color: '#fff', borderRadius: 6, padding: '7px 9px', fontSize: 12, fontFamily: 'inherit', minWidth: 0, width: 190, outline: 'none' }} />
+                  <button disabled={savingEmail} onClick={handleSaveEmail} style={{ background: '#FFD700', border: 'none', color: '#0f0f0f', borderRadius: 6, padding: '7px 10px', fontSize: 11, fontWeight: 700, cursor: savingEmail ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>{savingEmail ? 'Saving' : 'Save'}</button>
+                  <button disabled={savingEmail} onClick={() => { setEditingEmail(false); setEmailInput(''); }} style={{ background: 'transparent', border: '0.5px solid #2a2a2a', color: '#777', borderRadius: 6, padding: '7px 10px', fontSize: 11, cursor: savingEmail ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>Cancel</button>
+                </span>
+              )}
+            </div>
           </div>
 
           <div style={card}>
@@ -2799,6 +2843,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       lenderEmail={email}
       lenderName={lenderName}
       borrowerEmails={borrowerEmails}
+      setBorrowerEmails={setBorrowerEmails}
       paymentSuccess={paymentSuccess}
       onBack={() => { setSelected(null); setLiveData(null); setLoanPayments([]); setDocUrls([]); setPaymentSuccess(false); setActiveView('loans'); }}
       onRecordPayment={() => { setPaymentSuccess(false); setShowPaymentModal(true); }}
