@@ -520,7 +520,7 @@ function MonthlyStatementPreviewModal({ doc, borrower, lenderName, onClose }) {
 }
 
 //  Loan Detail Page 
-function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, docSuccess, uploadingDocs, docFileRef, lenderEmail, lenderName, borrowerEmails, onBack, onRecordPayment, onRemoveDoc, onUploadDocs, onDeleteLoan, onViewDocuments, onGeneratePayoff, paymentSuccess }) {
+function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, docSuccess, uploadingDocs, pendingDocProcess, processingDocs, docFileRef, lenderEmail, lenderName, borrowerEmails, onBack, onRecordPayment, onRemoveDoc, onUploadDocs, onProcessDocs, onDeleteLoan, onViewDocuments, onGeneratePayoff, paymentSuccess }) {
   const [showAllPayments, setShowAllPayments] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [loanNotes, setLoanNotes] = useState(liveData?.notes || selected?.notes || '');
@@ -662,6 +662,17 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
         <div style={{ fontSize: 12, color: '#555' }}>{uploadingDocs ? 'Uploading...' : 'Browse to upload - PDF only'}</div>
       </div>
       {docSuccess && <div style={{ color: docSuccess.startsWith('Could') ? '#f87171' : '#34d399', fontSize: 12, marginBottom: 12 }}>{docSuccess}</div>}
+      {pendingDocProcess && (
+        <div style={{ border: '0.5px solid #3a3300', background: '#171300', borderRadius: 8, padding: 13, marginBottom: 14, display: 'flex', justifyContent: 'space-between', gap: 14, alignItems: 'center' }}>
+          <div>
+            <div style={{ color: '#fff', fontSize: 13, fontWeight: 700 }}>{pendingDocProcess.newCount} document{pendingDocProcess.newCount === 1 ? '' : 's'} uploaded</div>
+            <div style={{ color: '#777', fontSize: 12, marginTop: 4 }}>Confirm to extract terms and update the loan data.</div>
+          </div>
+          <button onClick={onProcessDocs} disabled={processingDocs} style={{ background: '#FFD700', color: '#0f0f0f', border: 'none', borderRadius: 7, padding: '10px 14px', fontWeight: 700, cursor: processingDocs ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit' }}>
+            {processingDocs ? 'Processing...' : 'Confirm update ->'}
+          </button>
+        </div>
+      )}
       {docUrls.length === 0 ? (
         <div style={{ color: '#444', fontSize: 13, padding: '8px 0 12px' }}>No documents on file.</div>
       ) : (
@@ -1037,6 +1048,8 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const [deleting, setDeleting] = useState(false);
   const [uploadingDocs, setUploadingDocs] = useState(false);
   const [docSuccess, setDocSuccess] = useState('');
+  const [pendingDocProcess, setPendingDocProcess] = useState(null);
+  const [processingDocs, setProcessingDocs] = useState(false);
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1600);
   const docFileRef = useRef();
 
@@ -1047,6 +1060,8 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     setLiveData(null);
     setLoanPayments([]);
     setDocUrls([]);
+    setPendingDocProcess(null);
+    setProcessingDocs(false);
     setPaymentSuccess(false);
     setPayoffLoan(null);
     setPayoffGoodThrough(defaultGoodThroughDate());
@@ -1257,21 +1272,49 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       if (!res.ok) throw new Error('Document update failed');
       setDocUrls(combined);
       syncLoanDocumentState(selected.loan_id_internal, combined);
-      const refreshed = await fetch(`${SUPABASE_URL}/rest/v1/borrowers?loan_id_internal=eq.${encodeURIComponent(selected.loan_id_internal)}&limit=1&select=*`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
-      if (refreshed.ok) {
-        const refreshedData = await refreshed.json();
-        if (Array.isArray(refreshedData) && refreshedData[0]) {
-          setLiveData(refreshedData[0]);
-          setBorrowerData(prev => ({ ...prev, [selected.loan_id_internal]: refreshedData[0] }));
-        }
+      if (newUrls.length > 0) {
+        setPendingDocProcess({ urls: combined, newCount: newUrls.length });
+        setDocSuccess(`${newUrls.length} document${newUrls.length !== 1 ? 's' : ''} uploaded. Confirm to update loan data.`);
+      } else {
+        setDocSuccess('No PDF documents were uploaded.');
+        setTimeout(() => setDocSuccess(''), 4000);
       }
-      setDocSuccess(`${newUrls.length} document${newUrls.length !== 1 ? 's' : ''} uploaded.`);
-      setTimeout(() => setDocSuccess(''), 4000);
     } catch (e) {
       console.error('Upload error:', e);
       setDocSuccess('Could not upload documents. Try again.');
       setTimeout(() => setDocSuccess(''), 5000);
     } finally { setUploadingDocs(false); }
+  }
+
+  async function handleProcessUploadedDocs() {
+    if (!selected?.loan_id_internal || !pendingDocProcess?.urls?.length) return;
+    setProcessingDocs(true);
+    setDocSuccess('Processing documents...');
+    try {
+      const res = await fetch('/api/reprocess-loan-docs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ loanIdInternal: selected.loan_id_internal, newDocUrls: pendingDocProcess.urls }),
+      });
+      if (!res.ok) throw new Error('Document processing failed');
+      const data = await res.json();
+      if (data.borrower) {
+        setLiveData(data.borrower);
+        setBorrowerData(prev => ({ ...prev, [selected.loan_id_internal]: data.borrower }));
+      }
+      if (data.request) {
+        setRequests(prev => prev.map(r => r.loan_id_internal === selected.loan_id_internal ? { ...r, ...data.request } : r));
+        setSelected(prev => prev?.loan_id_internal === selected.loan_id_internal ? { ...prev, ...data.request } : prev);
+      }
+      setPendingDocProcess(null);
+      setDocSuccess('Loan data updated from documents.');
+      setTimeout(() => setDocSuccess(''), 5000);
+    } catch (e) {
+      console.error('Process docs error:', e);
+      setDocSuccess('Could not process documents. Try again.');
+    } finally {
+      setProcessingDocs(false);
+    }
   }
 
   async function handleDeleteLoan() {
@@ -2731,6 +2774,8 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       docUrls={docUrls}
       docSuccess={docSuccess}
       uploadingDocs={uploadingDocs}
+      pendingDocProcess={pendingDocProcess}
+      processingDocs={processingDocs}
       docFileRef={docFileRef}
       lenderEmail={email}
       lenderName={lenderName}
@@ -2740,6 +2785,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       onRecordPayment={() => { setPaymentSuccess(false); setShowPaymentModal(true); }}
       onRemoveDoc={handleRemoveDoc}
       onUploadDocs={handleUploadDocs}
+      onProcessDocs={handleProcessUploadedDocs}
       onDeleteLoan={() => { setShowDeleteModal(true); setDeleteConfirmText(''); }}
       onViewDocuments={openLoanDocuments}
       onGeneratePayoff={openPayoffModal}
