@@ -1275,11 +1275,11 @@ export default function Portal({ onSubmitRequest, resetToken }) {
         }
       }
       const combined = [...docUrls, ...newUrls];
+      setDocUrls(combined);
+      syncLoanDocumentState(selected.loan_id_internal, combined);
       const borrowerEmail = borrowerEmails[selected.loan_id_internal] || liveData?.borrower_email;
       const res = await fetch('/api/update-loan-docs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ loanIdInternal: selected.loan_id_internal, newDocUrls: combined, lenderEmail: email, lenderName, borrowerEmail, borrowerName: selected.borrower_name, docsAdded: newUrls.length > 0 }) });
       if (!res.ok) throw new Error('Document update failed');
-      setDocUrls(combined);
-      syncLoanDocumentState(selected.loan_id_internal, combined);
       if (newUrls.length > 0) {
         setPendingDocProcess({ urls: combined, newCount: newUrls.length });
         setDocSuccess(`${newUrls.length} document${newUrls.length !== 1 ? 's' : ''} uploaded. Confirm to update loan data.`);

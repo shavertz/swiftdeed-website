@@ -53,6 +53,22 @@ async function splitPdfIfNeeded(base64Data) {
   return chunks;
 }
 
+function applyLoanTermsSummaryFallback(loanData, text) {
+  if (!text) return loanData;
+  const out = { ...loanData };
+  const find = (label) => {
+    const pattern = new RegExp(`${label}\\s*[:\\-]?\\s*([^\\n\\r]+)`, 'i');
+    return text.match(pattern)?.[1]?.trim();
+  };
+  out.unpaid_principal ||= find('Loan Amount')?.replace(/[$,]/g, '');
+  out.interest_rate ||= find('Interest Rate')?.match(/[\d.]+/)?.[0];
+  out.loan_type ||= find('Loan Type');
+  out.next_payment_due_date ||= find('First Payment Date');
+  out.maturity_date ||= find('Maturity Date');
+  out.property_address ||= find('Collateral');
+  return out;
+}
+
 export default async function handler(req, res) {
   if (preparePostRequest(req, res)) return;
 
@@ -98,7 +114,8 @@ Fields to extract:
 - statement_date (date string, format MM/DD/YYYY)
 - daily_interest (number only if explicitly stated)
 - accrual_basis
-- stated_payoff_amount (number only, no $ or commas)`;
+- stated_payoff_amount (number only, no $ or commas)
+- loan_terms_summary_text (copy the Loan Terms Summary table text if present)`;
 
     const extractions = [];
     for (const pdf of expanded) {
@@ -118,7 +135,8 @@ Fields to extract:
       try { extractions.push(JSON.parse(cleanJson)); } catch {}
     }
 
-    const loanData = mergeExtractions(extractions);
+    const combinedExtractionText = extractions.map(item => item?.loan_terms_summary_text || JSON.stringify(item)).join('\n');
+    const loanData = applyLoanTermsSummaryFallback(mergeExtractions(extractions), combinedExtractionText);
     const docUrlValue = newDocUrls.join(',');
     const principal = numberOrNull(loanData.unpaid_principal);
     const rate = numberOrNull(loanData.interest_rate);
@@ -135,7 +153,6 @@ Fields to extract:
       interest_rate: rate,
       per_diem: perDiem ? parseFloat(perDiem.toFixed(2)) : null,
       monthly_payment: monthlyPayment,
-      loan_type: loanType,
       property_address: loanData.property_address,
       next_payment_date: nextPaymentDate,
       loan_start_date: loanStartDate,
