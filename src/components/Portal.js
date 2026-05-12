@@ -1453,9 +1453,26 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     if (!d) return null;
     return Math.ceil((d - today) / 86400000);
   };
-  const daysPastDue = (request) => {
+  const inferredNextPaymentDate = (request) => {
     const b = getBorrower(request);
-    const diff = daysFromToday(b.next_payment_date);
+    if (b.next_payment_date || request.next_payment_date) return b.next_payment_date || request.next_payment_date;
+    const start = dateValue(b.loan_start_date || request.loan_start_date);
+    if (!start) return null;
+    const next = new Date(start);
+    while (next < today) next.setMonth(next.getMonth() + 1);
+    return next.toISOString().slice(0, 10);
+  };
+  const inferredNextPaymentAmount = (request) => {
+    const b = getBorrower(request);
+    const direct = parseFloat(b.monthly_payment || request.monthly_payment);
+    if (!isNaN(direct) && direct > 0) return direct;
+    const balance = parseFloat(b.principal_balance || request.total_due);
+    const rate = parseFloat(b.interest_rate || request.interest_rate);
+    if (!isNaN(balance) && balance > 0 && !isNaN(rate) && rate > 0) return parseFloat(((balance * (rate / 100)) / 12).toFixed(2));
+    return null;
+  };
+  const daysPastDue = (request) => {
+    const diff = daysFromToday(inferredNextPaymentDate(request));
     return diff == null || diff >= 0 ? 0 : Math.abs(diff);
   };
   const isThisMonth = (iso) => {
@@ -1492,7 +1509,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const matchesLoanFilter = (request, filterId) => {
     const b = getBorrower(request);
     const maturityDays = daysFromToday(b.maturity_date || request.maturity_date);
-    const nextPaymentDays = daysFromToday(b.next_payment_date);
+    const nextPaymentDays = daysFromToday(inferredNextPaymentDate(request));
     const pastDueDays = daysPastDue(request);
     switch (filterId) {
       case 'received_month': return isThisMonth(b.last_payment_date);
@@ -1540,8 +1557,8 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     if (key === 'rate') return parseFloat(b.interest_rate || request.interest_rate) || 0;
     if (key === 'original_balance') return parseFloat(b.original_loan_amount || request.original_loan_amount || request.total_due) || 0;
     if (key === 'current_balance') return parseFloat(b.principal_balance || request.total_due) || 0;
-    if (key === 'next_payment_date') return dateValue(b.next_payment_date)?.getTime() || 0;
-    if (key === 'next_payment_amount') return parseFloat(b.monthly_payment) || 0;
+    if (key === 'next_payment_date') return dateValue(inferredNextPaymentDate(request))?.getTime() || 0;
+    if (key === 'next_payment_amount') return inferredNextPaymentAmount(request) || 0;
     if (key === 'days_past_due') return daysPastDue(request);
     if (key === 'status') return statusSeverity(request);
     return new Date(request.created_at).getTime() || 0;
@@ -2788,6 +2805,8 @@ export default function Portal({ onSubmitRequest, resetToken }) {
             const currentBalance = b.principal_balance || r.total_due;
             const days = daysPastDue(r);
             const bucket = statusBucket(r);
+            const nextDate = inferredNextPaymentDate(r);
+            const nextAmount = inferredNextPaymentAmount(r);
             return (
               <div key={r.id}
                 style={{ display: 'grid', gridTemplateColumns: LOAN_TABLE_COLS, gap: 8, minHeight: 44, padding: '0 14px', borderBottom: '0.5px solid #1b1b1b', alignItems: 'center', fontSize: 12, cursor: 'pointer', background: isHov ? '#171717' : '#111', boxShadow: isHov ? `inset 4px 0 0 ${loanFilter.accent}` : 'none', transition: 'background 0.1s, box-shadow 0.1s' }}
@@ -2802,8 +2821,8 @@ export default function Portal({ onSubmitRequest, resetToken }) {
                 <span style={{ color: '#777' }}>{b.interest_rate || r.interest_rate ? `${b.interest_rate || r.interest_rate}%` : '-'}</span>
                 <span style={{ color: '#777' }}>{formatCurrency(originalBalance)}</span>
                 <span style={{ color: '#f0f0f0', fontWeight: 500 }}>{formatCurrency(currentBalance)}</span>
-                <span style={{ color: '#e0d8c8' }}>{formatDate(b.next_payment_date)}</span>
-                <span style={{ color: '#f0f0f0' }}>{formatCurrency(b.monthly_payment)}</span>
+                <span style={{ color: '#e0d8c8' }}>{formatDate(nextDate)}</span>
+                <span style={{ color: '#f0f0f0' }}>{formatCurrency(nextAmount)}</span>
                 <span style={statusBadge(r)}><span style={{ fontSize: 16, lineHeight: 0 }}>•</span>{days > 0 ? `${days} days past due` : bucket}</span>
               </div>
             );
