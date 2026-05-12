@@ -4,6 +4,7 @@ import { preparePostRequest } from './lib/http.js';
 import { supabase } from './lib/supabase.js';
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+export const maxDuration = 60;
 
 function mergeExtractions(results) {
   const merged = {};
@@ -86,6 +87,7 @@ Fields to extract:
 - loan_origination_date (date string, format MM/DD/YYYY)
 - maturity_date (date string, format MM/DD/YYYY)
 - next_payment_due_date (date string, format MM/DD/YYYY)
+- monthly_payment (number only, no $ or commas)
 - statement_date (date string, format MM/DD/YYYY)
 - daily_interest (number only if explicitly stated)
 - accrual_basis
@@ -123,6 +125,7 @@ Fields to extract:
       principal_balance: principal,
       interest_rate: rate,
       per_diem: perDiem ? parseFloat(perDiem.toFixed(2)) : null,
+      monthly_payment: numberOrNull(loanData.monthly_payment),
       property_address: loanData.property_address,
       next_payment_date: nextPaymentDate,
       loan_start_date: loanStartDate,

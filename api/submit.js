@@ -6,6 +6,7 @@ import { preparePostRequest } from './lib/http.js';
 import { supabase } from './lib/supabase.js';
 
 export const config = { api: { bodyParser: false, responseLimit: false } };
+export const maxDuration = 60;
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -148,6 +149,7 @@ Fields to extract:
 - payoff_date (date string, format MM/DD/YYYY)
 - maturity_date (date string, format MM/DD/YYYY)
 - next_payment_due_date (date string, format MM/DD/YYYY)
+- monthly_payment (number only, no $ or commas)
 - statement_date (date string, format MM/DD/YYYY)
 - expiry_date (date string, format MM/DD/YYYY)
 - late_charge_deadline (date string, format MM/DD/YYYY)

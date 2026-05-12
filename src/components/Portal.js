@@ -520,7 +520,7 @@ function MonthlyStatementPreviewModal({ doc, borrower, lenderName, onClose }) {
 }
 
 //  Loan Detail Page 
-function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, docSuccess, uploadingDocs, pendingDocProcess, processingDocs, docFileRef, lenderEmail, lenderName, borrowerEmails, onBack, onRecordPayment, onRemoveDoc, onUploadDocs, onProcessDocs, onDeleteLoan, onViewDocuments, onGeneratePayoff, paymentSuccess }) {
+function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, docSuccess, uploadingDocs, pendingDocProcess, processingDocs, clearingLoanData, docFileRef, lenderEmail, lenderName, borrowerEmails, onBack, onRecordPayment, onRemoveDoc, onUploadDocs, onProcessDocs, onClearLoanData, onDeleteLoan, onViewDocuments, onGeneratePayoff, paymentSuccess }) {
   const [showAllPayments, setShowAllPayments] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [loanNotes, setLoanNotes] = useState(liveData?.notes || selected?.notes || '');
@@ -674,7 +674,13 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
         </div>
       )}
       {docUrls.length === 0 ? (
-        <div style={{ color: '#444', fontSize: 13, padding: '8px 0 12px' }}>No documents on file.</div>
+        <div style={{ border: '0.5px solid #3a3300', background: '#171300', borderRadius: 8, padding: 13 }}>
+          <div style={{ color: '#FFD700', fontSize: 13, fontWeight: 700 }}>No source documents on file.</div>
+          <div style={{ color: '#777', fontSize: 12, marginTop: 5 }}>Loan data is based on prior extraction.</div>
+          <button onClick={onClearLoanData} disabled={clearingLoanData} style={{ marginTop: 12, background: 'transparent', color: '#f87171', border: '0.5px solid #5a2020', borderRadius: 7, padding: '8px 12px', cursor: clearingLoanData ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+            {clearingLoanData ? 'Clearing...' : 'Clear extracted loan data'}
+          </button>
+        </div>
       ) : (
         <div style={{ borderTop: '0.5px solid #1a1a1a' }}>
           {isDocumentsTab && (
@@ -1050,6 +1056,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const [docSuccess, setDocSuccess] = useState('');
   const [pendingDocProcess, setPendingDocProcess] = useState(null);
   const [processingDocs, setProcessingDocs] = useState(false);
+  const [clearingLoanData, setClearingLoanData] = useState(false);
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1600);
   const docFileRef = useRef();
 
@@ -1062,6 +1069,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     setDocUrls([]);
     setPendingDocProcess(null);
     setProcessingDocs(false);
+    setClearingLoanData(false);
     setPaymentSuccess(false);
     setPayoffLoan(null);
     setPayoffGoodThrough(defaultGoodThroughDate());
@@ -1136,7 +1144,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
         setRequests(rows);
         const ids = rows.map(r => r.loan_id_internal).filter(Boolean);
         if (ids.length > 0) {
-          const bRes = await fetch(`${SUPABASE_URL}/rest/v1/borrowers?loan_id_internal=in.(${ids.map(id => `"${id}"`).join(',')})&select=loan_id_internal,borrower_email,principal_balance,next_payment_date,monthly_payment,payment_status,interest_rate,per_diem,original_loan_amount,total_interest_paid,total_payments_made,legal_name,guarantor_name,portal_access,loan_document_urls,last_payment_date,last_payment_amount,maturity_date`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
+          const bRes = await fetch(`${SUPABASE_URL}/rest/v1/borrowers?loan_id_internal=in.(${ids.map(id => `"${id}"`).join(',')})&select=loan_id_internal,borrower_email,principal_balance,next_payment_date,monthly_payment,payment_status,interest_rate,per_diem,original_loan_amount,total_interest_paid,total_payments_made,legal_name,guarantor_name,portal_access,loan_document_urls,last_payment_date,last_payment_amount,maturity_date,property_address,city,state`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
           const bData = await bRes.json();
           if (Array.isArray(bData)) {
             const emailMap = {};
@@ -1317,6 +1325,51 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     }
   }
 
+  async function handleClearLoanData() {
+    if (!selected?.loan_id_internal) return;
+    setClearingLoanData(true);
+    setDocSuccess('');
+    try {
+      const patch = {
+        principal_balance: null,
+        interest_rate: null,
+        per_diem: null,
+        monthly_payment: null,
+        next_payment_date: null,
+        maturity_date: null,
+      };
+      const requestPatch = {
+        total_due: null,
+        interest_rate: null,
+        per_diem: null,
+        next_payment_date: null,
+        maturity_date: null,
+      };
+      const headers = { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=representation' };
+      const borrowerRes = await fetch(`${SUPABASE_URL}/rest/v1/borrowers?loan_id_internal=eq.${encodeURIComponent(selected.loan_id_internal)}`, { method: 'PATCH', headers, body: JSON.stringify(patch) });
+      if (!borrowerRes.ok) throw new Error('Clear borrower data failed');
+      const requestRes = await fetch(`${SUPABASE_URL}/rest/v1/payoff_requests?loan_id_internal=eq.${encodeURIComponent(selected.loan_id_internal)}`, { method: 'PATCH', headers, body: JSON.stringify(requestPatch) });
+      if (!requestRes.ok) throw new Error('Clear request data failed');
+      const borrowerRows = await borrowerRes.json();
+      const requestRows = await requestRes.json();
+      if (borrowerRows?.[0]) {
+        setLiveData(borrowerRows[0]);
+        setBorrowerData(prev => ({ ...prev, [selected.loan_id_internal]: borrowerRows[0] }));
+      }
+      if (requestRows?.[0]) {
+        setRequests(prev => prev.map(r => r.loan_id_internal === selected.loan_id_internal ? { ...r, ...requestRows[0] } : r));
+        setSelected(prev => prev?.loan_id_internal === selected.loan_id_internal ? { ...prev, ...requestRows[0] } : prev);
+      }
+      setDocSuccess('Extracted loan data cleared.');
+      setTimeout(() => setDocSuccess(''), 5000);
+    } catch (e) {
+      console.error('Clear loan data error:', e);
+      setDocSuccess('Could not clear extracted loan data.');
+    } finally {
+      setClearingLoanData(false);
+    }
+  }
+
   async function handleDeleteLoan() {
     if (deleteConfirmText !== 'DELETE') return;
     setDeleting(true);
@@ -1383,7 +1436,10 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     const b = getBorrower(request);
     const explicitCity = b.city || request.city || request.property_city;
     const explicitState = b.state || request.state || request.property_state;
-    return { city: explicitCity || '-', state: explicitState || '-' };
+    if (explicitCity || explicitState) return { city: explicitCity || '-', state: explicitState || '-' };
+    const address = b.property_address || request.property_address || '';
+    const match = String(address).match(/,\s*([^,]+),\s*([A-Z]{2})(?:\s+\d{5})?\s*$/i);
+    return { city: match?.[1]?.trim() || '-', state: match?.[2]?.toUpperCase() || '-' };
   };
   const dateValue = (iso) => {
     if (!iso) return null;
@@ -2776,6 +2832,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       uploadingDocs={uploadingDocs}
       pendingDocProcess={pendingDocProcess}
       processingDocs={processingDocs}
+      clearingLoanData={clearingLoanData}
       docFileRef={docFileRef}
       lenderEmail={email}
       lenderName={lenderName}
@@ -2786,6 +2843,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       onRemoveDoc={handleRemoveDoc}
       onUploadDocs={handleUploadDocs}
       onProcessDocs={handleProcessUploadedDocs}
+      onClearLoanData={handleClearLoanData}
       onDeleteLoan={() => { setShowDeleteModal(true); setDeleteConfirmText(''); }}
       onViewDocuments={openLoanDocuments}
       onGeneratePayoff={openPayoffModal}
