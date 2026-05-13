@@ -56,7 +56,7 @@ function mergeBorrowerIntoLoanRow(request, borrower) {
     maturity_date: firstPresent(borrower.maturity_date, request.maturity_date),
     next_payment_date: firstPresent(borrower.next_payment_date, request.next_payment_date),
     guarantor_name: firstPresent(borrower.guarantor_name, request.guarantor_name),
-    loan_document_urls: firstPresent(borrower.loan_document_urls, request.loan_document_urls),
+    loan_document_urls: borrower.loan_document_urls !== null && borrower.loan_document_urls !== undefined ? borrower.loan_document_urls : request.loan_document_urls,
   };
 }
 
@@ -1264,8 +1264,8 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       try {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/borrowers?loan_id_internal=eq.${encodeURIComponent(selected.loan_id_internal)}&select=loan_document_urls&limit=1`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
         const data = await res.json();
-        const borrowerDocs = Array.isArray(data) && data.length > 0 ? data[0].loan_document_urls : '';
-        setDocUrls(uniqueDocUrls(borrowerDocs || selected.loan_document_urls));
+        const borrowerDocs = Array.isArray(data) && data.length > 0 ? data[0].loan_document_urls : null;
+        setDocUrls(uniqueDocUrls(borrowerDocs !== null && borrowerDocs !== undefined ? borrowerDocs : selected.loan_document_urls));
       } catch (e) { console.error(e); }
     }
     fetchDocs();
@@ -1477,6 +1477,14 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   };
 
   const getBorrower = (request) => borrowerData[request.loan_id_internal] || {};
+  const loanDocumentUrlsFor = (loan) => {
+    const loanId = loan?.loan_id_internal;
+    const borrower = loanId ? borrowerData[loanId] : null;
+    const value = borrower && borrower.loan_document_urls !== null && borrower.loan_document_urls !== undefined
+      ? borrower.loan_document_urls
+      : loan?.loan_document_urls;
+    return uniqueDocUrls(value);
+  };
   const parseLocation = (request) => {
     const b = getBorrower(request);
     const explicitCity = b.city || request.city || request.property_city;
@@ -2331,7 +2339,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       };
     }),
     ...requests.flatMap(loan => {
-      const urls = uniqueDocUrls(getBorrower(loan).loan_document_urls, loan.loan_document_urls);
+      const urls = loanDocumentUrlsFor(loan);
       return urls.length > 0
         ? urls.map((url, index) => ({
             id: `loan-${loan.loan_id_internal}-${index}`,
@@ -2402,7 +2410,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const visibleDocCount = (loan, tab = docTab) => {
     if (tab === 'yearend') return yearEndRecords.length;
     if (tab === 'payoff') return loan.payoff_statement_url ? 1 : 0;
-    if (tab === 'loan') return uniqueDocUrls(getBorrower(loan).loan_document_urls, loan.loan_document_urls).length;
+    if (tab === 'loan') return loanDocumentUrlsFor(loan).length;
     return docsForLoan(loan, tab).length;
   };
   const normalizedDocSearch = docSearch.trim().toLowerCase();

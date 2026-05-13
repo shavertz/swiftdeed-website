@@ -26,10 +26,16 @@ export default async function handler(req, res) {
 
     const docUrlValue = cleanedDocUrls.join(',');
 
+    const borrowerPayload = {
+      loan_id_internal: loanIdInternal,
+      loan_document_urls: docUrlValue,
+      ...(borrowerName ? { legal_name: borrowerName } : {}),
+      ...(borrowerEmail ? { borrower_email: borrowerEmail } : {}),
+    };
+
     const { error } = await supabase
       .from('borrowers')
-      .update({ loan_document_urls: docUrlValue })
-      .eq('loan_id_internal', loanIdInternal);
+      .upsert(borrowerPayload, { onConflict: 'loan_id_internal' });
 
     if (error) {
       console.error('Update docs error:', error);
