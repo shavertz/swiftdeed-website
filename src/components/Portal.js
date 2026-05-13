@@ -562,15 +562,17 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
   const [updateDocSuccess, setUpdateDocSuccess] = useState(false);
 
   const live = liveData || {};
-  const balance = live.principal_balance != null ? live.principal_balance : selected?.total_due;
-  const originalAmount = live.original_loan_amount || selected?.total_due;
+  const hasLive = !!liveData;
+  const sourceValue = (field, fallback) => hasLive ? live[field] : fallback;
+  const balance = sourceValue('principal_balance', selected?.total_due);
+  const originalAmount = sourceValue('original_loan_amount', selected?.total_due);
   const principalPaid = originalAmount && balance ? (parseFloat(originalAmount) - parseFloat(balance)) : 0;
-  const rate = live.interest_rate != null ? live.interest_rate : selected?.interest_rate;
-  const perDiem = live.per_diem != null ? live.per_diem : selected?.per_diem;
-  const loanStart = live.loan_start_date || selected?.loan_start_date;
-  const maturity = live.maturity_date || selected?.maturity_date;
-  const paymentStatus = live.payment_status || selected?.payment_status;
-  const nextPaymentDate = live.next_payment_date || selected?.next_payment_date;
+  const rate = sourceValue('interest_rate', selected?.interest_rate);
+  const perDiem = sourceValue('per_diem', selected?.per_diem);
+  const loanStart = sourceValue('loan_start_date', selected?.loan_start_date);
+  const maturity = sourceValue('maturity_date', selected?.maturity_date);
+  const paymentStatus = sourceValue('payment_status', selected?.payment_status);
+  const nextPaymentDate = sourceValue('next_payment_date', selected?.next_payment_date);
   const maturityDateValue = maturity ? new Date(`${String(maturity).slice(0, 10)}T00:00:00`) : null;
   const nextPaymentDateValue = nextPaymentDate ? new Date(`${String(nextPaymentDate).slice(0, 10)}T00:00:00`) : null;
   const nextPaymentDaysLate = nextPaymentDateValue && !isNaN(nextPaymentDateValue.getTime()) ? Math.floor((new Date(new Date().setHours(0, 0, 0, 0)) - nextPaymentDateValue) / 86400000) : 0;
@@ -581,8 +583,8 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
   const otherCharges = live.other_charges || selected?.other_charges || 0;
   const totalPaid = (principalPaid + parseFloat(totalInterestPaid || 0));
   const panelBorrowerEmail = borrowerEmails[selected.loan_id_internal] || live.borrower_email || selected?.borrower_email || '-';
-  const loanType = live.loan_type || selected?.loan_type || '-';
-  const monthlyPayment = live.monthly_payment || selected?.monthly_payment || (originalAmount && rate ? (parseFloat(originalAmount) * (parseFloat(rate) / 100)) / 12 : null);
+  const loanType = sourceValue('loan_type', selected?.loan_type) || '-';
+  const monthlyPayment = sourceValue('monthly_payment', selected?.monthly_payment) || (originalAmount && rate ? (parseFloat(originalAmount) * (parseFloat(rate) / 100)) / 12 : null);
   const principalProgress = originalAmount && parseFloat(originalAmount) > 0 ? Math.max(0, Math.min(100, (principalPaid / parseFloat(originalAmount)) * 100)) : 0;
   const displayPayments = activeTab === 'payments' || showAllPayments ? loanPayments : loanPayments.slice(0, 5);
   const isDocumentsTab = activeTab === 'documents';
@@ -1330,12 +1332,12 @@ export default function Portal({ onSubmitRequest, resetToken }) {
         ...requestFallback,
         ...data.borrower,
         legal_name: data.borrower.legal_name || requestFallback.borrower_name,
-        principal_balance: data.borrower.principal_balance || requestFallback.total_due,
-        original_loan_amount: data.borrower.original_loan_amount || requestFallback.total_due,
-        monthly_payment: data.borrower.monthly_payment || requestFallback.monthly_payment,
-        loan_type: data.borrower.loan_type || requestFallback.loan_type,
-        loan_start_date: data.borrower.loan_start_date || requestFallback.loan_start_date,
-        guarantor_name: data.borrower.guarantor_name || requestFallback.guarantor_name,
+        principal_balance: data.borrower.principal_balance !== null && data.borrower.principal_balance !== undefined ? data.borrower.principal_balance : requestFallback.total_due,
+        original_loan_amount: data.borrower.original_loan_amount !== null && data.borrower.original_loan_amount !== undefined ? data.borrower.original_loan_amount : requestFallback.total_due,
+        monthly_payment: data.borrower.monthly_payment !== null && data.borrower.monthly_payment !== undefined ? data.borrower.monthly_payment : requestFallback.monthly_payment,
+        loan_type: data.borrower.loan_type !== null && data.borrower.loan_type !== undefined ? data.borrower.loan_type : requestFallback.loan_type,
+        loan_start_date: data.borrower.loan_start_date !== null && data.borrower.loan_start_date !== undefined ? data.borrower.loan_start_date : requestFallback.loan_start_date,
+        guarantor_name: data.borrower.guarantor_name !== null && data.borrower.guarantor_name !== undefined ? data.borrower.guarantor_name : requestFallback.guarantor_name,
       };
       setLiveData(mergedBorrower);
       setBorrowerData(prev => ({ ...prev, [data.borrower.loan_id_internal]: mergedBorrower }));
@@ -1367,6 +1369,14 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       const res = await fetch('/api/update-loan-docs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ loanIdInternal: selected.loan_id_internal, newDocUrls: newUrls, lenderEmail: email, lenderName, borrowerEmail, borrowerName: selected.borrower_name, docsAdded: false }) });
       if (!res.ok) throw new Error('Document removal failed');
       syncLoanDocumentState(selected.loan_id_internal, newUrls);
+      try {
+        await reprocessLoanDocuments(newUrls);
+      } catch (reprocessError) {
+        console.error('Reprocess after document removal failed:', reprocessError);
+        setDocSuccess('Document removed. Loan data update failed.');
+        setTimeout(() => setDocSuccess(''), 5000);
+        return;
+      }
       setDocSuccess('Document removed.');
       setTimeout(() => setDocSuccess(''), 4000);
     } catch (e) {

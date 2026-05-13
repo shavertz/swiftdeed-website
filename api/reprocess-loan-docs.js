@@ -56,10 +56,14 @@ export default async function handler(req, res) {
     if (!loanIdInternal || !Array.isArray(newDocUrls)) return res.status(400).json({ error: 'Missing required fields' });
 
     if (newDocUrls.length === 0) {
-      const clear = { interest_rate: null, per_diem: null, monthly_payment: null, next_payment_date: null, maturity_date: null, loan_type: null, loan_document_urls: '' };
-      await supabase.from('borrowers').update({ ...clear, principal_balance: null, original_loan_amount: null }).eq('loan_id_internal', loanIdInternal);
-      await supabase.from('payoff_requests').update({ ...clear, total_due: null }).eq('loan_id_internal', loanIdInternal);
-      return res.status(200).json({ success: true, borrower: null, request: null });
+      const clear = { interest_rate: null, per_diem: null, monthly_payment: null, next_payment_date: null, maturity_date: null, loan_type: null, loan_start_date: null, guarantor_name: null, loan_document_urls: '', principal_balance: null, original_loan_amount: null };
+      const { data: borrowerRows, error: borrowerError } = await supabase
+        .from('borrowers')
+        .update(clear)
+        .eq('loan_id_internal', loanIdInternal)
+        .select();
+      if (borrowerError) throw borrowerError;
+      return res.status(200).json({ success: true, borrower: borrowerRows?.[0] || null, request: null });
     }
 
     const extractedRows = [];
