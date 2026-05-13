@@ -92,8 +92,26 @@ export default async function handler(req, res) {
     const loc = location(data.property_address);
     const docUrlValue = newDocUrls.join(',');
 
+    const { data: existingBorrowerRows, error: existingBorrowerError } = await supabase
+      .from('borrowers')
+      .select('borrower_email')
+      .eq('loan_id_internal', loanIdInternal)
+      .limit(1);
+    if (existingBorrowerError) throw existingBorrowerError;
+
+    const { data: existingRequestRows, error: existingRequestError } = await supabase
+      .from('payoff_requests')
+      .select('borrower_email')
+      .eq('loan_id_internal', loanIdInternal)
+      .limit(1);
+    if (existingRequestError) throw existingRequestError;
+
+    const borrowerEmail = existingBorrowerRows?.[0]?.borrower_email || existingRequestRows?.[0]?.borrower_email || null;
+
     const borrowerPatch = clean({
+      loan_id_internal: loanIdInternal,
       legal_name: data.borrower_name,
+      borrower_email: borrowerEmail,
       property_address: data.property_address,
       guarantor_name: data.guarantor_name,
       city: loc.city,
@@ -125,7 +143,7 @@ export default async function handler(req, res) {
       loan_document_urls: docUrlValue,
     });
 
-    const { data: borrowerRows, error: borrowerError } = await supabase.from('borrowers').update(borrowerPatch).eq('loan_id_internal', loanIdInternal).select();
+    const { data: borrowerRows, error: borrowerError } = await supabase.from('borrowers').upsert(borrowerPatch, { onConflict: 'loan_id_internal' }).select();
     if (borrowerError) throw borrowerError;
     const { data: requestRows, error: requestError } = await supabase.from('payoff_requests').update(requestPatch).eq('loan_id_internal', loanIdInternal).select();
     if (requestError) throw requestError;
