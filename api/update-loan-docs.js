@@ -36,16 +36,6 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: error.message });
     }
 
-    const { error: requestError } = await supabase
-      .from('payoff_requests')
-      .update({ loan_document_urls: docUrlValue })
-      .eq('loan_id_internal', loanIdInternal);
-
-    if (requestError) {
-      console.error('Update request docs error:', requestError);
-      return res.status(500).json({ error: requestError.message });
-    }
-
     try {
       await sendLenderDocsUpdatedEmail({
         lenderEmail,
