@@ -28,6 +28,7 @@ export async function upsertBorrower({
   rate,
   borrowerEmail,
   borrowerName,
+  lenderEmail,
   activationBaseUrl,
 }) {
   try {
@@ -71,6 +72,7 @@ export async function upsertBorrower({
           loan_start_date: loanStartDate,
           maturity_date: maturityDate,
           loan_document_urls: loanDocumentUrls,
+          lender_email: lenderEmail || null,
           status: 'active',
           ...(borrowerEmail ? { borrower_email: borrowerEmail, verification_token: token } : {}),
         })
@@ -95,6 +97,7 @@ export async function upsertBorrower({
           loan_start_date: loanStartDate,
           maturity_date: maturityDate,
           loan_document_urls: loanDocumentUrls,
+          lender_email: lenderEmail || null,
           status: 'active',
           borrower_email: borrowerEmail || null,
           verification_token: token,

@@ -31,6 +31,7 @@ export default async function handler(req, res) {
       loan_document_urls: docUrlValue,
       ...(borrowerName ? { legal_name: borrowerName } : {}),
       ...(borrowerEmail ? { borrower_email: borrowerEmail } : {}),
+      ...(lenderEmail ? { lender_email: lenderEmail } : {}),
     };
 
     const { data: updatedRows, error } = await supabase
@@ -50,6 +51,13 @@ export default async function handler(req, res) {
         .insert(borrowerPayload);
 
       if (insertError) {
+        if (borrowerPayload.lender_email && insertError.message?.includes('lender_email')) {
+          const { lender_email, ...payloadWithoutLenderEmail } = borrowerPayload;
+          const { error: retryError } = await supabase
+            .from('borrowers')
+            .insert(payloadWithoutLenderEmail);
+          if (!retryError) return res.status(200).json({ success: true, documentCount: cleanedDocUrls.length, loanDocumentUrls: docUrlValue });
+        }
         console.error('Insert docs borrower error:', insertError);
         return res.status(500).json({ error: insertError.message });
       }

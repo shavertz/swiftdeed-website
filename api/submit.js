@@ -323,6 +323,7 @@ Borrower ID provided by submitter: ${borrowerId || 'none'}`;
       rate,
       borrowerEmail: borrowerEmail || null,
       borrowerName: borrowerName || null,
+      lenderEmail: email || null,
       activationBaseUrl,
     });
 

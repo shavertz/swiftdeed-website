@@ -32,31 +32,31 @@ function uniqueDocUrls(...values) {
   return [...new Set(values.flatMap(parseDocUrls))];
 }
 
-function firstPresent(...values) {
-  return values.find(value => value !== null && value !== undefined && value !== '') ?? null;
+function borrowerValue(borrower, field, fallback = null) {
+  return borrower && Object.prototype.hasOwnProperty.call(borrower, field) ? borrower[field] : fallback;
 }
 
 function mergeBorrowerIntoLoanRow(request, borrower) {
   if (!borrower) return request;
   return {
     ...request,
-    borrower_name: firstPresent(borrower.legal_name, request.borrower_name),
-    borrower_email: firstPresent(borrower.borrower_email, request.borrower_email),
-    property_address: firstPresent(borrower.property_address, request.property_address),
-    city: firstPresent(borrower.city, request.city),
-    state: firstPresent(borrower.state, request.state),
-    total_due: firstPresent(borrower.principal_balance, request.total_due),
-    original_loan_amount: firstPresent(borrower.original_loan_amount, request.original_loan_amount, request.total_due),
-    interest_rate: firstPresent(borrower.interest_rate, request.interest_rate),
-    per_diem: firstPresent(borrower.per_diem, request.per_diem),
-    monthly_payment: firstPresent(borrower.monthly_payment, request.monthly_payment),
-    payment_status: firstPresent(borrower.payment_status, request.payment_status),
-    loan_type: firstPresent(borrower.loan_type, request.loan_type),
-    loan_start_date: firstPresent(borrower.loan_start_date, request.loan_start_date),
-    maturity_date: firstPresent(borrower.maturity_date, request.maturity_date),
-    next_payment_date: firstPresent(borrower.next_payment_date, request.next_payment_date),
-    guarantor_name: firstPresent(borrower.guarantor_name, request.guarantor_name),
-    loan_document_urls: borrower.loan_document_urls !== null && borrower.loan_document_urls !== undefined ? borrower.loan_document_urls : request.loan_document_urls,
+    borrower_name: borrowerValue(borrower, 'legal_name', request.borrower_name),
+    borrower_email: borrowerValue(borrower, 'borrower_email', request.borrower_email),
+    property_address: borrowerValue(borrower, 'property_address', request.property_address),
+    city: borrowerValue(borrower, 'city', request.city),
+    state: borrowerValue(borrower, 'state', request.state),
+    total_due: borrowerValue(borrower, 'principal_balance', request.total_due),
+    original_loan_amount: borrowerValue(borrower, 'original_loan_amount', request.original_loan_amount || request.total_due),
+    interest_rate: borrowerValue(borrower, 'interest_rate', request.interest_rate),
+    per_diem: borrowerValue(borrower, 'per_diem', request.per_diem),
+    monthly_payment: borrowerValue(borrower, 'monthly_payment', request.monthly_payment),
+    payment_status: borrowerValue(borrower, 'payment_status', request.payment_status),
+    loan_type: borrowerValue(borrower, 'loan_type', request.loan_type),
+    loan_start_date: borrowerValue(borrower, 'loan_start_date', request.loan_start_date),
+    maturity_date: borrowerValue(borrower, 'maturity_date', request.maturity_date),
+    next_payment_date: borrowerValue(borrower, 'next_payment_date', request.next_payment_date),
+    guarantor_name: borrowerValue(borrower, 'guarantor_name', request.guarantor_name),
+    loan_document_urls: borrowerValue(borrower, 'loan_document_urls', request.loan_document_urls),
   };
 }
 
@@ -1231,29 +1231,57 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     setPage(1);
     async function load() {
       try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/payoff_requests?from_email=eq.${encodeURIComponent(email)}&order=created_at.desc`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
+        const headers = { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` };
+        const borrowerRes = await fetch(`${SUPABASE_URL}/rest/v1/borrowers?lender_email=eq.${encodeURIComponent(email)}&order=created_at.desc&select=*`, { headers });
+        const borrowerRows = borrowerRes.ok ? await borrowerRes.json() : [];
+        if (Array.isArray(borrowerRows) && borrowerRows.length > 0) {
+          const emailMap = {};
+          const dataMap = {};
+          borrowerRows.forEach(b => {
+            if (b.loan_id_internal) {
+              emailMap[b.loan_id_internal] = b.borrower_email;
+              dataMap[b.loan_id_internal] = b;
+            }
+          });
+          setBorrowerEmails(emailMap);
+          setBorrowerData(dataMap);
+          setRequests(borrowerRows.map(b => mergeBorrowerIntoLoanRow({ ...b, borrower_name: b.legal_name, total_due: b.principal_balance }, b)));
+          return;
+        }
+
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/payoff_requests?from_email=eq.${encodeURIComponent(email)}&order=created_at.desc`, { headers });
         const data = await res.json();
-        const rows = Array.isArray(data) ? data : [];
-        setRequests(rows);
-        const ids = rows.map(r => r.loan_id_internal).filter(Boolean);
-        if (ids.length > 0) {
-          const bRes = await fetch(`${SUPABASE_URL}/rest/v1/borrowers?loan_id_internal=in.(${ids.map(id => `"${id}"`).join(',')})&select=loan_id_internal,borrower_email,principal_balance,next_payment_date,monthly_payment,payment_status,interest_rate,per_diem,original_loan_amount,total_interest_paid,total_payments_made,legal_name,guarantor_name,portal_access,loan_document_urls,last_payment_date,last_payment_amount,maturity_date,loan_start_date,property_address,city,state,loan_type`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
-          const bData = await bRes.json();
-          if (Array.isArray(bData)) {
-            const emailMap = {};
-            const dataMap = {};
-            bData.forEach(b => {
-              if (b.loan_id_internal) {
-                emailMap[b.loan_id_internal] = b.borrower_email;
-                dataMap[b.loan_id_internal] = b;
-              }
-            });
-            setBorrowerEmails(emailMap);
-            setBorrowerData(dataMap);
-            setRequests(rows.map(r => mergeBorrowerIntoLoanRow(r, dataMap[r.loan_id_internal])));
-          }
-        } else {
-          setRequests(rows);
+        const legacyRows = Array.isArray(data) ? data : [];
+        const ids = legacyRows.map(r => r.loan_id_internal).filter(Boolean);
+        if (ids.length === 0) {
+          setRequests([]);
+          setBorrowerEmails({});
+          setBorrowerData({});
+          return;
+        }
+
+        const bRes = await fetch(`${SUPABASE_URL}/rest/v1/borrowers?loan_id_internal=in.(${ids.map(id => `"${id}"`).join(',')})&select=*`, { headers });
+        const bData = await bRes.json();
+        if (Array.isArray(bData)) {
+          const emailMap = {};
+          const dataMap = {};
+          bData.forEach(b => {
+            if (b.loan_id_internal) {
+              emailMap[b.loan_id_internal] = b.borrower_email;
+              dataMap[b.loan_id_internal] = b;
+            }
+          });
+          setBorrowerEmails(emailMap);
+          setBorrowerData(dataMap);
+          setRequests(legacyRows.map(r => mergeBorrowerIntoLoanRow(r, dataMap[r.loan_id_internal])));
+
+          bData.filter(b => b.loan_id_internal && !b.lender_email).forEach(b => {
+            fetch(`${SUPABASE_URL}/rest/v1/borrowers?loan_id_internal=eq.${encodeURIComponent(b.loan_id_internal)}`, {
+              method: 'PATCH',
+              headers: { ...headers, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+              body: JSON.stringify({ lender_email: email }),
+            }).catch(() => {});
+          });
         }
       } catch (e) { console.error(e); } finally { setLoading(false); }
     }
@@ -1443,10 +1471,9 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   }
 
   const getLoanStatus = (request) => {
-    const b = borrowerData[request.loan_id_internal] || {};
-    const raw = (b.payment_status || request.payment_status || '').toLowerCase();
-    const balance = parseFloat(b.principal_balance || request.total_due);
-    const maturityDays = daysFromToday(b.maturity_date || request.maturity_date);
+    const raw = (getLoanField(request, 'payment_status') || '').toLowerCase();
+    const balance = parseFloat(getLoanField(request, 'principal_balance', 'total_due'));
+    const maturityDays = daysFromToday(getLoanField(request, 'maturity_date'));
     if (raw.includes('default')) return 'Default';
     if (raw.includes('paid')) return 'Paid Off';
     if (raw.includes('late') || raw.includes('missed') || raw.includes('overdue') || raw.includes('past due')) return 'Past Due';
@@ -1487,6 +1514,10 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   };
 
   const getBorrower = (request) => borrowerData[request.loan_id_internal] || {};
+  const getLoanField = (request, borrowerFieldName, requestFieldName = borrowerFieldName) => {
+    const b = borrowerData[request.loan_id_internal];
+    return b ? borrowerValue(b, borrowerFieldName) : request[requestFieldName];
+  };
   const loanDocumentUrlsFor = (loan) => {
     const loanId = loan?.loan_id_internal;
     const borrower = loanId ? borrowerData[loanId] : null;
@@ -1496,11 +1527,10 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     return uniqueDocUrls(value);
   };
   const parseLocation = (request) => {
-    const b = getBorrower(request);
-    const explicitCity = b.city || request.city || request.property_city;
-    const explicitState = b.state || request.state || request.property_state;
+    const explicitCity = getLoanField(request, 'city') || request.property_city;
+    const explicitState = getLoanField(request, 'state') || request.property_state;
     if (explicitCity || explicitState) return { city: explicitCity || '-', state: explicitState || '-' };
-    const address = b.property_address || request.property_address || '';
+    const address = getLoanField(request, 'property_address') || '';
     const match = String(address).match(/,\s*([^,]+),\s*([A-Z]{2})(?:\s+\d{5})?\s*$/i);
     return { city: match?.[1]?.trim() || '-', state: match?.[2]?.toUpperCase() || '-' };
   };
@@ -1517,15 +1547,13 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     return Math.ceil((d - today) / 86400000);
   };
   const storedNextPaymentDate = (request) => {
-    const b = getBorrower(request);
-    return b.next_payment_date || request.next_payment_date || null;
+    return getLoanField(request, 'next_payment_date') || null;
   };
   const storedNextPaymentAmount = (request) => {
-    const b = getBorrower(request);
-    const direct = parseFloat(b.monthly_payment || request.monthly_payment);
+    const direct = parseFloat(getLoanField(request, 'monthly_payment'));
     if (!isNaN(direct) && direct > 0) return direct;
-    const principal = parseFloat(b.principal_balance || request.total_due);
-    const rate = parseFloat(b.interest_rate || request.interest_rate);
+    const principal = parseFloat(getLoanField(request, 'principal_balance', 'total_due'));
+    const rate = parseFloat(getLoanField(request, 'interest_rate'));
     return !isNaN(principal) && principal > 0 && !isNaN(rate) && rate > 0 ? (principal * (rate / 100)) / 12 : null;
   };
   const daysPastDue = (request) => {
@@ -1561,11 +1589,11 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   };
   const isAttentionLoan = (request) => {
     const b = borrowerData[request.loan_id_internal];
-    return !b || !b.monthly_payment || isOverdueLoan(request) || ['Default', 'Past maturity'].includes(getLoanStatus(request));
+    return !b || !borrowerValue(b, 'monthly_payment') || isOverdueLoan(request) || ['Default', 'Past maturity'].includes(getLoanStatus(request));
   };
   const matchesLoanFilter = (request, filterId) => {
     const b = getBorrower(request);
-    const maturityDays = daysFromToday(b.maturity_date || request.maturity_date);
+    const maturityDays = daysFromToday(getLoanField(request, 'maturity_date'));
     const nextPaymentDays = daysFromToday(storedNextPaymentDate(request));
     const pastDueDays = daysPastDue(request);
     switch (filterId) {
@@ -1580,7 +1608,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       case 'bucket_31_60': return pastDueDays >= 31 && pastDueDays <= 60;
       case 'bucket_60_plus': return pastDueDays > 60;
       case 'not_activated': return !borrowerData[request.loan_id_internal];
-      case 'missing_payment': return !!borrowerData[request.loan_id_internal] && !b.monthly_payment;
+      case 'missing_payment': return !!borrowerData[request.loan_id_internal] && !borrowerValue(b, 'monthly_payment');
       case 'default': return getLoanStatus(request) === 'Default';
       case 'all':
       default: return isActiveLoan(request);
@@ -1589,9 +1617,8 @@ export default function Portal({ onSubmitRequest, resetToken }) {
 
   const searchTerm = search.trim().toLowerCase();
   const filtered = requests.filter(r => {
-    const b = getBorrower(r);
     const { city, state } = parseLocation(r);
-    const originalBalance = b.original_loan_amount || r.original_loan_amount || r.total_due;
+    const originalBalance = getLoanField(r, 'original_loan_amount', 'original_loan_amount') || getLoanField(r, 'principal_balance', 'total_due');
     const matchesSearch = !searchTerm
       || String(r.loan_id_internal || '').toLowerCase().includes(searchTerm)
       || String(r.loan_id || '').toLowerCase().includes(searchTerm)
@@ -1605,15 +1632,14 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   });
 
   const getSortValue = (request, key) => {
-    const b = getBorrower(request);
     const loc = parseLocation(request);
     if (key === 'borrower') return String(request.borrower_name || '').toLowerCase();
     if (key === 'city') return String(loc.city || '').toLowerCase();
     if (key === 'state') return String(loc.state || '').toLowerCase();
-    if (key === 'maturity') return dateValue(b.maturity_date || request.maturity_date)?.getTime() || 0;
-    if (key === 'rate') return parseFloat(b.interest_rate || request.interest_rate) || 0;
-    if (key === 'original_balance') return parseFloat(b.original_loan_amount || request.original_loan_amount || request.total_due) || 0;
-    if (key === 'current_balance') return parseFloat(b.principal_balance || request.total_due) || 0;
+    if (key === 'maturity') return dateValue(getLoanField(request, 'maturity_date'))?.getTime() || 0;
+    if (key === 'rate') return parseFloat(getLoanField(request, 'interest_rate')) || 0;
+    if (key === 'original_balance') return parseFloat(getLoanField(request, 'original_loan_amount', 'original_loan_amount') || getLoanField(request, 'principal_balance', 'total_due')) || 0;
+    if (key === 'current_balance') return parseFloat(getLoanField(request, 'principal_balance', 'total_due')) || 0;
     if (key === 'next_payment_date') return dateValue(storedNextPaymentDate(request))?.getTime() || 0;
     if (key === 'next_payment_amount') return storedNextPaymentAmount(request) || 0;
     if (key === 'days_past_due') return daysPastDue(request);
@@ -1641,8 +1667,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const thisYear = now.getFullYear();
   const allBorrowers = Object.values(borrowerData);
   const principalOutstanding = requests.reduce((sum, r) => {
-    const b = borrowerData[r.loan_id_internal] || {};
-    return isActiveLoan(r) ? sum + (parseFloat(b.principal_balance || r.total_due) || 0) : sum;
+    return isActiveLoan(r) ? sum + (parseFloat(getLoanField(r, 'principal_balance', 'total_due')) || 0) : sum;
   }, 0);
   const receivedThisMonth = allBorrowers.filter(b => { if (!b.last_payment_date) return false; const d = new Date(b.last_payment_date); return d.getMonth() === thisMonth && d.getFullYear() === thisYear; });
   const receivedThisMonthTotal = receivedThisMonth.reduce((sum, b) => sum + (parseFloat(b.last_payment_amount || b.monthly_payment) || 0), 0);
@@ -1656,7 +1681,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const bucketTwo = requests.filter(r => matchesLoanFilter(r, 'bucket_31_60'));
   const bucketThree = requests.filter(r => matchesLoanFilter(r, 'bucket_60_plus'));
   const loansNeedingAttentionCount = needingAttention.length;
-  const nextMaturity = [...maturingSoon].sort((a, b) => daysFromToday(getBorrower(a).maturity_date || a.maturity_date) - daysFromToday(getBorrower(b).maturity_date || b.maturity_date))[0];
+  const nextMaturity = [...maturingSoon].sort((a, b) => daysFromToday(getLoanField(a, 'maturity_date')) - daysFromToday(getLoanField(b, 'maturity_date')))[0];
   const nextMaturityBorrower = nextMaturity ? getBorrower(nextMaturity) : {};
 
   const sc = { background: '#121212', border: '0.5px solid #202020', borderRadius: 9, padding: '22px 24px', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit' };
@@ -1818,12 +1843,11 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     );
   };
   const dashboardListItem = (loan, filterId, accent, detail, tag) => {
-    const b = getBorrower(loan);
     return (
       <button key={loan.id} onClick={() => setLoansView(filterId)} style={{ width: '100%', display: 'grid', gridTemplateColumns: '1fr auto', gap: 12, background: 'transparent', border: 'none', borderTop: '0.5px solid #1f1f1f', padding: '13px 0', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}>
         <span>
           <span style={{ display: 'block', color: '#fff', fontSize: 13, lineHeight: 1.2 }}>{loan.borrower_name || loan.property_address || '-'}</span>
-          <span style={{ display: 'block', color: '#555', fontSize: 12, marginTop: 3 }}>{detail || formatCurrency(b.principal_balance || loan.total_due)}</span>
+          <span style={{ display: 'block', color: '#555', fontSize: 12, marginTop: 3 }}>{detail || formatCurrency(getLoanField(loan, 'principal_balance', 'total_due'))}</span>
         </span>
         {tag && <span style={{ color: accent, background: `${accent}22`, borderRadius: 4, padding: '3px 8px', fontSize: 11, alignSelf: 'center' }}>{tag}</span>}
       </button>
@@ -2271,17 +2295,16 @@ export default function Portal({ onSubmitRequest, resetToken }) {
             </button>
             <div style={{ marginTop: 14 }}>
               {card.loans.slice(0, 3).map(loan => {
-                const b = getBorrower(loan);
                 const daysLabel = card.id === 'maturity'
-                  ? `${Math.max(0, daysFromToday(b.maturity_date || loan.maturity_date) || 0)} days`
+                  ? `${Math.max(0, daysFromToday(getLoanField(loan, 'maturity_date')) || 0)} days`
                   : card.id === 'overdue'
                     ? `${daysPastDue(loan)} days`
-                    : b.next_payment_date ? formatDate(b.next_payment_date) : '';
+                    : getLoanField(loan, 'next_payment_date') ? formatDate(getLoanField(loan, 'next_payment_date')) : '';
                 const detail = card.id === 'overdue'
-                  ? `${formatCurrency(b.principal_balance || loan.total_due)} outstanding`
+                  ? `${formatCurrency(getLoanField(loan, 'principal_balance', 'total_due'))} outstanding`
                   : card.id === 'upcoming'
-                    ? `${formatCurrency(b.monthly_payment)} due`
-                    : formatCurrency(b.principal_balance || loan.total_due);
+                    ? `${formatCurrency(getLoanField(loan, 'monthly_payment'))} due`
+                    : formatCurrency(getLoanField(loan, 'principal_balance', 'total_due'));
                 return dashboardListItem(loan, card.id, card.accent, detail, daysLabel);
               })}
               {card.loans.length === 0 && <div style={{ color: '#444', fontSize: 13, padding: '18px 0' }}>None</div>}
@@ -2296,10 +2319,10 @@ export default function Portal({ onSubmitRequest, resetToken }) {
         <div style={{ display: 'grid', gridTemplateColumns: bucketCols, minWidth: isNarrowPortfolio ? 725 : 0 }}>
         {[
           { id: 'all', label: 'All Loans', count: activeLoans.length, total: principalOutstanding },
-          { id: 'current', label: 'Current', count: currentLoans.length, total: currentLoans.reduce((sum, r) => sum + (parseFloat(getBorrower(r).principal_balance || r.total_due) || 0), 0) },
-          { id: 'bucket_1_30', label: '1-30 Days Past Due', count: bucketOne.length, total: bucketOne.reduce((sum, r) => sum + (parseFloat(getBorrower(r).principal_balance || r.total_due) || 0), 0) },
-          { id: 'bucket_31_60', label: '31-60 Days Past Due', count: bucketTwo.length, total: bucketTwo.reduce((sum, r) => sum + (parseFloat(getBorrower(r).principal_balance || r.total_due) || 0), 0) },
-          { id: 'bucket_60_plus', label: '60+ Days Past Due', count: bucketThree.length, total: bucketThree.reduce((sum, r) => sum + (parseFloat(getBorrower(r).principal_balance || r.total_due) || 0), 0) },
+          { id: 'current', label: 'Current', count: currentLoans.length, total: currentLoans.reduce((sum, r) => sum + (parseFloat(getLoanField(r, 'principal_balance', 'total_due')) || 0), 0) },
+          { id: 'bucket_1_30', label: '1-30 Days Past Due', count: bucketOne.length, total: bucketOne.reduce((sum, r) => sum + (parseFloat(getLoanField(r, 'principal_balance', 'total_due')) || 0), 0) },
+          { id: 'bucket_31_60', label: '31-60 Days Past Due', count: bucketTwo.length, total: bucketTwo.reduce((sum, r) => sum + (parseFloat(getLoanField(r, 'principal_balance', 'total_due')) || 0), 0) },
+          { id: 'bucket_60_plus', label: '60+ Days Past Due', count: bucketThree.length, total: bucketThree.reduce((sum, r) => sum + (parseFloat(getLoanField(r, 'principal_balance', 'total_due')) || 0), 0) },
         ].map(bucket => (
           <button key={bucket.id} onClick={() => setLoansView(bucket.id)} onMouseEnter={() => setHoveredCard(bucket.id)} onMouseLeave={() => setHoveredCard(null)} style={{ background: hoveredCard === bucket.id ? '#151515' : 'transparent', border: 'none', borderRight: '0.5px solid #222', padding: '18px 16px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center', transition: 'background 0.12s' }}>
             <div style={{ ...sl, marginBottom: 8 }}>{bucket.label}</div>
@@ -2338,7 +2361,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
         tab: 'payoff',
         type: 'Payoff statement',
         title: loan.payoff_statement_url ? 'Payoff Statement' : 'No payoff statement yet',
-        detail: loan.payoff_statement_url ? `${formatCurrency(loan.total_due || b.principal_balance)} payoff amount` : 'Generate one for this loan',
+        detail: loan.payoff_statement_url ? `${formatCurrency(getLoanField(loan, 'principal_balance', 'total_due'))} payoff amount` : 'Generate one for this loan',
         generated: !!loan.payoff_statement_url,
         loan,
         borrower: loan.borrower_name || b.legal_name || '-',
@@ -2429,7 +2452,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     const aBorrower = (a.borrower_name || '').toLowerCase();
     const bBorrower = (b.borrower_name || '').toLowerCase();
     if (docSort === 'recent') return new Date(b.created_at || 0) - new Date(a.created_at || 0);
-    if (docSort === 'maturity') return (daysFromToday(getBorrower(a).maturity_date || a.maturity_date) ?? 99999) - (daysFromToday(getBorrower(b).maturity_date || b.maturity_date) ?? 99999);
+    if (docSort === 'maturity') return (daysFromToday(getLoanField(a, 'maturity_date')) ?? 99999) - (daysFromToday(getLoanField(b, 'maturity_date')) ?? 99999);
     if (docSort === 'delinquency') return daysPastDue(b) - daysPastDue(a);
     if (docSort === 'most_docs') return visibleDocCount(b) - visibleDocCount(a) || aBorrower.localeCompare(bBorrower);
     if (docSort === 'no_docs') return visibleDocCount(a) - visibleDocCount(b) || aBorrower.localeCompare(bBorrower);
@@ -2855,15 +2878,16 @@ export default function Portal({ onSubmitRequest, resetToken }) {
           {!loading && sorted.length === 0 && <div style={s.empty}>{searchTerm ? 'No results found.' : `No loans match ${loanFilter.label.toLowerCase()}.`}</div>}
 
           {!loading && paginated.map(r => {
-            const b = getBorrower(r);
             const loc = parseLocation(r);
             const isHov = hoveredId === r.id;
-            const originalBalance = b.original_loan_amount || r.original_loan_amount || r.total_due;
-            const currentBalance = b.principal_balance || r.total_due;
+            const originalBalance = getLoanField(r, 'original_loan_amount', 'original_loan_amount') || getLoanField(r, 'principal_balance', 'total_due');
+            const currentBalance = getLoanField(r, 'principal_balance', 'total_due');
             const days = daysPastDue(r);
             const bucket = statusBucket(r);
             const nextDate = storedNextPaymentDate(r);
             const nextAmount = storedNextPaymentAmount(r);
+            const maturity = getLoanField(r, 'maturity_date');
+            const rate = getLoanField(r, 'interest_rate');
             return (
               <div key={r.id}
                 style={{ display: 'grid', gridTemplateColumns: LOAN_TABLE_COLS, gap: 8, minHeight: 44, padding: '0 14px', borderBottom: '0.5px solid #1b1b1b', alignItems: 'center', fontSize: 12, cursor: 'pointer', background: isHov ? '#171717' : '#111', boxShadow: isHov ? `inset 4px 0 0 ${loanFilter.accent}` : 'none', transition: 'background 0.1s, box-shadow 0.1s' }}
@@ -2874,8 +2898,8 @@ export default function Portal({ onSubmitRequest, resetToken }) {
                 <span style={{ color: '#fff', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.borrower_name || '-'}</span>
                 <span style={{ color: '#777', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{loc.city}</span>
                 <span style={{ color: '#777' }}>{loc.state}</span>
-                <span style={{ color: '#e0d8c8' }}>{formatDate(b.maturity_date || r.maturity_date)}</span>
-                <span style={{ color: '#777' }}>{b.interest_rate || r.interest_rate ? `${b.interest_rate || r.interest_rate}%` : '-'}</span>
+                <span style={{ color: '#e0d8c8' }}>{formatDate(maturity)}</span>
+                <span style={{ color: '#777' }}>{rate ? `${rate}%` : '-'}</span>
                 <span style={{ color: '#777' }}>{formatCurrency(originalBalance)}</span>
                 <span style={{ color: '#f0f0f0', fontWeight: 500 }}>{formatCurrency(currentBalance)}</span>
                 <span style={{ color: '#e0d8c8' }}>{formatDate(nextDate)}</span>
