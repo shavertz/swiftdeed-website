@@ -18,6 +18,27 @@ function parseLocation(address = '') {
   return { city: match?.[1]?.trim() || null, state: match?.[2]?.toUpperCase() || null };
 }
 
+export function normalizeLoanTerms({ loanData, dailyRateForPDF, principal, rate }) {
+  const perDiem = Number.isFinite(dailyRateForPDF) ? parseFloat(dailyRateForPDF.toFixed(2)) : null;
+  const loanType = loanData.loan_type || null;
+  const monthlyPayment = parseFloat(loanData.monthly_payment) || (principal && rate ? parseFloat(((principal * (rate / 100)) / 12).toFixed(2)) : null);
+  const nextPaymentDate = cleanDate(loanData.next_payment_due_date);
+  const loanStartDate = cleanDate(loanData.loan_origination_date || loanData.interest_paid_to_date || loanData.statement_date);
+  const maturityDate = cleanDate(loanData.maturity_date);
+  const { city, state } = parseLocation(loanData.property_address);
+
+  return {
+    perDiem,
+    loanType,
+    monthlyPayment,
+    nextPaymentDate,
+    loanStartDate,
+    maturityDate,
+    city,
+    state,
+  };
+}
+
 export async function upsertBorrower({
   supabase,
   loanData,
@@ -35,13 +56,7 @@ export async function upsertBorrower({
     const legalName = borrowerName || loanData.borrower_name || null;
     if (!legalName) return;
 
-    const perDiem = parseFloat(dailyRateForPDF.toFixed(2));
-    const loanType = loanData.loan_type || null;
-    const monthlyPayment = parseFloat(loanData.monthly_payment) || (principal && rate ? parseFloat(((principal * (rate / 100)) / 12).toFixed(2)) : null);
-    const nextPaymentDate = cleanDate(loanData.next_payment_due_date);
-    const loanStartDate = cleanDate(loanData.loan_origination_date || loanData.interest_paid_to_date || loanData.statement_date);
-    const maturityDate = cleanDate(loanData.maturity_date);
-    const { city, state } = parseLocation(loanData.property_address);
+    const { perDiem, loanType, monthlyPayment, nextPaymentDate, loanStartDate, maturityDate, city, state } = normalizeLoanTerms({ loanData, dailyRateForPDF, principal, rate });
     const token = generateToken();
     const activationUrl = `${activationBaseUrl || 'https://www.theswiftdeed.com'}#activate=${token}`;
 

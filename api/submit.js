@@ -1,15 +1,12 @@
-import Anthropic from '@anthropic-ai/sdk';
 import formidable from 'formidable';
 import { upsertBorrower } from './lib/borrowers.js';
 import { sendInternalSubmissionEmail } from './lib/email.js';
 import { preparePostRequest } from './lib/http.js';
-import { deriveLoanFieldsFromText, extractReportLabTextFromPdfBuffer, mergeMissingFields } from './lib/pdf-text.js';
+import { extractLoanDataFromUrls } from './lib/loan-extraction.js';
 import { supabase } from './lib/supabase.js';
 
 export const config = { api: { bodyParser: false, responseLimit: false } };
 export const maxDuration = 60;
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 function calculateInterest({ principal, rate, accrualBasis, compoundingFrequency, interestCalculationMethod, daysElapsed, statedPayoffAmount }) {
   const r = rate / 100;
@@ -58,18 +55,6 @@ function calculateInterest({ principal, rate, accrualBasis, compoundingFrequency
   return { interestDue: dailyRate * daysElapsed, useStatedPayoff: false };
 }
 
-function mergeExtractions(results) {
-  const merged = {};
-  for (const result of results) {
-    for (const [key, value] of Object.entries(result)) {
-      if (value !== null && value !== undefined && value !== '' && !merged[key]) {
-        merged[key] = value;
-      }
-    }
-  }
-  return merged;
-}
-
 export default async function handler(req, res) {
   if (preparePostRequest(req, res)) return;
 
@@ -96,6 +81,8 @@ export default async function handler(req, res) {
 
     const fileUrlsRaw = Array.isArray(fields.fileUrls) ? fields.fileUrls[0] : fields.fileUrls;
     const fileUrls = fileUrlsRaw ? JSON.parse(fileUrlsRaw) : [];
+    const loanData = await extractLoanDataFromUrls(fileUrls, { notes, borrowerId });
+    /*
     let pdfTextFallback = '';
     const pdfContents = await Promise.all(fileUrls.map(async (url) => {
       const r = await fetch(url);
@@ -204,7 +191,7 @@ Borrower ID provided by submitter: ${borrowerId || 'none'}`;
       }
     }
 
-    const loanData = mergeMissingFields(mergeExtractions(allExtractions), deriveLoanFieldsFromText(pdfTextFallback));
+    */
 
     const principal   = parseFloat(loanData.unpaid_principal) || 0;
     const rate        = parseFloat(loanData.interest_rate) || 0;
