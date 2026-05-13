@@ -1437,15 +1437,6 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       }
       const persistedUrls = uniqueDocUrls(borrower?.loan_document_urls ?? newUrls);
       syncLoanDocumentState(selected.loan_id_internal, persistedUrls);
-      try {
-        await reprocessLoanDocuments(persistedUrls);
-        await refreshBorrowerState(selected.loan_id_internal);
-      } catch (reprocessError) {
-        console.error('Reprocess after document removal failed:', reprocessError);
-        setDocSuccess(`Document removed. ${reprocessError.message || 'Loan data update failed.'}`);
-        setTimeout(() => setDocSuccess(''), 5000);
-        return;
-      }
       setDocSuccess('Document removed.');
       setTimeout(() => setDocSuccess(''), 4000);
     } catch (e) {

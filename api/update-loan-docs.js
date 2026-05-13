@@ -25,10 +25,25 @@ export default async function handler(req, res) {
       .filter(Boolean);
 
     const docUrlValue = cleanedDocUrls.join(',');
+    const emptyDocsPatch = cleanedDocUrls.length === 0
+      ? {
+          interest_rate: null,
+          per_diem: null,
+          monthly_payment: null,
+          next_payment_date: null,
+          maturity_date: null,
+          loan_type: null,
+          loan_start_date: null,
+          guarantor_name: null,
+          principal_balance: null,
+          original_loan_amount: null,
+        }
+      : {};
 
     const borrowerPayload = {
       loan_id_internal: loanIdInternal,
       loan_document_urls: docUrlValue,
+      ...emptyDocsPatch,
       ...(borrowerName ? { legal_name: borrowerName } : {}),
       ...(borrowerEmail ? { borrower_email: borrowerEmail } : {}),
       ...(lenderEmail ? { lender_email: lenderEmail } : {}),
@@ -36,7 +51,7 @@ export default async function handler(req, res) {
 
     const { data: updatedRows, error } = await supabase
       .from('borrowers')
-      .update({ loan_document_urls: docUrlValue })
+      .update({ loan_document_urls: docUrlValue, ...emptyDocsPatch })
       .eq('loan_id_internal', loanIdInternal)
       .select('id');
 
