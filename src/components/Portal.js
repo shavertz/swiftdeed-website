@@ -1232,6 +1232,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/payoff_requests?from_email=eq.${encodeURIComponent(email)}&order=created_at.desc`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
         const data = await res.json();
         const rows = Array.isArray(data) ? data : [];
+        setRequests(rows);
         const ids = rows.map(r => r.loan_id_internal).filter(Boolean);
         if (ids.length > 0) {
           const bRes = await fetch(`${SUPABASE_URL}/rest/v1/borrowers?loan_id_internal=in.(${ids.map(id => `"${id}"`).join(',')})&select=loan_id_internal,borrower_email,principal_balance,next_payment_date,monthly_payment,payment_status,interest_rate,per_diem,original_loan_amount,total_interest_paid,total_payments_made,legal_name,guarantor_name,portal_access,loan_document_urls,last_payment_date,last_payment_amount,maturity_date,loan_start_date,property_address,city,state,loan_type`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
