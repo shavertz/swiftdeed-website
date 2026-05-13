@@ -2732,7 +2732,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const invoiceLineTable = (title, items, totalLabel = 'Subtotal') => (
     <>
       <div style={{ color: '#FFD700', fontSize: 10, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', padding: '12px 0 8px' }}>{title}</div>
-      <div className="swiftdeed-yellow-scroll" style={{ overflowX: 'auto', overflowY: items.length > 10 ? 'auto' : 'visible', maxHeight: items.length > 10 ? 450 : 'none', background: '#161616', scrollbarColor: '#FFD700 #0f0f0f', scrollbarWidth: 'thin' }}>
+      <div className="swiftdeed-yellow-scroll" style={{ overflowX: 'auto', overflowY: items.length > 10 ? 'auto' : 'visible', maxHeight: items.length > 10 ? 450 : 'none', background: '#161616', scrollbarColor: '#FFD700 #0f0f0f', scrollbarWidth: 'thin', paddingRight: items.length > 10 ? 18 : 0, boxSizing: 'border-box' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 520, tableLayout: 'fixed' }}>
           <colgroup>
             <col style={{ width: '34%' }} />
@@ -2757,7 +2757,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
           </tbody>
         </table>
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 11, borderTop: '0.5px solid #333', marginTop: 4 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 11, paddingRight: items.length > 10 ? 18 : 0, borderTop: '0.5px solid #333', marginTop: 4 }}>
         <span style={{ color: '#fff', fontSize: 12, fontWeight: 700 }}>{totalLabel}</span>
         <span style={{ color: '#fff', fontSize: 12, fontWeight: 700 }}>{formatCurrency(items.reduce((sum, item) => sum + item.amount, 0))}</span>
       </div>
