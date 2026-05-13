@@ -730,21 +730,21 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
     <div style={card}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 14, marginBottom: 10 }}>
         <div style={cardLabel}>Loan documents</div>
-        {docSuccess && <span style={{ fontSize: 11, color: '#34d399' }}>{docSuccess}</span>}
       </div>
-      {docsChanged && (
-        <div style={{ background: '#1d1705', border: '0.5px solid #4a3900', borderLeft: '3px solid #FFD700', borderRadius: 7, padding: '10px 14px', fontSize: 12, color: '#d8c870', marginBottom: 12 }}>
-          Documents uploaded. Click Extract loan data to update this loan.
+      {(uploadingDocs || docsChanged || updateDocSuccess) && (
+        <div style={{ background: updateDocSuccess ? '#071c12' : '#1d1705', border: `0.5px solid ${updateDocSuccess ? '#065f46' : '#4a3900'}`, borderLeft: `3px solid ${updateDocSuccess ? '#34d399' : '#FFD700'}`, borderRadius: 7, padding: '10px 14px', fontSize: 12, color: updateDocSuccess ? '#34d399' : '#d8c870', marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <span>{uploadingDocs ? 'Step 1: Documents saving.' : updateDocSuccess ? 'Loan data updated ✓' : 'Step 2: Extract loan data ->'}</span>
+          {!uploadingDocs && !updateDocSuccess && (
+            <button
+              className="swiftdeed-statement-button"
+              onClick={handleUpdateLoanData}
+              disabled={docsBusy}
+              style={{ background: '#FFD700', color: '#0f0f0f', border: 'none', borderRadius: 7, padding: '8px 16px', fontSize: 12, fontWeight: 700, cursor: docsBusy ? 'not-allowed' : 'pointer', opacity: docsBusy ? 0.7 : 1, fontFamily: 'inherit', marginLeft: 'auto' }}
+            >
+              Extract loan data
+            </button>
+          )}
         </div>
-      )}
-      {(docsChanged || updateDocSuccess) && (
-        <button
-          onClick={handleUpdateLoanData}
-          disabled={docsBusy}
-          style={{ background: '#FFD700', color: '#0f0f0f', border: 'none', borderRadius: 7, padding: '8px 16px', fontSize: 12, fontWeight: 700, cursor: docsBusy ? 'not-allowed' : 'pointer', opacity: docsBusy ? 0.7 : 1, fontFamily: 'inherit', marginBottom: 12 }}
-        >
-          {docsBusy ? 'Updating...' : updateDocSuccess ? 'Loan data updated ✓' : 'Extract loan data'}
-        </button>
       )}
       <input ref={docFileRef} type="file" accept="application/pdf" multiple style={{ display: 'none' }} onChange={e => { handleUploadChangedDocs(e.target.files); e.target.value = ''; }} />
       <div
@@ -1483,11 +1483,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       const persistedUrls = uniqueDocUrls(borrower?.loan_document_urls ?? combined);
       syncLoanDocumentState(selected.loan_id_internal, persistedUrls);
       if (newUrls.length > 0) {
-        setDocSuccess('Documents uploaded. Updating loan data...');
-        await reprocessLoanDocuments(persistedUrls);
-        await refreshBorrowerState(selected.loan_id_internal);
-        setDocSuccess(`${newUrls.length} document${newUrls.length !== 1 ? 's' : ''} uploaded. Loan data updated.`);
-        setTimeout(() => setDocSuccess(''), 5000);
+        setDocSuccess('');
       } else {
         setDocSuccess('No PDF documents were uploaded.');
         setTimeout(() => setDocSuccess(''), 4000);
@@ -2682,7 +2678,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     </div>
   );
 
-  const servicingLineItems = (activeLoans.length ? activeLoans : requests).slice(0, 10).map(loan => ({
+  const servicingLineItems = (activeLoans.length ? activeLoans : requests).map(loan => ({
     type: 'Loan servicing',
     details: `${loan.loan_id_internal || loan.loan_id || '-'} - ${loan.borrower_name || 'Borrower'}`,
     amount: 35,
@@ -2736,7 +2732,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const invoiceLineTable = (title, items, totalLabel = 'Subtotal') => (
     <>
       <div style={{ color: '#FFD700', fontSize: 10, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', padding: '12px 0 8px' }}>{title}</div>
-      <div style={{ overflowX: 'auto' }}>
+      <div className="swiftdeed-yellow-scroll" style={{ overflowX: 'auto', overflowY: items.length > 10 ? 'auto' : 'visible', maxHeight: items.length > 10 ? 450 : 'none', background: '#161616', scrollbarColor: '#FFD700 #0f0f0f', scrollbarWidth: 'thin' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 520, tableLayout: 'fixed' }}>
           <colgroup>
             <col style={{ width: '34%' }} />
