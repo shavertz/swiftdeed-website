@@ -1265,7 +1265,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/borrowers?loan_id_internal=eq.${encodeURIComponent(selected.loan_id_internal)}&select=loan_document_urls&limit=1`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
         const data = await res.json();
         const borrowerDocs = Array.isArray(data) && data.length > 0 ? data[0].loan_document_urls : '';
-        setDocUrls(uniqueDocUrls(borrowerDocs));
+        setDocUrls(uniqueDocUrls(borrowerDocs || selected.loan_document_urls));
       } catch (e) { console.error(e); }
     }
     fetchDocs();
