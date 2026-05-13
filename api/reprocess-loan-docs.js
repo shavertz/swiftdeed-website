@@ -99,14 +99,7 @@ export default async function handler(req, res) {
       .limit(1);
     if (existingBorrowerError) throw existingBorrowerError;
 
-    const { data: existingRequestRows, error: existingRequestError } = await supabase
-      .from('payoff_requests')
-      .select('borrower_email')
-      .eq('loan_id_internal', loanIdInternal)
-      .limit(1);
-    if (existingRequestError) throw existingRequestError;
-
-    const borrowerEmail = existingBorrowerRows?.[0]?.borrower_email || existingRequestRows?.[0]?.borrower_email || null;
+    const borrowerEmail = existingBorrowerRows?.[0]?.borrower_email || null;
 
     const borrowerPatch = clean({
       loan_id_internal: loanIdInternal,
@@ -128,27 +121,10 @@ export default async function handler(req, res) {
       loan_document_urls: docUrlValue,
     });
 
-    const requestPatch = clean({
-      borrower_name: data.borrower_name,
-      property_address: data.property_address,
-      total_due: principal,
-      interest_rate: rate,
-      per_diem: perDiem,
-      guarantor_name: data.guarantor_name,
-      monthly_payment: monthlyPayment,
-      loan_type: loanType,
-      loan_start_date: date(data.loan_origination_date),
-      maturity_date: date(data.maturity_date),
-      next_payment_date: date(data.next_payment_due_date),
-      loan_document_urls: docUrlValue,
-    });
-
     const { data: borrowerRows, error: borrowerError } = await supabase.from('borrowers').upsert(borrowerPatch, { onConflict: 'loan_id_internal' }).select();
     if (borrowerError) throw borrowerError;
-    const { data: requestRows, error: requestError } = await supabase.from('payoff_requests').update(requestPatch).eq('loan_id_internal', loanIdInternal).select();
-    if (requestError) throw requestError;
 
-    return res.status(200).json({ success: true, borrower: borrowerRows?.[0] || null, request: requestRows?.[0] || null });
+    return res.status(200).json({ success: true, borrower: borrowerRows?.[0] || null, request: null });
   } catch (error) {
     console.error('Reprocess loan docs error:', error);
     return res.status(500).json({ error: error.message });
