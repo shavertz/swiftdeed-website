@@ -32,6 +32,34 @@ function uniqueDocUrls(...values) {
   return [...new Set(values.flatMap(parseDocUrls))];
 }
 
+function firstPresent(...values) {
+  return values.find(value => value !== null && value !== undefined && value !== '') ?? null;
+}
+
+function mergeBorrowerIntoLoanRow(request, borrower) {
+  if (!borrower) return request;
+  return {
+    ...request,
+    borrower_name: firstPresent(borrower.legal_name, request.borrower_name),
+    borrower_email: firstPresent(borrower.borrower_email, request.borrower_email),
+    property_address: firstPresent(borrower.property_address, request.property_address),
+    city: firstPresent(borrower.city, request.city),
+    state: firstPresent(borrower.state, request.state),
+    total_due: firstPresent(borrower.principal_balance, request.total_due),
+    original_loan_amount: firstPresent(borrower.original_loan_amount, request.original_loan_amount, request.total_due),
+    interest_rate: firstPresent(borrower.interest_rate, request.interest_rate),
+    per_diem: firstPresent(borrower.per_diem, request.per_diem),
+    monthly_payment: firstPresent(borrower.monthly_payment, request.monthly_payment),
+    payment_status: firstPresent(borrower.payment_status, request.payment_status),
+    loan_type: firstPresent(borrower.loan_type, request.loan_type),
+    loan_start_date: firstPresent(borrower.loan_start_date, request.loan_start_date),
+    maturity_date: firstPresent(borrower.maturity_date, request.maturity_date),
+    next_payment_date: firstPresent(borrower.next_payment_date, request.next_payment_date),
+    guarantor_name: firstPresent(borrower.guarantor_name, request.guarantor_name),
+    loan_document_urls: firstPresent(borrower.loan_document_urls, request.loan_document_urls),
+  };
+}
+
 
 const PAGE_SIZE = 15;
 
@@ -520,7 +548,7 @@ function MonthlyStatementPreviewModal({ doc, borrower, lenderName, onClose }) {
 }
 
 //  Loan Detail Page 
-function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, docSuccess, uploadingDocs, docFileRef, lenderEmail, lenderName, borrowerEmails, setBorrowerEmails, onBack, onRecordPayment, onRemoveDoc, onUploadDocs, onDeleteLoan, onViewDocuments, onGeneratePayoff, paymentSuccess }) {
+function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, docSuccess, uploadingDocs, docFileRef, lenderEmail, lenderName, borrowerEmails, setBorrowerEmails, onBack, onRecordPayment, onRemoveDoc, onUploadDocs, onUpdateLoanData, onDeleteLoan, onViewDocuments, onGeneratePayoff, paymentSuccess }) {
   const [showAllPayments, setShowAllPayments] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [loanNotes, setLoanNotes] = useState(liveData?.notes || selected?.notes || '');
@@ -674,15 +702,7 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
   async function handleUpdateLoanData() {
     setUpdatingDocs(true);
     try {
-      const res = await fetch('/api/reprocess-loan-docs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          loanIdInternal: selected.loan_id_internal,
-          newDocUrls: docUrls,
-        }),
-      });
-      if (!res.ok) throw new Error('Reprocess failed');
+      await onUpdateLoanData(docUrls);
       setDocsChanged(false);
       setUpdateDocSuccess(true);
       setTimeout(() => setUpdateDocSuccess(false), 4000);
@@ -1212,7 +1232,6 @@ export default function Portal({ onSubmitRequest, resetToken }) {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/payoff_requests?from_email=eq.${encodeURIComponent(email)}&order=created_at.desc`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
         const data = await res.json();
         const rows = Array.isArray(data) ? data : [];
-        setRequests(rows);
         const ids = rows.map(r => r.loan_id_internal).filter(Boolean);
         if (ids.length > 0) {
           const bRes = await fetch(`${SUPABASE_URL}/rest/v1/borrowers?loan_id_internal=in.(${ids.map(id => `"${id}"`).join(',')})&select=loan_id_internal,borrower_email,principal_balance,next_payment_date,monthly_payment,payment_status,interest_rate,per_diem,original_loan_amount,total_interest_paid,total_payments_made,legal_name,guarantor_name,portal_access,loan_document_urls,last_payment_date,last_payment_amount,maturity_date,loan_start_date,property_address,city,state,loan_type`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
@@ -1226,28 +1245,12 @@ export default function Portal({ onSubmitRequest, resetToken }) {
                 dataMap[b.loan_id_internal] = b;
               }
             });
-            rows.forEach(r => {
-              if (!r.loan_id_internal) return;
-              dataMap[r.loan_id_internal] = {
-                ...r,
-                ...(dataMap[r.loan_id_internal] || {}),
-                legal_name: dataMap[r.loan_id_internal]?.legal_name || r.borrower_name,
-                principal_balance: dataMap[r.loan_id_internal]?.principal_balance || r.total_due,
-                original_loan_amount: dataMap[r.loan_id_internal]?.original_loan_amount || r.total_due,
-                interest_rate: dataMap[r.loan_id_internal]?.interest_rate || r.interest_rate,
-                per_diem: dataMap[r.loan_id_internal]?.per_diem || r.per_diem,
-                monthly_payment: dataMap[r.loan_id_internal]?.monthly_payment || r.monthly_payment,
-                loan_type: dataMap[r.loan_id_internal]?.loan_type || r.loan_type,
-                loan_start_date: dataMap[r.loan_id_internal]?.loan_start_date || r.loan_start_date,
-                maturity_date: dataMap[r.loan_id_internal]?.maturity_date || r.maturity_date,
-                next_payment_date: dataMap[r.loan_id_internal]?.next_payment_date || r.next_payment_date,
-                guarantor_name: dataMap[r.loan_id_internal]?.guarantor_name || r.guarantor_name,
-                loan_document_urls: dataMap[r.loan_id_internal]?.loan_document_urls || r.loan_document_urls || '',
-              };
-            });
             setBorrowerEmails(emailMap);
             setBorrowerData(dataMap);
+            setRequests(rows.map(r => mergeBorrowerIntoLoanRow(r, dataMap[r.loan_id_internal])));
           }
+        } else {
+          setRequests(rows);
         }
       } catch (e) { console.error(e); } finally { setLoading(false); }
     }
@@ -1261,10 +1264,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/borrowers?loan_id_internal=eq.${encodeURIComponent(selected.loan_id_internal)}&select=loan_document_urls&limit=1`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
         const data = await res.json();
         const borrowerDocs = Array.isArray(data) && data.length > 0 ? data[0].loan_document_urls : '';
-        const reqRes = await fetch(`${SUPABASE_URL}/rest/v1/payoff_requests?loan_id_internal=eq.${encodeURIComponent(selected.loan_id_internal)}&select=loan_document_urls&limit=1`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
-        const reqData = await reqRes.json();
-        const requestDocs = Array.isArray(reqData) && reqData.length > 0 ? reqData[0].loan_document_urls : '';
-        setDocUrls(uniqueDocUrls(borrowerDocs, selected.loan_document_urls, requestDocs));
+        setDocUrls(uniqueDocUrls(borrowerDocs));
       } catch (e) { console.error(e); }
     }
     fetchDocs();
@@ -1338,6 +1338,8 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       };
       setLiveData(mergedBorrower);
       setBorrowerData(prev => ({ ...prev, [data.borrower.loan_id_internal]: mergedBorrower }));
+      setRequests(prev => prev.map(r => r.loan_id_internal === data.borrower.loan_id_internal ? mergeBorrowerIntoLoanRow(r, mergedBorrower) : r));
+      setSelected(prev => prev?.loan_id_internal === data.borrower.loan_id_internal ? mergeBorrowerIntoLoanRow(prev, mergedBorrower) : prev);
     }
     if (data?.request?.loan_id_internal) {
       setRequests(prev => prev.map(r => r.loan_id_internal === data.request.loan_id_internal ? { ...r, ...data.request } : r));
@@ -1364,7 +1366,6 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       const res = await fetch('/api/update-loan-docs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ loanIdInternal: selected.loan_id_internal, newDocUrls: newUrls, lenderEmail: email, lenderName, borrowerEmail, borrowerName: selected.borrower_name, docsAdded: false }) });
       if (!res.ok) throw new Error('Document removal failed');
       syncLoanDocumentState(selected.loan_id_internal, newUrls);
-      await reprocessLoanDocuments(newUrls);
       setDocSuccess('Document removed.');
       setTimeout(() => setDocSuccess(''), 4000);
     } catch (e) {
@@ -2896,6 +2897,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       onRecordPayment={() => { setPaymentSuccess(false); setShowPaymentModal(true); }}
       onRemoveDoc={handleRemoveDoc}
       onUploadDocs={handleUploadDocs}
+      onUpdateLoanData={reprocessLoanDocuments}
       onDeleteLoan={() => { setShowDeleteModal(true); setDeleteConfirmText(''); }}
       onViewDocuments={openLoanDocuments}
       onGeneratePayoff={openPayoffModal}
