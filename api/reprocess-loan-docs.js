@@ -98,17 +98,19 @@ export default async function handler(req, res) {
 
     const { data: existingBorrowerRows, error: existingBorrowerError } = await supabase
       .from('borrowers')
-      .select('borrower_email')
+      .select('borrower_email,lender_email')
       .eq('loan_id_internal', loanIdInternal)
       .limit(1);
     if (existingBorrowerError) throw existingBorrowerError;
 
-    const borrowerEmail = existingBorrowerRows?.[0]?.borrower_email || null;
+    const existingBorrower = existingBorrowerRows?.[0] || {};
+    const borrowerEmail = existingBorrower.borrower_email || null;
 
     const borrowerPatch = clean({
       loan_id_internal: loanIdInternal,
       legal_name: data.borrower_name,
       borrower_email: borrowerEmail,
+      lender_email: existingBorrower.lender_email || null,
       property_address: data.property_address,
       guarantor_name: data.guarantor_name,
       city: loc.city,
@@ -125,10 +127,24 @@ export default async function handler(req, res) {
       loan_document_urls: docUrlValue,
     });
 
-    const { data: borrowerRows, error: borrowerError } = await supabase.from('borrowers').upsert(borrowerPatch, { onConflict: 'loan_id_internal' }).select();
+    const { data: updatedRows, error: borrowerError } = await supabase
+      .from('borrowers')
+      .update(borrowerPatch)
+      .eq('loan_id_internal', loanIdInternal)
+      .select();
     if (borrowerError) throw borrowerError;
 
-    return res.status(200).json({ success: true, borrower: borrowerRows?.[0] || null, request: null });
+    if (updatedRows?.length) {
+      return res.status(200).json({ success: true, borrower: updatedRows[0], request: null });
+    }
+
+    const { data: insertedRows, error: insertError } = await supabase
+      .from('borrowers')
+      .insert(borrowerPatch)
+      .select();
+    if (insertError) throw insertError;
+
+    return res.status(200).json({ success: true, borrower: insertedRows?.[0] || null, request: null });
   } catch (error) {
     console.error('Reprocess loan docs error:', error);
     return res.status(500).json({ error: error.message });
