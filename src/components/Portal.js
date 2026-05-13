@@ -734,7 +734,7 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
       </div>
       {docsChanged && (
         <div style={{ background: '#1d1705', border: '0.5px solid #4a3900', borderLeft: '3px solid #FFD700', borderRadius: 7, padding: '10px 14px', fontSize: 12, color: '#d8c870', marginBottom: 12 }}>
-          Documents changed. Click Update loan data to re-extract and update this loan.
+          Documents uploaded. Click Extract loan data to update this loan.
         </div>
       )}
       {(docsChanged || updateDocSuccess) && (
@@ -743,7 +743,7 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
           disabled={docsBusy}
           style={{ background: '#FFD700', color: '#0f0f0f', border: 'none', borderRadius: 7, padding: '8px 16px', fontSize: 12, fontWeight: 700, cursor: docsBusy ? 'not-allowed' : 'pointer', opacity: docsBusy ? 0.7 : 1, fontFamily: 'inherit', marginBottom: 12 }}
         >
-          {docsBusy ? 'Updating...' : updateDocSuccess ? 'Updated ✓' : 'Update loan data'}
+          {docsBusy ? 'Updating...' : updateDocSuccess ? 'Loan data updated ✓' : 'Extract loan data'}
         </button>
       )}
       <input ref={docFileRef} type="file" accept="application/pdf" multiple style={{ display: 'none' }} onChange={e => { handleUploadChangedDocs(e.target.files); e.target.value = ''; }} />
