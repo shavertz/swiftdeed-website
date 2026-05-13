@@ -2735,9 +2735,9 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       <div className="swiftdeed-yellow-scroll" style={{ overflowX: 'auto', overflowY: items.length > 10 ? 'auto' : 'visible', maxHeight: items.length > 10 ? 450 : 'none', background: '#161616', scrollbarColor: '#FFD700 #0f0f0f', scrollbarWidth: 'thin', paddingRight: items.length > 10 ? 18 : 0, boxSizing: 'border-box' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 520, tableLayout: 'fixed' }}>
           <colgroup>
-            <col style={{ width: '34%' }} />
-            <col style={{ width: '48%' }} />
-            <col style={{ width: '18%' }} />
+            <col style={{ width: 280 }} />
+            <col />
+            <col style={{ width: 120 }} />
           </colgroup>
           <thead>
             <tr>
