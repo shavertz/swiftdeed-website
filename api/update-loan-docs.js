@@ -33,13 +33,26 @@ export default async function handler(req, res) {
       ...(borrowerEmail ? { borrower_email: borrowerEmail } : {}),
     };
 
-    const { error } = await supabase
+    const { data: updatedRows, error } = await supabase
       .from('borrowers')
-      .upsert(borrowerPayload, { onConflict: 'loan_id_internal' });
+      .update({ loan_document_urls: docUrlValue })
+      .eq('loan_id_internal', loanIdInternal)
+      .select('id');
 
     if (error) {
       console.error('Update docs error:', error);
       return res.status(500).json({ error: error.message });
+    }
+
+    if (!updatedRows || updatedRows.length === 0) {
+      const { error: insertError } = await supabase
+        .from('borrowers')
+        .insert(borrowerPayload);
+
+      if (insertError) {
+        console.error('Insert docs borrower error:', insertError);
+        return res.status(500).json({ error: insertError.message });
+      }
     }
 
     try {
