@@ -613,17 +613,25 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
     return 'Other';
   };
   const documentName = url => decodeURIComponent(url.split('/').pop()).replace(/^\d+_/, '').replace(/[-_]/g, ' ').replace('.pdf', '').trim();
+  const docsBusy = uploadingDocs || updatingDocs;
   const handleDocDrop = e => {
     e.preventDefault();
-    if (!uploadingDocs && e.dataTransfer.files?.length) handleUploadChangedDocs(e.dataTransfer.files);
+    if (!docsBusy && e.dataTransfer.files?.length) handleUploadChangedDocs(e.dataTransfer.files);
   };
   const handleUploadChangedDocs = files => {
+    if (docsBusy) return;
     setDocsChanged(true);
     onUploadDocs(files);
   };
-  const handleRemoveChangedDoc = url => {
+  const handleRemoveChangedDoc = async url => {
+    if (docsBusy) return;
     setDocsChanged(true);
-    onRemoveDoc(url);
+    setUpdatingDocs(true);
+    try {
+      await onRemoveDoc(url);
+    } finally {
+      setUpdatingDocs(false);
+    }
   };
   const tabButton = (id, label) => ({
     background: activeTab === id ? '#171717' : 'transparent',
@@ -732,17 +740,17 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
       {(docsChanged || updateDocSuccess) && (
         <button
           onClick={handleUpdateLoanData}
-          disabled={updatingDocs}
-          style={{ background: '#FFD700', color: '#0f0f0f', border: 'none', borderRadius: 7, padding: '8px 16px', fontSize: 12, fontWeight: 700, cursor: updatingDocs ? 'not-allowed' : 'pointer', opacity: updatingDocs ? 0.7 : 1, fontFamily: 'inherit', marginBottom: 12 }}
+          disabled={docsBusy}
+          style={{ background: '#FFD700', color: '#0f0f0f', border: 'none', borderRadius: 7, padding: '8px 16px', fontSize: 12, fontWeight: 700, cursor: docsBusy ? 'not-allowed' : 'pointer', opacity: docsBusy ? 0.7 : 1, fontFamily: 'inherit', marginBottom: 12 }}
         >
-          {updatingDocs ? 'Updating...' : updateDocSuccess ? 'Updated ✓' : 'Update loan data'}
+          {docsBusy ? 'Updating...' : updateDocSuccess ? 'Updated ✓' : 'Update loan data'}
         </button>
       )}
-      <input ref={docFileRef} type="file" accept="application/pdf" multiple style={{ display: 'none' }} onChange={e => handleUploadChangedDocs(e.target.files)} />
+      <input ref={docFileRef} type="file" accept="application/pdf" multiple style={{ display: 'none' }} onChange={e => { handleUploadChangedDocs(e.target.files); e.target.value = ''; }} />
       <div
         onDragOver={e => e.preventDefault()}
         onDrop={handleDocDrop}
-        onClick={() => docFileRef.current.click()}
+        onClick={() => { if (!docsBusy) docFileRef.current.click(); }}
         style={{
           border: '0.5px dashed #3a3300',
           background: '#0d0d0d',
@@ -753,17 +761,17 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
           alignItems: 'center',
           justifyContent: 'center',
           gap: 7,
-          color: uploadingDocs ? '#555' : '#ccc',
-          cursor: uploadingDocs ? 'not-allowed' : 'pointer',
+          color: docsBusy ? '#555' : '#ccc',
+          cursor: docsBusy ? 'not-allowed' : 'pointer',
           marginBottom: 16,
           transition: 'all 0.15s',
         }}
-        onMouseEnter={e => { if (!uploadingDocs) { e.currentTarget.style.borderColor = '#FFD700'; e.currentTarget.style.background = '#121000'; } }}
+        onMouseEnter={e => { if (!docsBusy) { e.currentTarget.style.borderColor = '#FFD700'; e.currentTarget.style.background = '#121000'; } }}
         onMouseLeave={e => { e.currentTarget.style.borderColor = '#3a3300'; e.currentTarget.style.background = '#0d0d0d'; }}
       >
         {isDocumentsTab && <div style={{ width: 38, height: 38, borderRadius: 8, border: '0.5px solid #252525', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFD700', fontSize: 22 }}>^</div>}
         <div style={{ fontSize: isDocumentsTab ? 15 : 13, color: '#ddd' }}>{isDocumentsTab ? 'Drag and drop loan documents here' : 'Drag and drop additional loan documents'}</div>
-        <div style={{ fontSize: 12, color: '#555' }}>{uploadingDocs ? 'Uploading...' : 'Browse to upload - PDF only'}</div>
+        <div style={{ fontSize: 12, color: '#555' }}>{docsBusy ? 'Updating...' : 'Browse to upload - PDF only'}</div>
       </div>
       {docSuccess && <div style={{ color: docSuccess.startsWith('Could') ? '#f87171' : '#34d399', fontSize: 12, marginBottom: 12 }}>{docSuccess}</div>}
       {docUrls.length === 0 ? (
@@ -788,7 +796,7 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
             {isDocumentsTab && <div style={{ fontSize: 12, color: '#555' }}>-</div>}
             <div style={{ display: 'flex', gap: 12, justifyContent: isDocumentsTab ? 'flex-end' : 'flex-start', alignItems: 'center' }}>
               {isDocumentsTab && <a href={url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: '#FFD700', textDecoration: 'none' }}>View</a>}
-            <button onClick={() => handleRemoveChangedDoc(url)} style={{ background: 'transparent', border: 'none', color: '#555', cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }}
+            <button disabled={docsBusy} onClick={() => handleRemoveChangedDoc(url)} style={{ background: 'transparent', border: 'none', color: docsBusy ? '#333' : '#555', cursor: docsBusy ? 'not-allowed' : 'pointer', fontSize: 12, fontFamily: 'inherit' }}
               onMouseEnter={e => e.currentTarget.style.color = '#f87171'} onMouseLeave={e => e.currentTarget.style.color = '#555'}>
               Remove
             </button>
@@ -1382,6 +1390,23 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     }
   }
 
+  async function refreshBorrowerState(loanIdInternal) {
+    if (!loanIdInternal) return null;
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/borrowers?loan_id_internal=eq.${encodeURIComponent(loanIdInternal)}&limit=1&select=*`, {
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+    });
+    const data = await res.json();
+    const borrower = Array.isArray(data) && data.length > 0 ? data[0] : null;
+    if (borrower) {
+      syncExtractedLoanData({ borrower });
+      setDocUrls(uniqueDocUrls(borrower.loan_document_urls));
+      if (borrower.borrower_email !== undefined) {
+        setBorrowerEmails(prev => ({ ...prev, [loanIdInternal]: borrower.borrower_email }));
+      }
+    }
+    return borrower;
+  }
+
   async function reprocessLoanDocuments(urls) {
     const res = await fetch('/api/reprocess-loan-docs', {
       method: 'POST',
@@ -1404,9 +1429,17 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       let updateData = {};
       try { updateData = await res.json(); } catch {}
       if (!res.ok) throw new Error(updateData.details || updateData.error || 'Document removal failed');
-      syncLoanDocumentState(selected.loan_id_internal, newUrls);
+      let borrower = null;
       try {
-        await reprocessLoanDocuments(newUrls);
+        borrower = await refreshBorrowerState(selected.loan_id_internal);
+      } catch (refreshError) {
+        console.error('Borrower refresh after document removal failed:', refreshError);
+      }
+      const persistedUrls = uniqueDocUrls(borrower?.loan_document_urls ?? newUrls);
+      syncLoanDocumentState(selected.loan_id_internal, persistedUrls);
+      try {
+        await reprocessLoanDocuments(persistedUrls);
+        await refreshBorrowerState(selected.loan_id_internal);
       } catch (reprocessError) {
         console.error('Reprocess after document removal failed:', reprocessError);
         setDocSuccess(`Document removed. ${reprocessError.message || 'Loan data update failed.'}`);
@@ -1425,6 +1458,8 @@ export default function Portal({ onSubmitRequest, resetToken }) {
 
   async function handleUploadDocs(files) {
     if (!files || files.length === 0) return;
+    const previousUrls = docUrls;
+    let wroteDocs = false;
     setUploadingDocs(true);
     try {
       const { createClient: sc } = await import('@supabase/supabase-js');
@@ -1447,9 +1482,19 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       let updateData = {};
       try { updateData = await res.json(); } catch {}
       if (!res.ok) throw new Error(updateData.details || updateData.error || 'Document update failed');
+      wroteDocs = true;
+      let borrower = null;
+      try {
+        borrower = await refreshBorrowerState(selected.loan_id_internal);
+      } catch (refreshError) {
+        console.error('Borrower refresh after document upload failed:', refreshError);
+      }
+      const persistedUrls = uniqueDocUrls(borrower?.loan_document_urls ?? combined);
+      syncLoanDocumentState(selected.loan_id_internal, persistedUrls);
       if (newUrls.length > 0) {
         setDocSuccess('Documents uploaded. Updating loan data...');
-        await reprocessLoanDocuments(combined);
+        await reprocessLoanDocuments(persistedUrls);
+        await refreshBorrowerState(selected.loan_id_internal);
         setDocSuccess(`${newUrls.length} document${newUrls.length !== 1 ? 's' : ''} uploaded. Loan data updated.`);
         setTimeout(() => setDocSuccess(''), 5000);
       } else {
@@ -1458,6 +1503,10 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       }
     } catch (e) {
       console.error('Upload error:', e);
+      if (!wroteDocs) {
+        setDocUrls(previousUrls);
+        syncLoanDocumentState(selected.loan_id_internal, previousUrls);
+      }
       setDocSuccess(`Could not upload documents: ${e.message || 'Try again.'}`);
       setTimeout(() => setDocSuccess(''), 8000);
     } finally { setUploadingDocs(false); }
