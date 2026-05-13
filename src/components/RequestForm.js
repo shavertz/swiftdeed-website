@@ -131,7 +131,7 @@ function SuccessScreen({ form, files, turnaround, onReset }) {
   );
 }
 
-function PaymentForm({ turnaround, form, files, onSubmitting, onProcessingStep, onSuccess }) {
+function PaymentForm({ turnaround, form, files, lenderEmail, onSubmitting, onProcessingStep, onSuccess }) {
   const stripe = useStripe();
   const elements = useElements();
   const [submitting, setSubmitting] = useState(false);
@@ -186,6 +186,7 @@ function PaymentForm({ turnaround, form, files, onSubmitting, onProcessingStep, 
 
       const data = new FormData();
       Object.entries(form).forEach(([k, v]) => data.append(k, v));
+      data.append('lenderEmail', lenderEmail || form.email);
       data.append('turnaround', turnaround);
       data.append('paymentIntentId', paymentIntentId || '');
       data.append('skipPayment', skipPayment ? 'true' : 'false');
@@ -418,7 +419,7 @@ export default function RequestForm() {
         <hr style={s.divider} />
         <div style={s.sectionLabel}>Payment</div>
         <Elements stripe={stripePromise}>
-          <PaymentForm turnaround={turnaround} form={form} files={files} onSubmitting={handleSetSubmitting} onProcessingStep={setProcessingStep} onSuccess={() => setSubmitted(true)} />
+          <PaymentForm turnaround={turnaround} form={form} files={files} lenderEmail={user?.primaryEmailAddress?.emailAddress} onSubmitting={handleSetSubmitting} onProcessingStep={setProcessingStep} onSuccess={() => setSubmitted(true)} />
         </Elements>
       </div>
     </div>

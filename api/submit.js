@@ -89,8 +89,10 @@ export default async function handler(req, res) {
     const borrowerId = Array.isArray(fields.borrowerId)    ? fields.borrowerId[0]    : fields.borrowerId;
     const notes      = Array.isArray(fields.notes)         ? fields.notes[0]         : fields.notes;
     const turnaround = Array.isArray(fields.turnaround)    ? fields.turnaround[0]    : fields.turnaround;
+    const lenderEmail = Array.isArray(fields.lenderEmail)  ? fields.lenderEmail[0]  : fields.lenderEmail;
     const borrowerEmail = Array.isArray(fields.borrowerEmail) ? fields.borrowerEmail[0] : fields.borrowerEmail;
     const borrowerName  = Array.isArray(fields.borrowerName)  ? fields.borrowerName[0]  : fields.borrowerName;
+    const ownerEmail = lenderEmail || email;
 
     const fileUrlsRaw = Array.isArray(fields.fileUrls) ? fields.fileUrls[0] : fields.fileUrls;
     const fileUrls = fileUrlsRaw ? JSON.parse(fileUrlsRaw) : [];
@@ -254,7 +256,7 @@ Borrower ID provided by submitter: ${borrowerId || 'none'}`;
     const monthlyPayment = parseFloat(loanData.monthly_payment) || (principal && rate ? parseFloat(((principal * (rate / 100)) / 12).toFixed(2)) : null);
 
     const requestPayload = {
-      from_email: email,
+      from_email: ownerEmail,
       borrower_name: loanData.borrower_name,
       property_address: loanData.property_address,
       loan_id: loanData.loan_id || internalLoanId,
@@ -323,7 +325,7 @@ Borrower ID provided by submitter: ${borrowerId || 'none'}`;
       rate,
       borrowerEmail: borrowerEmail || null,
       borrowerName: borrowerName || null,
-      lenderEmail: email || null,
+      lenderEmail: ownerEmail || null,
       activationBaseUrl,
     });
 
