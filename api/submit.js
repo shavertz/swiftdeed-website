@@ -302,8 +302,12 @@ Borrower ID provided by submitter: ${borrowerId || 'none'}`;
         notes: requestPayload.notes,
         interest_rate: requestPayload.interest_rate,
         per_diem: requestPayload.per_diem,
+        monthly_payment: requestPayload.monthly_payment,
+        loan_type: requestPayload.loan_type,
         maturity_date: requestPayload.maturity_date,
+        loan_start_date: requestPayload.loan_start_date,
         next_payment_date: requestPayload.next_payment_date,
+        guarantor_name: requestPayload.guarantor_name,
       };
       const { error: fallbackError } = await supabase.from('payoff_requests').insert(fallbackPayload);
       if (fallbackError) throw fallbackError;

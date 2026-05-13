@@ -529,6 +529,9 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
   const [emailInput, setEmailInput] = useState('');
   const [savingEmail, setSavingEmail] = useState(false);
   const [emailSaved, setEmailSaved] = useState(false);
+  const [docsChanged, setDocsChanged] = useState(false);
+  const [updatingDocs, setUpdatingDocs] = useState(false);
+  const [updateDocSuccess, setUpdateDocSuccess] = useState(false);
 
   const live = liveData || {};
   const balance = live.principal_balance != null ? live.principal_balance : selected?.total_due;
@@ -582,7 +585,15 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
   const documentName = url => decodeURIComponent(url.split('/').pop()).replace(/^\d+_/, '').replace(/[-_]/g, ' ').replace('.pdf', '').trim();
   const handleDocDrop = e => {
     e.preventDefault();
-    if (!uploadingDocs && e.dataTransfer.files?.length) onUploadDocs(e.dataTransfer.files);
+    if (!uploadingDocs && e.dataTransfer.files?.length) handleUploadChangedDocs(e.dataTransfer.files);
+  };
+  const handleUploadChangedDocs = files => {
+    setDocsChanged(true);
+    onUploadDocs(files);
+  };
+  const handleRemoveChangedDoc = url => {
+    setDocsChanged(true);
+    onRemoveDoc(url);
   };
   const tabButton = (id, label) => ({
     background: activeTab === id ? '#171717' : 'transparent',
@@ -660,13 +671,49 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
     }
   };
 
+  async function handleUpdateLoanData() {
+    setUpdatingDocs(true);
+    try {
+      const res = await fetch('/api/reprocess-loan-docs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          loanIdInternal: selected.loan_id_internal,
+          newDocUrls: docUrls,
+        }),
+      });
+      if (!res.ok) throw new Error('Reprocess failed');
+      setDocsChanged(false);
+      setUpdateDocSuccess(true);
+      setTimeout(() => setUpdateDocSuccess(false), 4000);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setUpdatingDocs(false);
+    }
+  }
+
   const documentsPanel = (
     <div style={card}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 14, marginBottom: 10 }}>
         <div style={cardLabel}>Loan documents</div>
         {docSuccess && <span style={{ fontSize: 11, color: '#34d399' }}>{docSuccess}</span>}
       </div>
-      <input ref={docFileRef} type="file" accept="application/pdf" multiple style={{ display: 'none' }} onChange={e => onUploadDocs(e.target.files)} />
+      {docsChanged && (
+        <div style={{ background: '#1d1705', border: '0.5px solid #4a3900', borderLeft: '3px solid #FFD700', borderRadius: 7, padding: '10px 14px', fontSize: 12, color: '#d8c870', marginBottom: 12 }}>
+          Documents changed. Click Update loan data to re-extract and update this loan.
+        </div>
+      )}
+      {(docsChanged || updateDocSuccess) && (
+        <button
+          onClick={handleUpdateLoanData}
+          disabled={updatingDocs}
+          style={{ background: '#FFD700', color: '#0f0f0f', border: 'none', borderRadius: 7, padding: '8px 16px', fontSize: 12, fontWeight: 700, cursor: updatingDocs ? 'not-allowed' : 'pointer', opacity: updatingDocs ? 0.7 : 1, fontFamily: 'inherit', marginBottom: 12 }}
+        >
+          {updatingDocs ? 'Updating...' : updateDocSuccess ? 'Updated ✓' : 'Update loan data'}
+        </button>
+      )}
+      <input ref={docFileRef} type="file" accept="application/pdf" multiple style={{ display: 'none' }} onChange={e => handleUploadChangedDocs(e.target.files)} />
       <div
         onDragOver={e => e.preventDefault()}
         onDrop={handleDocDrop}
@@ -716,7 +763,7 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
             {isDocumentsTab && <div style={{ fontSize: 12, color: '#555' }}>-</div>}
             <div style={{ display: 'flex', gap: 12, justifyContent: isDocumentsTab ? 'flex-end' : 'flex-start', alignItems: 'center' }}>
               {isDocumentsTab && <a href={url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: '#FFD700', textDecoration: 'none' }}>View</a>}
-            <button onClick={() => onRemoveDoc(url)} style={{ background: 'transparent', border: 'none', color: '#555', cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }}
+            <button onClick={() => handleRemoveChangedDoc(url)} style={{ background: 'transparent', border: 'none', color: '#555', cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }}
               onMouseEnter={e => e.currentTarget.style.color = '#f87171'} onMouseLeave={e => e.currentTarget.style.color = '#555'}>
               Remove
             </button>
