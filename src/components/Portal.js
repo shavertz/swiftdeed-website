@@ -710,6 +710,9 @@ function LoanDetail({ selected, liveData, liveLoading, loanPayments, docUrls, do
       setTimeout(() => setUpdateDocSuccess(false), 4000);
     } catch (e) {
       console.error(e);
+      setUpdateDocSuccess(false);
+      setDocsChanged(true);
+      alert(e.message || 'Loan data update failed.');
     } finally {
       setUpdatingDocs(false);
     }
@@ -1385,8 +1388,10 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ loanIdInternal: selected.loan_id_internal, newDocUrls: urls }),
     });
-    if (!res.ok) throw new Error('Document extraction failed');
-    syncExtractedLoanData(await res.json());
+    let data = {};
+    try { data = await res.json(); } catch {}
+    if (!res.ok) throw new Error(data.details || data.error || 'Document extraction failed');
+    syncExtractedLoanData(data);
   }
 
   async function handleRemoveDoc(urlToRemove) {
@@ -1396,13 +1401,15 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     try {
       const borrowerEmail = borrowerEmails[selected.loan_id_internal] || liveData?.borrower_email;
       const res = await fetch('/api/update-loan-docs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ loanIdInternal: selected.loan_id_internal, newDocUrls: newUrls, lenderEmail: email, lenderName, borrowerEmail, borrowerName: selected.borrower_name, docsAdded: false }) });
-      if (!res.ok) throw new Error('Document removal failed');
+      let updateData = {};
+      try { updateData = await res.json(); } catch {}
+      if (!res.ok) throw new Error(updateData.details || updateData.error || 'Document removal failed');
       syncLoanDocumentState(selected.loan_id_internal, newUrls);
       try {
         await reprocessLoanDocuments(newUrls);
       } catch (reprocessError) {
         console.error('Reprocess after document removal failed:', reprocessError);
-        setDocSuccess('Document removed. Loan data update failed.');
+        setDocSuccess(`Document removed. ${reprocessError.message || 'Loan data update failed.'}`);
         setTimeout(() => setDocSuccess(''), 5000);
         return;
       }
@@ -1437,7 +1444,9 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       syncLoanDocumentState(selected.loan_id_internal, combined);
       const borrowerEmail = borrowerEmails[selected.loan_id_internal] || liveData?.borrower_email;
       const res = await fetch('/api/update-loan-docs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ loanIdInternal: selected.loan_id_internal, newDocUrls: combined, lenderEmail: email, lenderName, borrowerEmail, borrowerName: selected.borrower_name, docsAdded: newUrls.length > 0 }) });
-      if (!res.ok) throw new Error('Document update failed');
+      let updateData = {};
+      try { updateData = await res.json(); } catch {}
+      if (!res.ok) throw new Error(updateData.details || updateData.error || 'Document update failed');
       if (newUrls.length > 0) {
         setDocSuccess('Documents uploaded. Updating loan data...');
         await reprocessLoanDocuments(combined);
@@ -1449,8 +1458,8 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       }
     } catch (e) {
       console.error('Upload error:', e);
-      setDocSuccess('Could not upload documents. Try again.');
-      setTimeout(() => setDocSuccess(''), 5000);
+      setDocSuccess(`Could not upload documents: ${e.message || 'Try again.'}`);
+      setTimeout(() => setDocSuccess(''), 8000);
     } finally { setUploadingDocs(false); }
   }
 
