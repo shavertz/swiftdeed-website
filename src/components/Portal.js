@@ -1166,6 +1166,12 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const [deleting, setDeleting] = useState(false);
   const [uploadingDocs, setUploadingDocs] = useState(false);
   const [docSuccess, setDocSuccess] = useState('');
+  const [transferStep, setTransferStep] = useState(1);
+  const [transferRows, setTransferRows] = useState([
+    { id: 'transfer-1', borrower: 'Crescent City Real Estate Holdings LLC', property: 'New Orleans, LA', balance: '215000', rate: '7.25', maturity: '2056-05-01', originalAmount: '', loanType: '', guarantor: '' },
+    { id: 'transfer-2', borrower: 'River North Development Group LLC', property: 'Chicago, IL', balance: '3200000', rate: '10.25', maturity: '2029-05-01', originalAmount: '3200000', loanType: 'Interest Only', guarantor: 'Mark D. Ellis' },
+    { id: 'transfer-3', borrower: 'Gulf Coast Property Ventures LLC', property: 'Houston, TX', balance: '890000', rate: '11', maturity: '2028-04-01', originalAmount: '', loanType: 'Bridge', guarantor: '' },
+  ]);
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1600);
   const docFileRef = useRef();
 
@@ -1820,7 +1826,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   };
   const quickActionGrid = {
     display: 'grid',
-    gridTemplateColumns: shellNarrow ? '1fr' : 'repeat(2, minmax(0, 1fr))',
+    gridTemplateColumns: shellNarrow ? '1fr' : 'repeat(3, minmax(0, 1fr))',
     gap: 12,
     marginBottom: 28,
   };
@@ -2330,6 +2336,30 @@ export default function Portal({ onSubmitRequest, resetToken }) {
           </span>
           <span style={{ ...onboardingCta, color: '#dbeaf2' }}>Get started <span aria-hidden="true">-&gt;</span></span>
         </button>
+        <button onClick={() => { setActiveView('transfer'); setSelected(null); }} style={{
+          ...onboardingBanner,
+          gridTemplateColumns: shellNarrow ? 'auto 1fr' : 'auto minmax(0, 1fr) auto',
+          width: '100%',
+          minHeight: shellNarrow ? 'auto' : 98,
+          marginBottom: 0,
+          background: '#0a1f1c',
+          border: '0.5px solid #1d6e56',
+          borderLeft: '3px solid #1D9E75',
+          textAlign: 'left',
+          fontFamily: 'inherit',
+          cursor: 'pointer',
+          transition: 'border-color 0.12s, background 0.12s, box-shadow 0.12s',
+        }}
+          onMouseEnter={e => { e.currentTarget.style.background = '#0d2e28'; e.currentTarget.style.boxShadow = '0 12px 28px rgba(29,158,117,0.14)'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = '#0a1f1c'; e.currentTarget.style.boxShadow = 'none'; }}
+        >
+          <span style={{ width: 34, height: 34, borderRadius: 8, background: '#0d2e28', border: '0.5px solid #1d6e56', color: '#5DCAA5', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>⇄</span>
+          <span style={{ minWidth: 0 }}>
+            <span style={{ display: 'block', color: '#fff', fontSize: 14, fontWeight: 600, marginBottom: 2 }}>Transfer existing loans</span>
+            <span style={{ display: 'block', color: '#9FE1CB', fontSize: 13, lineHeight: 1.45 }}>Moving from another servicer? Upload statements, PDFs, or a spreadsheet.</span>
+          </span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'transparent', border: 'none', color: '#5DCAA5', fontSize: 13, fontWeight: 600, padding: 0, whiteSpace: 'nowrap' }}>Transfer →</span>
+        </button>
         <button onClick={() => { setActiveView('documents'); setDocTab('payoff'); setSelected(null); }} style={quickActionCard('amber')} {...quickActionHover('amber')}>
           <span style={payoffIcon}>PDF</span>
           <span style={{ minWidth: 0 }}>
@@ -2402,6 +2432,117 @@ export default function Portal({ onSubmitRequest, resetToken }) {
         </div>
       </div>
       </div>
+    </div>
+  );
+
+  const updateTransferRow = (id, field, value) => {
+    setTransferRows(prev => prev.map(row => row.id === id ? { ...row, [field]: value } : row));
+  };
+  const transferMissingFields = row => [
+    !row.originalAmount ? 'Original loan amount' : null,
+    !row.loanType ? 'Loan type' : null,
+    !row.guarantor ? 'Guarantor' : null,
+  ].filter(Boolean);
+  const transferCompleteCount = transferRows.filter(row => transferMissingFields(row).length === 0).length;
+  const transferTotalBalance = transferRows.reduce((sum, row) => sum + (parseFloat(row.balance) || 0), 0);
+  const transferDocsNeeded = transferRows.length - transferCompleteCount;
+  const transferCard = { background: '#111', border: '0.5px solid #252525', borderRadius: 9, padding: '20px 22px', boxSizing: 'border-box' };
+  const transferLabel = { fontSize: 11, color: '#FFD700', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 };
+  const transferPrimary = { background: '#FFD700', color: '#0f0f0f', border: 'none', borderRadius: 7, padding: '10px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' };
+  const transferSecondary = { background: 'transparent', color: '#FFD700', border: '0.5px solid #4a3900', borderRadius: 7, padding: '10px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' };
+  const transferInput = { width: '100%', background: '#0d0d0d', border: '0.5px solid #252525', borderRadius: 6, color: '#ddd', padding: '9px 10px', fontSize: 12, fontFamily: 'inherit', boxSizing: 'border-box' };
+  const transferView = (
+    <div style={{ padding: contentPad, ...contentWrap }}>
+      {transferStep === 1 && (
+        <>
+          <button onClick={() => setActiveView('dashboard')} style={{ background: 'transparent', border: 'none', color: '#FFD700', padding: 0, marginBottom: 18, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13 }}>Back to Dashboard</button>
+          <div style={{ fontSize: 24, fontWeight: 500, color: '#fff', marginBottom: 22 }}>Transfer existing loans</div>
+          <div style={{ ...transferCard, marginBottom: 16 }}>
+            <div style={transferLabel}>Upload transfer files</div>
+            <div style={{ border: '0.5px dashed #3a3300', background: '#0d0d0d', borderRadius: 9, minHeight: 150, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, color: '#ddd', marginBottom: 14 }}>
+              <div style={{ fontSize: 15 }}>Drag and drop transfer documents</div>
+              <div style={{ color: '#555', fontSize: 12 }}>PDF, Excel, or CSV files accepted</div>
+              <input type="file" accept=".pdf,.xlsx,.csv,.xls" multiple style={{ color: '#777', fontSize: 12, marginTop: 4 }} />
+            </div>
+            <div style={{ color: '#888', fontSize: 13, lineHeight: 1.5, marginBottom: 12 }}>Upload payoff statements, monthly statements, or a spreadsheet from your current servicer. You can also upload an Excel or CSV file with your loan data.</div>
+            <div style={{ background: '#1d1705', border: '0.5px solid #4a3900', borderLeft: '3px solid #FFD700', borderRadius: 7, padding: '10px 14px', color: '#d8c870', fontSize: 12, lineHeight: 1.45, marginBottom: 16 }}>Some fields may need manual entry after extraction — current balance, rate, maturity date, and per diem are typically included. Monthly payment, original loan amount, guarantor, and loan type may need to be filled in manually.</div>
+            <button onClick={() => setTransferStep(2)} style={transferPrimary}>Extract loan data -&gt;</button>
+          </div>
+          <div style={transferCard}>
+            <div style={transferLabel}>Transfer data map</div>
+            <div style={{ display: 'grid', gridTemplateColumns: shellNarrow ? '1fr' : 'repeat(3, minmax(0, 1fr))', gap: 12 }}>
+              <div style={{ color: '#34d399', fontSize: 13, lineHeight: 1.8 }}>✓ Balance<br />✓ Rate<br />✓ Maturity<br />✓ Next payment<br />✓ Per diem<br />✓ Borrower<br />✓ Property</div>
+              <div style={{ color: '#FFD700', fontSize: 13, lineHeight: 1.8 }}>⚠ Monthly payment</div>
+              <div style={{ color: '#f87171', fontSize: 13, lineHeight: 1.8 }}>✕ Guarantor<br />✕ Original loan amount<br />✕ Loan type</div>
+            </div>
+          </div>
+        </>
+      )}
+      {transferStep === 2 && (
+        <>
+          <button onClick={() => setTransferStep(1)} style={{ background: 'transparent', border: 'none', color: '#FFD700', padding: 0, marginBottom: 18, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13 }}>Back</button>
+          <div style={{ fontSize: 24, fontWeight: 500, color: '#fff', marginBottom: 22 }}>Review transferred loans</div>
+          <div style={transferCard}>
+            <div className="swiftdeed-yellow-scroll" style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', minWidth: 780, borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>{['Borrower / Property', 'Balance', 'Rate', 'Maturity', 'Status', ''].map(h => <th key={h} style={{ color: '#555', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8, padding: '8px 10px', borderBottom: '0.5px solid #252525', textAlign: h === '' ? 'right' : 'left' }}>{h}</th>)}</tr>
+                </thead>
+                <tbody>
+                  {transferRows.map(row => {
+                    const missing = transferMissingFields(row);
+                    return (
+                      <tr key={row.id}>
+                        <td style={{ color: '#ddd', fontSize: 12, padding: '10px', borderBottom: '0.5px solid #1c1c1c' }}>{row.borrower}<div style={{ color: '#555', marginTop: 3 }}>{row.property}</div></td>
+                        <td style={{ color: '#ccc', fontSize: 12, padding: '10px', borderBottom: '0.5px solid #1c1c1c' }}>{formatCurrency(row.balance)}</td>
+                        <td style={{ color: '#ccc', fontSize: 12, padding: '10px', borderBottom: '0.5px solid #1c1c1c' }}>{row.rate}%</td>
+                        <td style={{ color: '#ccc', fontSize: 12, padding: '10px', borderBottom: '0.5px solid #1c1c1c' }}>{formatDate(row.maturity)}</td>
+                        <td style={{ color: missing.length ? '#FFD700' : '#34d399', fontSize: 12, padding: '10px', borderBottom: '0.5px solid #1c1c1c' }}>{missing.length ? `${missing.length} missing` : 'Complete'}</td>
+                        <td style={{ textAlign: 'right', padding: '10px', borderBottom: '0.5px solid #1c1c1c' }}><button style={{ background: 'transparent', border: 'none', color: '#FFD700', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>Edit</button></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            {transferRows.filter(row => transferMissingFields(row).length > 0).map(row => (
+              <div key={`${row.id}-edit`} style={{ marginTop: 16, paddingTop: 16, borderTop: '0.5px solid #252525' }}>
+                <div style={{ color: '#FFD700', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 10 }}>{row.borrower} missing fields</div>
+                <div style={{ display: 'grid', gridTemplateColumns: shellNarrow ? '1fr' : 'repeat(3, minmax(0, 1fr))', gap: 10 }}>
+                  <input value={row.originalAmount} onChange={e => updateTransferRow(row.id, 'originalAmount', e.target.value)} placeholder="Original loan amount" style={transferInput} />
+                  <select value={row.loanType} onChange={e => updateTransferRow(row.id, 'loanType', e.target.value)} style={transferInput}>
+                    <option value="">Loan type</option>
+                    <option>Interest Only</option>
+                    <option>Bridge</option>
+                    <option>Construction</option>
+                    <option>Amortizing</option>
+                  </select>
+                  <input value={row.guarantor} onChange={e => updateTransferRow(row.id, 'guarantor', e.target.value)} placeholder="Guarantor name" style={transferInput} />
+                </div>
+              </div>
+            ))}
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginTop: 18, flexWrap: 'wrap' }}>
+              <button onClick={() => setTransferStep(1)} style={transferSecondary}>Back</button>
+              <button onClick={() => setTransferStep(3)} style={transferPrimary}>Confirm and go live -&gt;</button>
+            </div>
+          </div>
+        </>
+      )}
+      {transferStep === 3 && (
+        <div style={{ ...transferCard, textAlign: 'center', maxWidth: 760 }}>
+          <div style={{ width: 48, height: 48, borderRadius: 999, background: '#071c12', border: '0.5px solid #065f46', color: '#34d399', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, marginBottom: 16 }}>✓</div>
+          <div style={{ color: '#fff', fontSize: 22, fontWeight: 600, marginBottom: 18 }}>{transferRows.length} loans transferred successfully</div>
+          <div style={{ display: 'grid', gridTemplateColumns: shellNarrow ? '1fr' : 'repeat(3, minmax(0, 1fr))', gap: 12, marginBottom: 20 }}>
+            <div style={{ background: '#0d0d0d', border: '0.5px solid #252525', borderRadius: 8, padding: 14 }}><div style={transferLabel}>Loans transferred</div><div style={{ color: '#fff', fontSize: 24 }}>{transferRows.length}</div></div>
+            <div style={{ background: '#0d0d0d', border: '0.5px solid #252525', borderRadius: 8, padding: 14 }}><div style={transferLabel}>Total balance</div><div style={{ color: '#fff', fontSize: 24 }}>{formatCurrency(transferTotalBalance)}</div></div>
+            <div style={{ background: '#0d0d0d', border: '0.5px solid #252525', borderRadius: 8, padding: 14 }}><div style={transferLabel}>Docs needed</div><div style={{ color: '#fff', fontSize: 24 }}>{transferDocsNeeded}</div></div>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <button onClick={() => setActiveView('loans')} style={transferPrimary}>View loans -&gt;</button>
+            <button onClick={() => setTransferStep(1)} style={transferSecondary}>Transfer more loans</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -3024,6 +3165,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     ? detailView
     : activeView === 'dashboard' ? dashboardView
     : activeView === 'loans' ? loansView
+    : activeView === 'transfer' ? transferView
     : activeView === 'documents' ? documentsView
     : activeView === 'invoices' ? invoicesView
     : activeView === 'settings' ? settingsView
