@@ -1170,6 +1170,11 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const [closingDocs, setClosingDocs] = useState([]);
   const [servicerDocs, setServicerDocs] = useState([]);
   const [historyDocs, setHistoryDocs] = useState([]);
+  const [transferLoading, setTransferLoading] = useState(false);
+  const [transferLoans, setTransferLoans] = useState([]);
+  const [transferError, setTransferError] = useState('');
+  const [expandedTransferLoan, setExpandedTransferLoan] = useState(null);
+  const [transferConfirming, setTransferConfirming] = useState(false);
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1600);
   const docFileRef = useRef();
 
@@ -1411,6 +1416,68 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       }
     }
     return borrower;
+  }
+
+  async function handleTransferExtract() {
+    setTransferLoading(true);
+    setTransferError('');
+    try {
+      const { createClient: sc } = await import('@supabase/supabase-js');
+      const sb = sc(process.env.REACT_APP_SUPABASE_URL, process.env.REACT_APP_SUPABASE_ANON_KEY);
+
+      async function uploadFiles(files, bucket) {
+        const urls = [];
+        for (const file of files) {
+          const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+          const { error } = await sb.storage.from(bucket).upload(fileName, file, { contentType: file.type || 'application/pdf' });
+          if (!error) {
+            const { data } = sb.storage.from(bucket).getPublicUrl(fileName);
+            if (data?.publicUrl) urls.push(data.publicUrl);
+          }
+        }
+        return urls;
+      }
+
+      const [closingDocUrls, servicerStatementUrls, paymentHistoryUrls] = await Promise.all([
+        uploadFiles(closingDocs, 'loan-documents'),
+        uploadFiles(servicerDocs, 'loan-documents'),
+        uploadFiles(historyDocs, 'loan-documents'),
+      ]);
+
+      const res = await fetch('/api/transfer-loans', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ closingDocUrls, servicerStatementUrls, paymentHistoryUrls, lenderEmail: email }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Extraction failed');
+      setTransferLoans(data.loans || []);
+      setExpandedTransferLoan(null);
+      setTransferStep(2);
+    } catch (e) {
+      setTransferError(e.message || 'Something went wrong. Please try again.');
+    } finally {
+      setTransferLoading(false);
+    }
+  }
+
+  async function handleTransferConfirm() {
+    setTransferConfirming(true);
+    setTransferError('');
+    try {
+      const res = await fetch('/api/confirm-transfer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ loans: transferLoans, lenderEmail: email, lenderName }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Confirmation failed');
+      setTransferStep(3);
+    } catch (e) {
+      setTransferError(e.message || 'Something went wrong. Please try again.');
+    } finally {
+      setTransferConfirming(false);
+    }
   }
 
   async function reprocessLoanDocuments(urls) {
@@ -2474,19 +2541,96 @@ export default function Portal({ onSubmitRequest, resetToken }) {
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <button className="swiftdeed-statement-button" onClick={() => { if (closingDocs.length === 0 && servicerDocs.length === 0 && historyDocs.length === 0) { alert('Please upload files into at least one zone before proceeding.'); return; } setTransferStep(2); }} style={{ background: '#FFD700', color: '#0f0f0f', border: 'none', borderRadius: 7, padding: '10px 24px', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>Extract loan data <span aria-hidden="true">-&gt;</span></button>
+              <button className="swiftdeed-statement-button" onClick={() => { if (closingDocs.length === 0 && servicerDocs.length === 0 && historyDocs.length === 0) { alert('Please upload files into at least one zone before proceeding.'); return; } handleTransferExtract(); }} disabled={transferLoading} style={{ background: '#FFD700', color: '#0f0f0f', border: 'none', borderRadius: 7, padding: '10px 24px', fontSize: 13, fontWeight: 500, cursor: transferLoading ? 'not-allowed' : 'pointer', opacity: transferLoading ? 0.7 : 1, fontFamily: 'inherit' }}>{transferLoading ? 'Uploading and extracting...' : 'Extract loan data ->'}</button>
             </div>
           </>
         )}
 
         {transferStep === 2 && (
           <div style={{ background: '#111', border: '0.5px solid #252525', borderRadius: 9, padding: '24px' }}>
-            <div style={{ fontSize: 15, fontWeight: 500, color: '#fff', marginBottom: 6 }}>Review extracted loans</div>
-            <div style={{ fontSize: 12, color: '#555', marginBottom: 20 }}>Review the data extracted from your documents. Fix any flagged fields before confirming.</div>
-            <div style={{ color: '#444', fontSize: 13, padding: '40px 0', textAlign: 'center' }}>Extraction in progress. This is where the review table will appear after the API processes the uploaded files.</div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 20 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 500, color: '#fff', marginBottom: 4 }}>Review extracted loans</div>
+                <div style={{ fontSize: 12, color: '#555' }}>{transferLoans.length} loan{transferLoans.length !== 1 ? 's' : ''} found. Fix any flagged fields before confirming.</div>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <span style={{ background: '#0a2416', color: '#34d399', fontSize: 11, padding: '4px 10px', borderRadius: 4 }}>{transferLoans.filter(l => l.complete).length} complete</span>
+                <span style={{ background: '#1f1800', color: '#FFD700', fontSize: 11, padding: '4px 10px', borderRadius: 4 }}>{transferLoans.filter(l => !l.complete).length} need review</span>
+              </div>
+            </div>
+
+            {transferError && <div style={{ color: '#f87171', fontSize: 12, marginBottom: 14 }}>{transferError}</div>}
+
+            <div style={{ border: '0.5px solid #252525', borderRadius: 7, overflow: 'hidden', marginBottom: 20 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: shellNarrow ? '1.5fr 1fr 0.8fr' : '2fr 1fr 0.7fr 0.7fr 0.8fr 80px', gap: 0, padding: '8px 12px', background: '#0d0d0d', borderBottom: '0.5px solid #252525' }}>
+                {(shellNarrow ? ['Borrower / Property', 'Status', ''] : ['Borrower / Property', 'Balance', 'Rate', 'Maturity', 'Status', '']).map(h => (
+                  <span key={h} style={{ fontSize: 10, color: '#555', textTransform: 'uppercase', letterSpacing: 0.7 }}>{h}</span>
+                ))}
+              </div>
+
+              {transferLoans.map((loan, idx) => (
+                <div key={loan._id}>
+                  <div style={{ display: 'grid', gridTemplateColumns: shellNarrow ? '1.5fr 1fr 0.8fr' : '2fr 1fr 0.7fr 0.7fr 0.8fr 80px', gap: 0, padding: '12px', borderBottom: '0.5px solid #1a1a1a', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 500, color: '#fff' }}>{loan.borrower_name || '-'}</div>
+                      <div style={{ fontSize: 11, color: '#555', marginTop: 2 }}>{loan.property_address || '-'}</div>
+                    </div>
+                    {!shellNarrow && <span style={{ fontSize: 12, color: '#ccc' }}>{loan.current_principal_balance ? '$' + Number(loan.current_principal_balance).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'}</span>}
+                    {!shellNarrow && <span style={{ fontSize: 12, color: '#ccc' }}>{loan.interest_rate ? loan.interest_rate + '%' : '-'}</span>}
+                    {!shellNarrow && <span style={{ fontSize: 12, color: '#ccc' }}>{loan.maturity_date ? new Date(loan.maturity_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '-'}</span>}
+                    <span style={{ background: loan.complete ? '#0a2416' : '#1f1800', color: loan.complete ? '#34d399' : '#FFD700', fontSize: 11, padding: '3px 8px', borderRadius: 4, display: 'inline-block', width: 'fit-content' }}>
+                      {loan.complete ? 'Complete' : `${loan.missing.length} missing`}
+                    </span>
+                    <button onClick={() => setExpandedTransferLoan(expandedTransferLoan === idx ? null : idx)} style={{ background: 'transparent', border: '0.5px solid #2a2a2a', color: '#FFD700', fontSize: 11, padding: '5px 10px', borderRadius: 5, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      {expandedTransferLoan === idx ? 'Close' : 'Edit'}
+                    </button>
+                  </div>
+
+                  {expandedTransferLoan === idx && (
+                    <div style={{ background: '#0d0d0d', padding: '14px 12px', borderBottom: '0.5px solid #1a1a1a' }}>
+                      <div style={{ fontSize: 11, color: '#555', marginBottom: 10 }}>Edit extracted fields for this loan:</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: shellNarrow ? '1fr' : 'repeat(3, 1fr)', gap: 10 }}>
+                        {[
+                          { label: 'Borrower name', field: 'borrower_name', type: 'text' },
+                          { label: 'Property address', field: 'property_address', type: 'text' },
+                          { label: 'Original loan amount', field: 'original_loan_amount', type: 'number' },
+                          { label: 'Current balance', field: 'current_principal_balance', type: 'number' },
+                          { label: 'Interest rate (%)', field: 'interest_rate', type: 'number' },
+                          { label: 'Monthly payment', field: 'monthly_payment', type: 'number' },
+                          { label: 'Maturity date', field: 'maturity_date', type: 'date' },
+                          { label: 'Next payment date', field: 'next_payment_date', type: 'date' },
+                          { label: 'Guarantor name', field: 'guarantor_name', type: 'text' },
+                        ].map(({ label, field, type }) => (
+                          <div key={field}>
+                            <label style={{ fontSize: 11, color: loan.missing.includes(field) ? '#FFD700' : '#555', display: 'block', marginBottom: 4 }}>
+                              {label}{loan.missing.includes(field) ? ' *' : ''}
+                            </label>
+                            <input
+                              type={type}
+                              value={loan[field] || ''}
+                              onChange={e => {
+                                const updated = [...transferLoans];
+                                updated[idx] = { ...updated[idx], [field]: e.target.value };
+                                updated[idx].missing = updated[idx].missing.filter(f => f !== field || !e.target.value);
+                                updated[idx].complete = updated[idx].missing.length === 0;
+                                setTransferLoans(updated);
+                              }}
+                              style={{ width: '100%', background: '#1a1a1a', border: `0.5px solid ${loan.missing.includes(field) ? '#4a3900' : '#2a2a2a'}`, borderRadius: 6, padding: '7px 10px', fontSize: 12, color: '#fff', fontFamily: 'inherit', boxSizing: 'border-box', outline: 'none' }}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <button onClick={() => setTransferStep(1)} style={{ background: 'transparent', border: '0.5px solid #2a2a2a', color: '#fff', borderRadius: 7, padding: '10px 18px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>&larr; Back</button>
-              <button className="swiftdeed-statement-button" onClick={() => setTransferStep(3)} style={{ background: '#FFD700', color: '#0f0f0f', border: 'none', borderRadius: 7, padding: '10px 24px', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>Confirm and go live <span aria-hidden="true">-&gt;</span></button>
+              <button className="swiftdeed-statement-button" onClick={handleTransferConfirm} disabled={transferConfirming} style={{ background: '#FFD700', color: '#0f0f0f', border: 'none', borderRadius: 7, padding: '10px 24px', fontSize: 13, fontWeight: 500, cursor: transferConfirming ? 'not-allowed' : 'pointer', opacity: transferConfirming ? 0.7 : 1, fontFamily: 'inherit' }}>
+                {transferConfirming ? 'Confirming...' : 'Confirm and go live ->'}
+              </button>
             </div>
           </div>
         )}
@@ -2494,11 +2638,11 @@ export default function Portal({ onSubmitRequest, resetToken }) {
         {transferStep === 3 && (
           <div style={{ background: '#111', border: '0.5px solid #252525', borderRadius: 9, padding: '40px 24px', textAlign: 'center' }}>
             <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#0a2416', border: '0.5px solid #065f46', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: 22, color: '#34d399' }}>&#10003;</div>
-            <div style={{ fontSize: 16, fontWeight: 500, color: '#fff', marginBottom: 6 }}>Loans transferred successfully</div>
-            <div style={{ fontSize: 13, color: '#555', marginBottom: 24 }}>All loans are now live in SwiftDeed. Upload additional documents to each loan when ready.</div>
+            <div style={{ fontSize: 16, fontWeight: 500, color: '#fff', marginBottom: 6 }}>{transferLoans.length} loan{transferLoans.length !== 1 ? 's' : ''} transferred successfully</div>
+            <div style={{ fontSize: 13, color: '#555', marginBottom: 24 }}>All loans are now live in SwiftDeed. You can upload additional documents to each loan from the loan detail page.</div>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-              <button className="swiftdeed-statement-button" onClick={() => { setActiveView('loans'); setTransferStep(1); setClosingDocs([]); setServicerDocs([]); setHistoryDocs([]); }} style={{ background: '#FFD700', color: '#0f0f0f', border: 'none', borderRadius: 7, padding: '10px 20px', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>View loans <span aria-hidden="true">-&gt;</span></button>
-              <button onClick={() => { setTransferStep(1); setClosingDocs([]); setServicerDocs([]); setHistoryDocs([]); }} style={{ background: 'transparent', border: '0.5px solid #2a2a2a', color: '#fff', borderRadius: 7, padding: '10px 18px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Transfer more loans</button>
+              <button className="swiftdeed-statement-button" onClick={() => { setActiveView('loans'); setTransferStep(1); setClosingDocs([]); setServicerDocs([]); setHistoryDocs([]); setTransferLoans([]); }} style={{ background: '#FFD700', color: '#0f0f0f', border: 'none', borderRadius: 7, padding: '10px 20px', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>View loans <span aria-hidden="true">-&gt;</span></button>
+              <button onClick={() => { setTransferStep(1); setClosingDocs([]); setServicerDocs([]); setHistoryDocs([]); setTransferLoans([]); setTransferError(''); }} style={{ background: 'transparent', border: '0.5px solid #2a2a2a', color: '#fff', borderRadius: 7, padding: '10px 18px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Transfer more loans</button>
             </div>
           </div>
         )}
