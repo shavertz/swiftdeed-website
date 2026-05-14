@@ -2425,6 +2425,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
         <div style={{ marginBottom: 24 }}>
           <div style={{ fontSize: 24, fontWeight: 500, color: '#fff', marginBottom: 6 }}>Transfer existing loans</div>
           <div style={{ fontSize: 13, color: '#555', lineHeight: 1.6 }}>Upload your documents below. SwiftDeed will extract all loan data automatically: original terms, current balance, and payment history.</div>
+          <div style={{ fontSize: 13, color: '#FFD700', lineHeight: 1.6, marginTop: 8 }}>Transfer all your documents below at once. You can upload files for multiple loans in bulk.</div>
         </div>
 
         {transferStep === 1 && (
@@ -2433,7 +2434,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
               {[
                 { icon: 'PDF', title: 'Closing documents', required: true, description: 'Promissory note, loan agreement, deed, commercial guaranty.', accepts: '.pdf', acceptLabel: 'PDF only', accentColor: '#8fb0c4', borderColor: '#4f6270', bgColor: '#1d2d37', files: closingDocs, setFiles: setClosingDocs, extracts: ['Original loan amount', 'Interest rate & loan type', 'Maturity date', 'Guarantor', 'Monthly payment'] },
                 { icon: '$', title: 'Servicer statements', required: true, description: 'Payoff statements or monthly statements from your current servicer.', accepts: '.pdf,.xlsx,.xls,.csv', acceptLabel: '.pdf, .xlsx, .csv', accentColor: '#FFD700', borderColor: '#4a3900', bgColor: '#1d1705', files: servicerDocs, setFiles: setServicerDocs, extracts: ['Current principal balance', 'Next payment date', 'Per diem', 'Interest paid to date'] },
-                { icon: 'CSV', title: 'Payment history', required: false, description: 'Export from your current servicer showing all payments made to date.', accepts: '.pdf,.xlsx,.xls,.csv', acceptLabel: '.pdf, .xlsx, .csv', accentColor: '#5DCAA5', borderColor: '#1d6e56', bgColor: '#0a1f1c', files: historyDocs, setFiles: setHistoryDocs, extracts: ['Full payment history', 'Principal & interest breakdown', 'Total interest paid'] },
+                { icon: 'PMT', title: 'Payment history', required: false, description: 'Export from your current servicer showing all payments made to date.', accepts: '.pdf,.xlsx,.xls,.csv', acceptLabel: '.pdf, .xlsx, .csv', accentColor: '#5DCAA5', borderColor: '#1d6e56', bgColor: '#0a1f1c', files: historyDocs, setFiles: setHistoryDocs, extracts: ['Full payment history', 'Principal & interest breakdown', 'Total interest paid'] },
               ].map((zone, zoneIndex) => (
                 <div key={zoneIndex} style={{ background: '#111', border: '0.5px solid #252525', borderRadius: 9, padding: '20px 22px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
