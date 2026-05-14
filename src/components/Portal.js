@@ -1669,7 +1669,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       case 'maturing_90':
       case 'maturity': return isActiveLoan(request) && maturityDays != null;
       case 'overdue': return isOverdueLoan(request);
-      case 'upcoming': return isActiveLoan(request) && nextPaymentDays != null;
+      case 'upcoming': return isActiveLoan(request) && nextPaymentDays != null && nextPaymentDays >= 0;
       case 'current': return statusBucket(request) === 'Current';
       case 'bucket_1_30': return pastDueDays >= 1 && pastDueDays <= 30;
       case 'bucket_31_60': return pastDueDays >= 31 && pastDueDays <= 60;
@@ -1739,6 +1739,8 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const receivedThisMonth = allBorrowers.filter(b => { if (!b.last_payment_date) return false; const d = new Date(b.last_payment_date); return d.getMonth() === thisMonth && d.getFullYear() === thisYear; });
   const receivedThisMonthTotal = receivedThisMonth.reduce((sum, b) => sum + (parseFloat(b.last_payment_amount || b.monthly_payment) || 0), 0);
   const activeLoans = requests.filter(isActiveLoan);
+  const expectedThisMonth = activeLoans.filter(loan => isThisMonth(storedNextPaymentDate(loan)) && daysPastDue(loan) === 0);
+  const expectedThisMonthTotal = expectedThisMonth.reduce((sum, loan) => sum + (storedNextPaymentAmount(loan) || 0), 0);
   const pastDue = requests.filter(isOverdueLoan).length;
   const needingAttention = requests.filter(isAttentionLoan);
   const maturingSoon = requests.filter(r => matchesLoanFilter(r, 'maturity')).sort((a, b) => (dateValue(getLoanField(a, 'maturity_date'))?.getTime() || Infinity) - (dateValue(getLoanField(b, 'maturity_date'))?.getTime() || Infinity));
@@ -1748,8 +1750,6 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const bucketTwo = requests.filter(r => matchesLoanFilter(r, 'bucket_31_60'));
   const bucketThree = requests.filter(r => matchesLoanFilter(r, 'bucket_60_plus'));
   const loansNeedingAttentionCount = needingAttention.length;
-  const nextMaturity = maturingSoon[0];
-  const nextMaturityBorrower = nextMaturity ? getBorrower(nextMaturity) : {};
 
   const sc = { background: '#121212', border: '0.5px solid #202020', borderRadius: 9, padding: '22px 24px', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit' };
   const statCard = (id) => ({
@@ -2344,8 +2344,8 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       <div style={{ display: 'grid', gridTemplateColumns: dashboardStatCols, gap: 12, marginBottom: 28 }}>
         <button style={statCard('principal')} onClick={() => setLoansView('all')} onMouseEnter={() => setHoveredCard('principal')} onMouseLeave={() => setHoveredCard(null)}><div style={sl}>Principal Outstanding</div><div style={principalSv}>{formatCurrency(principalOutstanding)}</div><div style={ss}>{activeLoans.length} active loans</div></button>
         <button style={statCard('received')} onClick={() => setLoansView('received_month')} onMouseEnter={() => setHoveredCard('received')} onMouseLeave={() => setHoveredCard(null)}><div style={sl}>Payments This Month</div><div style={sv}>{formatCurrency(receivedThisMonthTotal)}</div><div style={ss}>{receivedThisMonth.length} loans with payments</div></button>
+        <button style={statCard('expected')} onClick={() => setLoansView('upcoming')} onMouseEnter={() => setHoveredCard('expected')} onMouseLeave={() => setHoveredCard(null)}><div style={sl}>Expected Payments This Month</div><div style={sv}>{formatCurrency(expectedThisMonthTotal)}</div><div style={ss}>{expectedThisMonth.length} payments due, excluding past due</div></button>
         <button style={statCard('attention')} onClick={() => setLoansView('attention')} onMouseEnter={() => setHoveredCard('attention')} onMouseLeave={() => setHoveredCard(null)}><div style={sl}>Servicing Exceptions</div><div style={sv}>{loansNeedingAttentionCount}</div><div style={ss}>Missing docs, terms, extraction, or past due</div></button>
-        <button style={statCard('maturing')} onClick={() => setLoansView('maturity')} onMouseEnter={() => setHoveredCard('maturing')} onMouseLeave={() => setHoveredCard(null)}><div style={sl}>Next Maturity</div><div style={sv}>{maturingSoon.length}</div><div style={ss}>{nextMaturity ? `${formatDate(nextMaturityBorrower.maturity_date || nextMaturity.maturity_date)} - ${formatCurrency(nextMaturityBorrower.principal_balance || nextMaturity.total_due)}` : '-'}</div></button>
       </div>
 
       <div style={{ fontSize: 12, color: '#FFD700', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 }}>Portfolio Watchlist</div>
@@ -2353,7 +2353,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
         {[
           { id: 'maturity', label: 'Maturity', count: maturingSoon.length, loans: maturingSoon, accent: '#FFD700' },
           { id: 'overdue', label: 'Overdue', count: pastDue, loans: requests.filter(isOverdueLoan), accent: '#f87171' },
-          { id: 'upcoming', label: 'Upcoming', count: upcomingPayments.length, loans: upcomingPayments, accent: '#4aa3ff' },
+          { id: 'upcoming', label: 'Upcoming Future Payments', count: upcomingPayments.length, loans: upcomingPayments, accent: '#4aa3ff' },
         ].map(card => (
           <div key={card.id} onClick={() => setLoansView(card.id)} onMouseEnter={() => setHoveredAttention(card.id)} onMouseLeave={() => setHoveredAttention(null)} style={attentionCardStyle(card.id, card.accent)}>
             <button onClick={() => setLoansView(card.id)} style={{ width: '100%', background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
