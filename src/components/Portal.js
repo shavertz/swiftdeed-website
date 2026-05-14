@@ -1167,11 +1167,9 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const [uploadingDocs, setUploadingDocs] = useState(false);
   const [docSuccess, setDocSuccess] = useState('');
   const [transferStep, setTransferStep] = useState(1);
-  const [transferRows, setTransferRows] = useState([
-    { id: 'transfer-1', borrower: 'Crescent City Real Estate Holdings LLC', property: 'New Orleans, LA', balance: '215000', rate: '7.25', maturity: '2056-05-01', originalAmount: '', loanType: '', guarantor: '' },
-    { id: 'transfer-2', borrower: 'River North Development Group LLC', property: 'Chicago, IL', balance: '3200000', rate: '10.25', maturity: '2029-05-01', originalAmount: '3200000', loanType: 'Interest Only', guarantor: 'Mark D. Ellis' },
-    { id: 'transfer-3', borrower: 'Gulf Coast Property Ventures LLC', property: 'Houston, TX', balance: '890000', rate: '11', maturity: '2028-04-01', originalAmount: '', loanType: 'Bridge', guarantor: '' },
-  ]);
+  const [closingDocs, setClosingDocs] = useState([]);
+  const [servicerDocs, setServicerDocs] = useState([]);
+  const [historyDocs, setHistoryDocs] = useState([]);
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1600);
   const docFileRef = useRef();
 
@@ -2336,29 +2334,13 @@ export default function Portal({ onSubmitRequest, resetToken }) {
           </span>
           <span style={{ ...onboardingCta, color: '#dbeaf2' }}>Get started <span aria-hidden="true">-&gt;</span></span>
         </button>
-        <button onClick={() => { setActiveView('transfer'); setSelected(null); }} style={{
-          ...onboardingBanner,
-          gridTemplateColumns: shellNarrow ? 'auto 1fr' : 'auto minmax(0, 1fr) auto',
-          width: '100%',
-          minHeight: shellNarrow ? 'auto' : 98,
-          marginBottom: 0,
-          background: '#0a1f1c',
-          border: '0.5px solid #1d6e56',
-          borderLeft: '3px solid #1D9E75',
-          textAlign: 'left',
-          fontFamily: 'inherit',
-          cursor: 'pointer',
-          transition: 'border-color 0.12s, background 0.12s, box-shadow 0.12s',
-        }}
-          onMouseEnter={e => { e.currentTarget.style.background = '#0d2e28'; e.currentTarget.style.boxShadow = '0 12px 28px rgba(29,158,117,0.14)'; }}
-          onMouseLeave={e => { e.currentTarget.style.background = '#0a1f1c'; e.currentTarget.style.boxShadow = 'none'; }}
-        >
-          <span style={{ width: 34, height: 34, borderRadius: 8, background: '#0d2e28', border: '0.5px solid #1d6e56', color: '#5DCAA5', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>⇄</span>
+        <button onClick={() => { setActiveView('transfer'); setTransferStep(1); }} style={{ ...quickActionCard('teal'), background: '#0a1f1c', border: '0.5px solid #1d6e56', borderLeft: '3px solid #1D9E75' }} onMouseEnter={e => { e.currentTarget.style.background = '#0d2e28'; e.currentTarget.style.boxShadow = '0 12px 28px rgba(29,158,117,0.14)'; }} onMouseLeave={e => { e.currentTarget.style.background = '#0a1f1c'; e.currentTarget.style.boxShadow = 'none'; }}>
+          <span style={{ width: 34, height: 34, borderRadius: 8, background: '#0d2e28', border: '0.5px solid #1d6e56', color: '#5DCAA5', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>&#8644;</span>
           <span style={{ minWidth: 0 }}>
             <span style={{ display: 'block', color: '#fff', fontSize: 14, fontWeight: 600, marginBottom: 2 }}>Transfer existing loans</span>
             <span style={{ display: 'block', color: '#9FE1CB', fontSize: 13, lineHeight: 1.45 }}>Moving from another servicer? Upload statements, PDFs, or a spreadsheet.</span>
           </span>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'transparent', border: 'none', color: '#5DCAA5', fontSize: 13, fontWeight: 600, padding: 0, whiteSpace: 'nowrap' }}>Transfer →</span>
+          <span style={{ color: '#5DCAA5', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' }}>Transfer <span aria-hidden="true">-&gt;</span></span>
         </button>
         <button onClick={() => { setActiveView('documents'); setDocTab('payoff'); setSelected(null); }} style={quickActionCard('amber')} {...quickActionHover('amber')}>
           <span style={payoffIcon}>PDF</span>
@@ -2435,114 +2417,87 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     </div>
   );
 
-  const updateTransferRow = (id, field, value) => {
-    setTransferRows(prev => prev.map(row => row.id === id ? { ...row, [field]: value } : row));
-  };
-  const transferMissingFields = row => [
-    !row.originalAmount ? 'Original loan amount' : null,
-    !row.loanType ? 'Loan type' : null,
-    !row.guarantor ? 'Guarantor' : null,
-  ].filter(Boolean);
-  const transferCompleteCount = transferRows.filter(row => transferMissingFields(row).length === 0).length;
-  const transferTotalBalance = transferRows.reduce((sum, row) => sum + (parseFloat(row.balance) || 0), 0);
-  const transferDocsNeeded = transferRows.length - transferCompleteCount;
-  const transferCard = { background: '#111', border: '0.5px solid #252525', borderRadius: 9, padding: '20px 22px', boxSizing: 'border-box' };
-  const transferLabel = { fontSize: 11, color: '#FFD700', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 };
-  const transferPrimary = { background: '#FFD700', color: '#0f0f0f', border: 'none', borderRadius: 7, padding: '10px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' };
-  const transferSecondary = { background: 'transparent', color: '#FFD700', border: '0.5px solid #4a3900', borderRadius: 7, padding: '10px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' };
-  const transferInput = { width: '100%', background: '#0d0d0d', border: '0.5px solid #252525', borderRadius: 6, color: '#ddd', padding: '9px 10px', fontSize: 12, fontFamily: 'inherit', boxSizing: 'border-box' };
   const transferView = (
-    <div style={{ padding: contentPad, ...contentWrap }}>
-      {transferStep === 1 && (
-        <>
-          <button onClick={() => setActiveView('dashboard')} style={{ background: 'transparent', border: 'none', color: '#FFD700', padding: 0, marginBottom: 18, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13 }}>Back to Dashboard</button>
-          <div style={{ fontSize: 24, fontWeight: 500, color: '#fff', marginBottom: 22 }}>Transfer existing loans</div>
-          <div style={{ ...transferCard, marginBottom: 16 }}>
-            <div style={transferLabel}>Upload transfer files</div>
-            <div style={{ border: '0.5px dashed #3a3300', background: '#0d0d0d', borderRadius: 9, minHeight: 150, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, color: '#ddd', marginBottom: 14 }}>
-              <div style={{ fontSize: 15 }}>Drag and drop transfer documents</div>
-              <div style={{ color: '#555', fontSize: 12 }}>PDF, Excel, or CSV files accepted</div>
-              <input type="file" accept=".pdf,.xlsx,.csv,.xls" multiple style={{ color: '#777', fontSize: 12, marginTop: 4 }} />
-            </div>
-            <div style={{ color: '#888', fontSize: 13, lineHeight: 1.5, marginBottom: 12 }}>Upload payoff statements, monthly statements, or a spreadsheet from your current servicer. You can also upload an Excel or CSV file with your loan data.</div>
-            <div style={{ background: '#1d1705', border: '0.5px solid #4a3900', borderLeft: '3px solid #FFD700', borderRadius: 7, padding: '10px 14px', color: '#d8c870', fontSize: 12, lineHeight: 1.45, marginBottom: 16 }}>Some fields may need manual entry after extraction — current balance, rate, maturity date, and per diem are typically included. Monthly payment, original loan amount, guarantor, and loan type may need to be filled in manually.</div>
-            <button onClick={() => setTransferStep(2)} style={transferPrimary}>Extract loan data -&gt;</button>
-          </div>
-          <div style={transferCard}>
-            <div style={transferLabel}>Transfer data map</div>
-            <div style={{ display: 'grid', gridTemplateColumns: shellNarrow ? '1fr' : 'repeat(3, minmax(0, 1fr))', gap: 12 }}>
-              <div style={{ color: '#34d399', fontSize: 13, lineHeight: 1.8 }}>✓ Balance<br />✓ Rate<br />✓ Maturity<br />✓ Next payment<br />✓ Per diem<br />✓ Borrower<br />✓ Property</div>
-              <div style={{ color: '#FFD700', fontSize: 13, lineHeight: 1.8 }}>⚠ Monthly payment</div>
-              <div style={{ color: '#f87171', fontSize: 13, lineHeight: 1.8 }}>✕ Guarantor<br />✕ Original loan amount<br />✕ Loan type</div>
-            </div>
-          </div>
-        </>
-      )}
-      {transferStep === 2 && (
-        <>
-          <button onClick={() => setTransferStep(1)} style={{ background: 'transparent', border: 'none', color: '#FFD700', padding: 0, marginBottom: 18, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13 }}>Back</button>
-          <div style={{ fontSize: 24, fontWeight: 500, color: '#fff', marginBottom: 22 }}>Review transferred loans</div>
-          <div style={transferCard}>
-            <div className="swiftdeed-yellow-scroll" style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', minWidth: 780, borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>{['Borrower / Property', 'Balance', 'Rate', 'Maturity', 'Status', ''].map(h => <th key={h} style={{ color: '#555', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8, padding: '8px 10px', borderBottom: '0.5px solid #252525', textAlign: h === '' ? 'right' : 'left' }}>{h}</th>)}</tr>
-                </thead>
-                <tbody>
-                  {transferRows.map(row => {
-                    const missing = transferMissingFields(row);
-                    return (
-                      <tr key={row.id}>
-                        <td style={{ color: '#ddd', fontSize: 12, padding: '10px', borderBottom: '0.5px solid #1c1c1c' }}>{row.borrower}<div style={{ color: '#555', marginTop: 3 }}>{row.property}</div></td>
-                        <td style={{ color: '#ccc', fontSize: 12, padding: '10px', borderBottom: '0.5px solid #1c1c1c' }}>{formatCurrency(row.balance)}</td>
-                        <td style={{ color: '#ccc', fontSize: 12, padding: '10px', borderBottom: '0.5px solid #1c1c1c' }}>{row.rate}%</td>
-                        <td style={{ color: '#ccc', fontSize: 12, padding: '10px', borderBottom: '0.5px solid #1c1c1c' }}>{formatDate(row.maturity)}</td>
-                        <td style={{ color: missing.length ? '#FFD700' : '#34d399', fontSize: 12, padding: '10px', borderBottom: '0.5px solid #1c1c1c' }}>{missing.length ? `${missing.length} missing` : 'Complete'}</td>
-                        <td style={{ textAlign: 'right', padding: '10px', borderBottom: '0.5px solid #1c1c1c' }}><button style={{ background: 'transparent', border: 'none', color: '#FFD700', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>Edit</button></td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-            {transferRows.filter(row => transferMissingFields(row).length > 0).map(row => (
-              <div key={`${row.id}-edit`} style={{ marginTop: 16, paddingTop: 16, borderTop: '0.5px solid #252525' }}>
-                <div style={{ color: '#FFD700', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 10 }}>{row.borrower} missing fields</div>
-                <div style={{ display: 'grid', gridTemplateColumns: shellNarrow ? '1fr' : 'repeat(3, minmax(0, 1fr))', gap: 10 }}>
-                  <input value={row.originalAmount} onChange={e => updateTransferRow(row.id, 'originalAmount', e.target.value)} placeholder="Original loan amount" style={transferInput} />
-                  <select value={row.loanType} onChange={e => updateTransferRow(row.id, 'loanType', e.target.value)} style={transferInput}>
-                    <option value="">Loan type</option>
-                    <option>Interest Only</option>
-                    <option>Bridge</option>
-                    <option>Construction</option>
-                    <option>Amortizing</option>
-                  </select>
-                  <input value={row.guarantor} onChange={e => updateTransferRow(row.id, 'guarantor', e.target.value)} placeholder="Guarantor name" style={transferInput} />
-                </div>
-              </div>
-            ))}
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginTop: 18, flexWrap: 'wrap' }}>
-              <button onClick={() => setTransferStep(1)} style={transferSecondary}>Back</button>
-              <button onClick={() => setTransferStep(3)} style={transferPrimary}>Confirm and go live -&gt;</button>
-            </div>
-          </div>
-        </>
-      )}
-      {transferStep === 3 && (
-        <div style={{ ...transferCard, textAlign: 'center', maxWidth: 760 }}>
-          <div style={{ width: 48, height: 48, borderRadius: 999, background: '#071c12', border: '0.5px solid #065f46', color: '#34d399', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, marginBottom: 16 }}>✓</div>
-          <div style={{ color: '#fff', fontSize: 22, fontWeight: 600, marginBottom: 18 }}>{transferRows.length} loans transferred successfully</div>
-          <div style={{ display: 'grid', gridTemplateColumns: shellNarrow ? '1fr' : 'repeat(3, minmax(0, 1fr))', gap: 12, marginBottom: 20 }}>
-            <div style={{ background: '#0d0d0d', border: '0.5px solid #252525', borderRadius: 8, padding: 14 }}><div style={transferLabel}>Loans transferred</div><div style={{ color: '#fff', fontSize: 24 }}>{transferRows.length}</div></div>
-            <div style={{ background: '#0d0d0d', border: '0.5px solid #252525', borderRadius: 8, padding: 14 }}><div style={transferLabel}>Total balance</div><div style={{ color: '#fff', fontSize: 24 }}>{formatCurrency(transferTotalBalance)}</div></div>
-            <div style={{ background: '#0d0d0d', border: '0.5px solid #252525', borderRadius: 8, padding: 14 }}><div style={transferLabel}>Docs needed</div><div style={{ color: '#fff', fontSize: 24 }}>{transferDocsNeeded}</div></div>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <button onClick={() => setActiveView('loans')} style={transferPrimary}>View loans -&gt;</button>
-            <button onClick={() => setTransferStep(1)} style={transferSecondary}>Transfer more loans</button>
-          </div>
+    <div style={{ padding: contentPad }}>
+      <div style={{ ...contentWrap, maxWidth: 1160 }}>
+        <button onClick={() => { setActiveView('dashboard'); setTransferStep(1); setClosingDocs([]); setServicerDocs([]); setHistoryDocs([]); }} style={{ background: 'none', border: 'none', color: '#FFD700', fontSize: 13, cursor: 'pointer', marginBottom: 18, padding: 0, fontFamily: 'inherit' }}>&larr; Back to dashboard</button>
+
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ fontSize: 24, fontWeight: 500, color: '#fff', marginBottom: 6 }}>Transfer existing loans</div>
+          <div style={{ fontSize: 13, color: '#555', lineHeight: 1.6 }}>Upload your documents below. SwiftDeed will extract all loan data automatically: original terms, current balance, and payment history.</div>
         </div>
-      )}
+
+        {transferStep === 1 && (
+          <>
+            <div style={{ display: 'grid', gridTemplateColumns: shellNarrow ? '1fr' : 'repeat(3, minmax(0, 1fr))', gap: 14, marginBottom: 14 }}>
+              {[
+                { icon: 'PDF', title: 'Closing documents', required: true, description: 'Promissory note, loan agreement, deed, commercial guaranty.', accepts: '.pdf', acceptLabel: 'PDF only', accentColor: '#8fb0c4', borderColor: '#4f6270', bgColor: '#1d2d37', files: closingDocs, setFiles: setClosingDocs, extracts: ['Original loan amount', 'Interest rate & loan type', 'Maturity date', 'Guarantor', 'Monthly payment'] },
+                { icon: '$', title: 'Servicer statements', required: true, description: 'Payoff statements or monthly statements from your current servicer.', accepts: '.pdf,.xlsx,.xls,.csv', acceptLabel: '.pdf, .xlsx, .csv', accentColor: '#FFD700', borderColor: '#4a3900', bgColor: '#1d1705', files: servicerDocs, setFiles: setServicerDocs, extracts: ['Current principal balance', 'Next payment date', 'Per diem', 'Interest paid to date'] },
+                { icon: 'CSV', title: 'Payment history', required: false, description: 'Export from your current servicer showing all payments made to date.', accepts: '.pdf,.xlsx,.xls,.csv', acceptLabel: '.pdf, .xlsx, .csv', accentColor: '#5DCAA5', borderColor: '#1d6e56', bgColor: '#0a1f1c', files: historyDocs, setFiles: setHistoryDocs, extracts: ['Full payment history', 'Principal & interest breakdown', 'Total interest paid'] },
+              ].map((zone, zoneIndex) => (
+                <div key={zoneIndex} style={{ background: '#111', border: '0.5px solid #252525', borderRadius: 9, padding: '20px 22px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                    <div style={{ width: 28, height: 28, borderRadius: 6, background: zone.bgColor, border: '0.5px solid ' + zone.borderColor, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: zone.icon.length > 1 ? 9 : 14, color: zone.accentColor, fontWeight: 700 }}>{zone.icon}</div>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 500, color: '#fff' }}>{zone.title}</div>
+                      <div style={{ fontSize: 11, color: zone.required ? '#555' : zone.accentColor }}>{zone.required ? 'Required' : 'Optional'}</div>
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 12, color: '#555', marginBottom: 12, lineHeight: 1.5 }}>{zone.description}</div>
+                  <div onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); const newFiles = Array.from(e.dataTransfer.files); zone.setFiles(prev => [...prev, ...newFiles]); }} onClick={() => { const input = document.createElement('input'); input.type = 'file'; input.accept = zone.accepts; input.multiple = true; input.onchange = e => zone.setFiles(prev => [...prev, ...Array.from(e.target.files)]); input.click(); }} style={{ border: '0.5px dashed #3a3300', background: '#0d0d0d', borderRadius: 8, padding: '20px 14px', textAlign: 'center', cursor: 'pointer', marginBottom: 12, transition: 'all 0.15s' }} onMouseEnter={e => { e.currentTarget.style.borderColor = zone.accentColor; e.currentTarget.style.background = '#121000'; }} onMouseLeave={e => { e.currentTarget.style.borderColor = '#3a3300'; e.currentTarget.style.background = '#0d0d0d'; }}>
+                    <div style={{ fontSize: 13, color: '#ccc', marginBottom: 4 }}>Drop files here</div>
+                    <div style={{ fontSize: 11, color: '#555' }}>{zone.acceptLabel} &middot; click to browse</div>
+                  </div>
+                  {zone.files.length > 0 && (
+                    <div style={{ marginBottom: 12 }}>
+                      {zone.files.map((f, i) => (
+                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '0.5px solid #1a1a1a', fontSize: 12 }}>
+                          <span style={{ color: '#ccc', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{f.name}</span>
+                          <button onClick={e => { e.stopPropagation(); zone.setFiles(prev => prev.filter((_, fi) => fi !== i)); }} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 11, fontFamily: 'inherit', flexShrink: 0 }}>Remove</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div style={{ fontSize: 11, color: '#444', lineHeight: 1.8 }}>
+                    <div style={{ color: '#555', fontWeight: 500, marginBottom: 3 }}>Extracts:</div>
+                    {zone.extracts.map(item => <div key={item} style={{ color: '#34d399' }}>&#10003; {item}</div>)}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ background: '#1d1705', border: '0.5px solid #4a3900', borderLeft: '3px solid #FFD700', padding: '10px 14px', marginBottom: 16, fontSize: 12, color: '#d8c870', lineHeight: 1.5 }}>After extraction, you'll review each loan before it goes live. Any missing fields will be flagged for manual entry.</div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button className="swiftdeed-statement-button" onClick={() => { if (closingDocs.length === 0 && servicerDocs.length === 0) { alert('Please upload at least closing documents or servicer statements.'); return; } setTransferStep(2); }} style={{ background: '#FFD700', color: '#0f0f0f', border: 'none', borderRadius: 7, padding: '10px 24px', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>Extract loan data <span aria-hidden="true">-&gt;</span></button>
+            </div>
+          </>
+        )}
+
+        {transferStep === 2 && (
+          <div style={{ background: '#111', border: '0.5px solid #252525', borderRadius: 9, padding: '24px' }}>
+            <div style={{ fontSize: 15, fontWeight: 500, color: '#fff', marginBottom: 6 }}>Review extracted loans</div>
+            <div style={{ fontSize: 12, color: '#555', marginBottom: 20 }}>Review the data extracted from your documents. Fix any flagged fields before confirming.</div>
+            <div style={{ color: '#444', fontSize: 13, padding: '40px 0', textAlign: 'center' }}>Extraction in progress. This is where the review table will appear after the API processes the uploaded files.</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 20 }}>
+              <button onClick={() => setTransferStep(1)} style={{ background: 'transparent', border: '0.5px solid #2a2a2a', color: '#fff', borderRadius: 7, padding: '10px 18px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>&larr; Back</button>
+              <button className="swiftdeed-statement-button" onClick={() => setTransferStep(3)} style={{ background: '#FFD700', color: '#0f0f0f', border: 'none', borderRadius: 7, padding: '10px 24px', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>Confirm and go live <span aria-hidden="true">-&gt;</span></button>
+            </div>
+          </div>
+        )}
+
+        {transferStep === 3 && (
+          <div style={{ background: '#111', border: '0.5px solid #252525', borderRadius: 9, padding: '40px 24px', textAlign: 'center' }}>
+            <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#0a2416', border: '0.5px solid #065f46', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: 22, color: '#34d399' }}>&#10003;</div>
+            <div style={{ fontSize: 16, fontWeight: 500, color: '#fff', marginBottom: 6 }}>Loans transferred successfully</div>
+            <div style={{ fontSize: 13, color: '#555', marginBottom: 24 }}>All loans are now live in SwiftDeed. Upload additional documents to each loan when ready.</div>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+              <button className="swiftdeed-statement-button" onClick={() => { setActiveView('loans'); setTransferStep(1); setClosingDocs([]); setServicerDocs([]); setHistoryDocs([]); }} style={{ background: '#FFD700', color: '#0f0f0f', border: 'none', borderRadius: 7, padding: '10px 20px', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>View loans <span aria-hidden="true">-&gt;</span></button>
+              <button onClick={() => { setTransferStep(1); setClosingDocs([]); setServicerDocs([]); setHistoryDocs([]); }} style={{ background: 'transparent', border: '0.5px solid #2a2a2a', color: '#fff', borderRadius: 7, padding: '10px 18px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Transfer more loans</button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 
