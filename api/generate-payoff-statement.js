@@ -65,6 +65,16 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
+    const { data: borrower, error: borrowerLookupError } = await supabase
+      .from('borrowers')
+      .select('*')
+      .eq('loan_id_internal', loanIdInternal)
+      .eq('lender_email', lenderEmail)
+      .limit(1)
+      .maybeSingle();
+
+    if (borrowerLookupError) throw borrowerLookupError;
+
     const { data: request, error: requestError } = await supabase
       .from('payoff_requests')
       .select('*')
@@ -74,14 +84,7 @@ export default async function handler(req, res) {
       .maybeSingle();
 
     if (requestError) throw requestError;
-    if (!request) return res.status(404).json({ error: 'Loan not found' });
-
-    const { data: borrower } = await supabase
-      .from('borrowers')
-      .select('*')
-      .eq('loan_id_internal', loanIdInternal)
-      .limit(1)
-      .maybeSingle();
+    if (!borrower && !request) return res.status(404).json({ error: 'Loan not found' });
 
     const { data: lender } = await supabase
       .from('lenders')
@@ -93,12 +96,12 @@ export default async function handler(req, res) {
     const principal = toNumber(
       borrower?.principal_balance ??
       borrower?.original_loan_amount ??
-      request.total_due,
+      request?.total_due,
       0
     );
-    const rate = toNumber(borrower?.interest_rate ?? request.interest_rate, 0);
+    const rate = toNumber(borrower?.interest_rate ?? request?.interest_rate, 0);
     const perDiem = toNumber(
-      borrower?.per_diem ?? request.per_diem,
+      borrower?.per_diem ?? request?.per_diem,
       rate ? (principal * (rate / 100)) / 365 : 0
     );
     const daysToGoodThrough = daysBetween(new Date(), goodThroughDate);
@@ -109,22 +112,22 @@ export default async function handler(req, res) {
     const payoffDate = formatDate(goodThroughDate);
 
     const pdfData = {
-      ...request,
-      borrower_name: request.borrower_name || borrower?.legal_name,
-      property_address: request.property_address || borrower?.property_address,
-      borrower_address: request.property_address || borrower?.property_address,
-      lender_name: lender?.company_name || lenderName || request.company_name || 'SwiftDeed',
+      ...(request || {}),
+      borrower_name: request?.borrower_name || borrower?.legal_name,
+      property_address: request?.property_address || borrower?.property_address,
+      borrower_address: request?.property_address || borrower?.property_address,
+      lender_name: lender?.company_name || lenderName || request?.company_name || 'SwiftDeed',
       lender_address: lender?.wire_bank_address || '',
-      lender_phone: lender?.phone || request.submitter_phone || '',
+      lender_phone: lender?.phone || request?.submitter_phone || '',
       loan_id_internal: loanIdInternal,
       account_number: loanIdInternal,
       statement_date: formatDate(completedAt),
       payoff_date: payoffDate,
       estimated_payoff_date: payoffDate,
       expiry_date: payoffDate,
-      maturity_date: formatDate(borrower?.maturity_date || request.maturity_date),
-      interest_paid_to_date: formatDate(borrower?.last_payment_date || request.loan_start_date || request.created_at),
-      next_payment_due_date: formatDate(borrower?.next_payment_date || request.next_payment_date),
+      maturity_date: formatDate(borrower?.maturity_date || request?.maturity_date),
+      interest_paid_to_date: formatDate(borrower?.last_payment_date || borrower?.loan_start_date || request?.loan_start_date || request?.created_at),
+      next_payment_due_date: formatDate(borrower?.next_payment_date || request?.next_payment_date),
       unpaid_principal_balance: principal,
       note_interest_rate: rate,
       current_note_interest_rate: rate,
@@ -147,23 +150,35 @@ export default async function handler(req, res) {
     const fileName = `${loanIdInternal}/payoff-${goodThroughDate}-${Date.now()}.pdf`;
     const statementUrl = await uploadPayoffPdf(fileName, pdfBuffer);
 
-    const { error: updateError } = await supabase
-      .from('payoff_requests')
-      .update({
-        payoff_statement_url: statementUrl,
-        total_due: parseFloat(totalDue.toFixed(2)),
-        status: 'completed',
-        completed_at: completedAt,
-      })
-      .eq('loan_id_internal', loanIdInternal)
-      .eq('from_email', lenderEmail);
+    const payoffPatch = {
+      payoff_statement_url: statementUrl,
+      total_due: parseFloat(totalDue.toFixed(2)),
+      status: 'completed',
+      completed_at: completedAt,
+    };
 
-    if (updateError) throw updateError;
+    const { error: borrowerUpdateError } = await supabase
+      .from('borrowers')
+      .update({ payoff_statement_url: statementUrl })
+      .eq('loan_id_internal', loanIdInternal)
+      .eq('lender_email', lenderEmail);
+
+    if (borrowerUpdateError) console.error('Borrower payoff statement update failed:', borrowerUpdateError);
+
+    if (request) {
+      const { error: updateError } = await supabase
+        .from('payoff_requests')
+        .update(payoffPatch)
+        .eq('loan_id_internal', loanIdInternal)
+        .eq('from_email', lenderEmail);
+
+      if (updateError) console.error('Payoff request update failed:', updateError);
+    }
 
     await sendLenderPayoffEmail({
       lenderEmail,
       lenderName: lenderName || lender?.full_name || lender?.company_name,
-      borrowerName: request.borrower_name || borrower?.legal_name,
+      borrowerName: request?.borrower_name || borrower?.legal_name,
       totalDue,
       internalLoanId: loanIdInternal,
       pdfBuffer,

@@ -512,7 +512,8 @@ export async function generateInvoicePDF({
       y += 14;
     };
 
-    drawTable(`Loan servicing - ${serviceRows.length} loans @ $35.00/mo`, serviceRows, 'LOAN');
+    const serviceRate = serviceRows.length ? Number(serviceRows[0].amount || 0) : 0;
+    drawTable(`Loan servicing - ${serviceRows.length} loans @ ${fmtMoney(serviceRate)}/mo`, serviceRows, 'LOAN');
     drawTable('Additional charges', chargeRows, 'DETAILS');
 
     ensureSpace(140);

@@ -57,6 +57,8 @@ function mergeBorrowerIntoLoanRow(request, borrower) {
     next_payment_date: borrowerValue(borrower, 'next_payment_date', request.next_payment_date),
     guarantor_name: borrowerValue(borrower, 'guarantor_name', request.guarantor_name),
     loan_document_urls: borrowerValue(borrower, 'loan_document_urls', request.loan_document_urls),
+    payoff_statement_url: borrowerValue(borrower, 'payoff_statement_url', request.payoff_statement_url),
+    completed_at: borrowerValue(borrower, 'completed_at', request.completed_at),
   };
 }
 
@@ -1537,9 +1539,9 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const filterConfig = {
     all: { id: 'all', label: 'All active loans', accent: '#FFD700' },
     received_month: { id: 'received_month', label: 'Payments this month', accent: '#FFD700' },
-    attention: { id: 'attention', label: 'Loans needing attention', accent: '#FFD700' },
-    maturing_90: { id: 'maturing_90', label: 'Maturing within 90 days', accent: '#FFD700' },
-    maturity: { id: 'maturity', label: 'Maturity', accent: '#FFD700' },
+    attention: { id: 'attention', label: 'Servicing exceptions', accent: '#FFD700' },
+    maturing_90: { id: 'maturing_90', label: 'Next maturity', accent: '#FFD700' },
+    maturity: { id: 'maturity', label: 'Next maturity', accent: '#FFD700' },
     overdue: { id: 'overdue', label: 'Overdue', accent: '#f87171' },
     upcoming: { id: 'upcoming', label: 'Upcoming payments', accent: '#4aa3ff' },
     current: { id: 'current', label: 'Current loans', accent: '#34d399' },
@@ -1553,6 +1555,9 @@ export default function Portal({ onSubmitRequest, resetToken }) {
 
   const setLoansView = (filterId = 'all') => {
     setLoanFilter(filterConfig[filterId] || filterConfig.all);
+    if (filterId === 'maturity' || filterId === 'maturing_90') setSortConfig({ key: 'maturity', direction: 'asc' });
+    if (filterId === 'upcoming') setSortConfig({ key: 'next_payment_date', direction: 'asc' });
+    if (filterId === 'overdue') setSortConfig({ key: 'days_past_due', direction: 'desc' });
     setActiveView('loans');
     setSelected(null);
     setSearch('');
@@ -1612,6 +1617,18 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   };
   const isActiveLoan = (request) => getLoanStatus(request) !== 'Paid Off';
   const isOverdueLoan = (request) => getLoanStatus(request) === 'Past Due' || daysPastDue(request) > 0;
+  const hasMissingLoanDocuments = (request) => loanDocumentUrlsFor(request).length === 0;
+  const hasMissingExtractedTerms = (request) => {
+    return !getLoanField(request, 'principal_balance', 'total_due')
+      || !getLoanField(request, 'interest_rate')
+      || !getLoanField(request, 'maturity_date')
+      || !storedNextPaymentDate(request);
+  };
+  const hasFailedExtraction = (request) => {
+    const b = getBorrower(request);
+    const status = String(b.extraction_status || b.document_extraction_status || b.loan_data_status || '').toLowerCase();
+    return status.includes('fail') || status.includes('error');
+  };
   const statusBucket = (request) => {
     const status = getLoanStatus(request);
     const days = daysPastDue(request);
@@ -1634,8 +1651,12 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     return 0;
   };
   const isAttentionLoan = (request) => {
-    const b = borrowerData[request.loan_id_internal];
-    return !b || !borrowerValue(b, 'monthly_payment') || isOverdueLoan(request) || ['Default', 'Past maturity'].includes(getLoanStatus(request));
+    return isActiveLoan(request) && (
+      hasMissingLoanDocuments(request)
+      || hasMissingExtractedTerms(request)
+      || isOverdueLoan(request)
+      || hasFailedExtraction(request)
+    );
   };
   const matchesLoanFilter = (request, filterId) => {
     const b = getBorrower(request);
@@ -1646,9 +1667,9 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       case 'received_month': return isThisMonth(b.last_payment_date);
       case 'attention': return isAttentionLoan(request);
       case 'maturing_90':
-      case 'maturity': return maturityDays != null && maturityDays >= 0 && maturityDays <= 90;
+      case 'maturity': return isActiveLoan(request) && maturityDays != null;
       case 'overdue': return isOverdueLoan(request);
-      case 'upcoming': return nextPaymentDays != null && nextPaymentDays >= 0 && nextPaymentDays <= 7;
+      case 'upcoming': return isActiveLoan(request) && nextPaymentDays != null;
       case 'current': return statusBucket(request) === 'Current';
       case 'bucket_1_30': return pastDueDays >= 1 && pastDueDays <= 30;
       case 'bucket_31_60': return pastDueDays >= 31 && pastDueDays <= 60;
@@ -1720,14 +1741,14 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   const activeLoans = requests.filter(isActiveLoan);
   const pastDue = requests.filter(isOverdueLoan).length;
   const needingAttention = requests.filter(isAttentionLoan);
-  const maturingSoon = requests.filter(r => matchesLoanFilter(r, 'maturing_90'));
-  const upcomingPayments = requests.filter(r => matchesLoanFilter(r, 'upcoming'));
+  const maturingSoon = requests.filter(r => matchesLoanFilter(r, 'maturity')).sort((a, b) => (dateValue(getLoanField(a, 'maturity_date'))?.getTime() || Infinity) - (dateValue(getLoanField(b, 'maturity_date'))?.getTime() || Infinity));
+  const upcomingPayments = requests.filter(r => matchesLoanFilter(r, 'upcoming')).sort((a, b) => (dateValue(storedNextPaymentDate(a))?.getTime() || Infinity) - (dateValue(storedNextPaymentDate(b))?.getTime() || Infinity));
   const currentLoans = requests.filter(r => matchesLoanFilter(r, 'current'));
   const bucketOne = requests.filter(r => matchesLoanFilter(r, 'bucket_1_30'));
   const bucketTwo = requests.filter(r => matchesLoanFilter(r, 'bucket_31_60'));
   const bucketThree = requests.filter(r => matchesLoanFilter(r, 'bucket_60_plus'));
   const loansNeedingAttentionCount = needingAttention.length;
-  const nextMaturity = [...maturingSoon].sort((a, b) => daysFromToday(getLoanField(a, 'maturity_date')) - daysFromToday(getLoanField(b, 'maturity_date')))[0];
+  const nextMaturity = maturingSoon[0];
   const nextMaturityBorrower = nextMaturity ? getBorrower(nextMaturity) : {};
 
   const sc = { background: '#121212', border: '0.5px solid #202020', borderRadius: 9, padding: '22px 24px', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit' };
@@ -1739,6 +1760,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
   });
   const sl = { fontSize: 10, color: '#555', textTransform: 'uppercase', letterSpacing: 0.9, marginBottom: 10 };
   const sv = { fontSize: 27, fontWeight: 600, color: '#fff', marginBottom: 6 };
+  const principalSv = { ...sv, fontSize: principalOutstanding >= 10000000 ? 24 : 27, whiteSpace: 'nowrap', letterSpacing: 0 };
   const ss = { fontSize: 12, color: '#444' };
   const attentionCardStyle = (filter, accent) => ({
     background: hoveredAttention === filter ? '#141414' : '#101010',
@@ -2226,6 +2248,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
         status: 'completed',
       };
       setRequests(prev => prev.map(r => (r.loan_id_internal || r.loan_id) === loanIdInternal ? { ...r, ...patch } : r));
+      setBorrowerData(prev => ({ ...prev, [loanIdInternal]: { ...(prev[loanIdInternal] || {}), ...patch } }));
       setSelected(prev => prev && (prev.loan_id_internal || prev.loan_id) === loanIdInternal ? { ...prev, ...patch } : prev);
       setPayoffSuccessUrl(data.statementUrl || '');
     } catch (error) {
@@ -2319,13 +2342,13 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: dashboardStatCols, gap: 12, marginBottom: 28 }}>
-        <button style={statCard('principal')} onClick={() => setLoansView('all')} onMouseEnter={() => setHoveredCard('principal')} onMouseLeave={() => setHoveredCard(null)}><div style={sl}>Principal Outstanding</div><div style={sv}>{formatCurrency(principalOutstanding)}</div><div style={ss}>{activeLoans.length} active loans</div></button>
+        <button style={statCard('principal')} onClick={() => setLoansView('all')} onMouseEnter={() => setHoveredCard('principal')} onMouseLeave={() => setHoveredCard(null)}><div style={sl}>Principal Outstanding</div><div style={principalSv}>{formatCurrency(principalOutstanding)}</div><div style={ss}>{activeLoans.length} active loans</div></button>
         <button style={statCard('received')} onClick={() => setLoansView('received_month')} onMouseEnter={() => setHoveredCard('received')} onMouseLeave={() => setHoveredCard(null)}><div style={sl}>Payments This Month</div><div style={sv}>{formatCurrency(receivedThisMonthTotal)}</div><div style={ss}>{receivedThisMonth.length} loans with payments</div></button>
-        <button style={statCard('attention')} onClick={() => setLoansView('attention')} onMouseEnter={() => setHoveredCard('attention')} onMouseLeave={() => setHoveredCard(null)}><div style={sl}>Loans Needing Attention</div><div style={sv}>{loansNeedingAttentionCount}</div><div style={ss}>Review flagged loans</div></button>
-        <button style={statCard('maturing')} onClick={() => setLoansView('maturing_90')} onMouseEnter={() => setHoveredCard('maturing')} onMouseLeave={() => setHoveredCard(null)}><div style={sl}>Maturing Within 90 Days</div><div style={sv}>{maturingSoon.length}</div><div style={ss}>{nextMaturity ? `${formatDate(nextMaturityBorrower.maturity_date || nextMaturity.maturity_date)} - ${formatCurrency(nextMaturityBorrower.principal_balance || nextMaturity.total_due)}` : '-'}</div></button>
+        <button style={statCard('attention')} onClick={() => setLoansView('attention')} onMouseEnter={() => setHoveredCard('attention')} onMouseLeave={() => setHoveredCard(null)}><div style={sl}>Servicing Exceptions</div><div style={sv}>{loansNeedingAttentionCount}</div><div style={ss}>Missing docs, terms, extraction, or past due</div></button>
+        <button style={statCard('maturing')} onClick={() => setLoansView('maturity')} onMouseEnter={() => setHoveredCard('maturing')} onMouseLeave={() => setHoveredCard(null)}><div style={sl}>Next Maturity</div><div style={sv}>{maturingSoon.length}</div><div style={ss}>{nextMaturity ? `${formatDate(nextMaturityBorrower.maturity_date || nextMaturity.maturity_date)} - ${formatCurrency(nextMaturityBorrower.principal_balance || nextMaturity.total_due)}` : '-'}</div></button>
       </div>
 
-      <div style={{ fontSize: 12, color: '#FFD700', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 }}>Needs Attention</div>
+      <div style={{ fontSize: 12, color: '#FFD700', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 }}>Portfolio Watchlist</div>
       <div style={{ display: 'grid', gridTemplateColumns: attentionCols, gap: 12, marginBottom: 28 }}>
         {[
           { id: 'maturity', label: 'Maturity', count: maturingSoon.length, loans: maturingSoon, accent: '#FFD700' },
@@ -2336,7 +2359,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
             <button onClick={() => setLoansView(card.id)} style={{ width: '100%', background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
                 <span style={{ color: card.accent, fontSize: 13, textTransform: 'uppercase' }}>{card.label}</span>
-                <span style={{ color: '#555', fontSize: 12 }}>{card.id === 'upcoming' ? `${card.count} payments this week` : `${card.count} loans`}</span>
+                <span style={{ color: '#555', fontSize: 12 }}>{card.id === 'upcoming' ? `${card.count} payments` : `${card.count} loans`}</span>
               </div>
             </button>
             <div style={{ marginTop: 14 }}>
@@ -2678,10 +2701,13 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     </div>
   );
 
-  const servicingLineItems = (activeLoans.length ? activeLoans : requests).map(loan => ({
+  const loanServicingRate = (count) => count >= 10 ? 35 : count >= 5 ? 40 : 45;
+  const invoiceServicingLoans = activeLoans.length ? activeLoans : requests;
+  const invoiceServicingRate = loanServicingRate(invoiceServicingLoans.length);
+  const servicingLineItems = invoiceServicingLoans.map(loan => ({
     type: 'Loan servicing',
     details: `${loan.loan_id_internal || loan.loan_id || '-'} - ${loan.borrower_name || 'Borrower'}`,
-    amount: 35,
+    amount: invoiceServicingRate,
   }));
   const payoffLineItems = requests
     .filter(loan => loan.payoff_statement_url)
@@ -2698,6 +2724,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       year: '2026',
       status: 'due',
       badge: 'Due Jun 1',
+      servicingRate: invoiceServicingRate,
       servicing: servicingLineItems,
       additional: payoffLineItems.length ? payoffLineItems : [
         { type: 'Payoff statement', details: 'SD-2026-7782 - K. Patel', amount: 30 },
@@ -2827,7 +2854,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
                 </button>
                 {open && (
                   <div style={{ borderTop: '0.5px solid #1e1e1e', padding: '0 16px 16px' }}>
-                    {invoice.servicing?.length ? invoiceLineTable(`Loan servicing - ${invoice.servicing.length} loans @ $35.00`, invoice.servicing) : null}
+                    {invoice.servicing?.length ? invoiceLineTable(`Loan servicing - ${invoice.servicing.length} loans @ ${formatCurrency(invoice.servicingRate || loanServicingRate(invoice.servicing.length))}`, invoice.servicing) : null}
                     {invoice.additional?.length ? (
                       <>
                         <hr style={{ border: 'none', borderTop: '0.5px solid #1e1e1e', margin: '12px 0' }} />
@@ -3046,7 +3073,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
           <div style={{ color: '#FFD700', fontSize: 12, fontWeight: 500, letterSpacing: 0.6, textTransform: 'uppercase' }}>Lender Portal</div>
         </div>
         <nav className={shellNarrow && !shellTiny ? 'swiftdeed-portal-nav-scroll' : undefined} style={{ padding: shellNarrow ? '0 22px 14px' : '18px 0', flex: shellNarrow ? 'none' : 1, display: shellNarrow ? (shellTiny ? 'grid' : 'flex') : 'block', gridTemplateColumns: shellTiny ? 'repeat(2, minmax(0, 1fr))' : undefined, gap: shellNarrow ? 8 : 0, overflowX: shellNarrow && !shellTiny ? 'auto' : 'visible', WebkitOverflowScrolling: 'touch' }}>
-          {navItem('dashboard', 'Dashboard', loansNeedingAttentionCount)}
+          {navItem('dashboard', 'Dashboard', activeLoans.length)}
           {navItem('loans', 'Loans')}
           {navItem('documents', 'Documents')}
           {navItem('invoices', 'Invoices')}
