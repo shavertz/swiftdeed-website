@@ -34,25 +34,6 @@ export default async function handler(req, res) {
         ...(loan.payment_history_urls || []),
       ].join(',');
 
-      const { error: requestError } = await supabase.from('payoff_requests').upsert({
-        loan_id_internal: loanIdInternal,
-        from_email: lenderEmail,
-        borrower_name: loan.borrower_name || null,
-        property_address: loan.property_address || null,
-        total_due: loan.current_principal_balance || loan.original_loan_amount || null,
-        interest_rate: loan.interest_rate || null,
-        per_diem: loan.per_diem || null,
-        monthly_payment: loan.monthly_payment || null,
-        loan_type: loan.loan_type || null,
-        loan_start_date: loan.loan_origination_date || null,
-        maturity_date: loan.maturity_date || null,
-        next_payment_date: loan.next_payment_date || null,
-        guarantor_name: loan.guarantor_name || null,
-        loan_document_urls: docUrls,
-        status: 'active',
-      }, { onConflict: 'loan_id_internal' });
-      if (requestError) throw requestError;
-
       const token = generateToken();
       const { error: borrowerError } = await supabase.from('borrowers').upsert({
         loan_id_internal: loanIdInternal,
