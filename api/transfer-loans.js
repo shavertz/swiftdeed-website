@@ -227,13 +227,13 @@ async function extractFromUrl(url, prompt) {
   }
 }
 
-async function extractInBatches(urls, prompt, batchSize = 8) {
+async function extractInBatches(urls, prompt, batchSize = 4) {
   const results = [];
   for (let i = 0; i < urls.length; i += batchSize) {
     const batch = urls.slice(i, i + batchSize);
     const batchResults = await Promise.all(batch.map(url => extractFromUrl(url, prompt)));
     results.push(...batchResults);
-    if (i + batchSize < urls.length) await new Promise(r => setTimeout(r, 500));
+    if (i + batchSize < urls.length) await new Promise(r => setTimeout(r, 2000));
   }
   return results;
 }
