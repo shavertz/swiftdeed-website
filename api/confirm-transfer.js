@@ -33,6 +33,11 @@ export default async function handler(req, res) {
         ...(loan.servicer_statement_urls || []),
         ...(loan.payment_history_urls || []),
       ].join(',');
+      const perDiem = loan.per_diem || (
+        (loan.current_principal_balance || loan.original_loan_amount) && loan.interest_rate
+          ? Math.round(((loan.current_principal_balance || loan.original_loan_amount) * (loan.interest_rate / 100) / 365) * 100) / 100
+          : null
+      );
 
       const token = generateToken();
       const { error: borrowerError } = await supabase.from('borrowers').insert({
@@ -44,7 +49,7 @@ export default async function handler(req, res) {
         original_loan_amount: loan.original_loan_amount || null,
         principal_balance: loan.current_principal_balance || loan.original_loan_amount || null,
         interest_rate: loan.interest_rate || null,
-        per_diem: loan.per_diem || null,
+        per_diem: perDiem,
         monthly_payment: loan.monthly_payment || null,
         loan_type: loan.loan_type || null,
         loan_start_date: loan.loan_origination_date || null,
