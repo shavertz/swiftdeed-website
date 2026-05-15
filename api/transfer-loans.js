@@ -249,11 +249,9 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'No files provided' });
     }
 
-    const [closingResults, servicerResults, historyResults] = await Promise.all([
-      extractInBatches(closingDocUrls, CLOSING_PROMPT),
-      extractInBatches(servicerStatementUrls, SERVICER_PROMPT),
-      extractInBatches(paymentHistoryUrls, HISTORY_PROMPT),
-    ]);
+    const closingResults = await extractInBatches(closingDocUrls, CLOSING_PROMPT);
+    const servicerResults = await extractInBatches(servicerStatementUrls, SERVICER_PROMPT);
+    const historyResults = await extractInBatches(paymentHistoryUrls, HISTORY_PROMPT);
 
     const entries = [
       ...closingResults.map((result, i) => ({ result, type: 'closing', url: closingDocUrls[i], fileLoanId: extractLoanIdFromUrl(closingDocUrls[i]) })).filter(e => e.result),
