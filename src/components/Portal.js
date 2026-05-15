@@ -1418,6 +1418,12 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     setTransferLoading(true);
     setTransferError('');
     try {
+      const lenderEmail = email || user?.primaryEmailAddress?.emailAddress || '';
+      if (!lenderEmail) {
+        setTransferError('Could not determine your email. Please refresh and try again.');
+        setTransferLoading(false);
+        return;
+      }
       const { createClient: sc } = await import('@supabase/supabase-js');
       const sb = sc(process.env.REACT_APP_SUPABASE_URL, process.env.REACT_APP_SUPABASE_ANON_KEY);
 
@@ -1443,7 +1449,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       const res = await fetch('/api/transfer-loans', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ closingDocUrls, servicerStatementUrls, paymentHistoryUrls, lenderEmail: email }),
+        body: JSON.stringify({ closingDocUrls, servicerStatementUrls, paymentHistoryUrls, lenderEmail }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Extraction failed');
