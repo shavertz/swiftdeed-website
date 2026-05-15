@@ -8,7 +8,8 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const CLOSING_PROMPT = `You are reading a closing document for a commercial real estate loan. Extract the following fields and return ONLY raw JSON with no markdown or explanation:
 borrower_name, property_address, original_loan_amount, interest_rate, loan_type, maturity_date, loan_origination_date, first_payment_date, monthly_payment, guarantor_name, loan_id.
 Use numbers only for money and rates. Use MM/DD/YYYY for dates. Return null for any field not found.
-If current_principal_balance is not found in a servicer statement, use original_loan_amount as the fallback value for current_principal_balance.
+If this is a Commercial Guaranty document, the guarantor_name is the individual who is personally guaranteeing the loan — look for language like "personally guarantees", "Guarantor:", or a signature block with an individual's name. Extract that individual's full name as guarantor_name.
+If current_principal_balance is not found, use original_loan_amount as the fallback value for current_principal_balance.
 Extract first_payment_date from the closing documents and use it as a fallback for next_payment_date if no servicer statement provides one.`;
 
 const SERVICER_PROMPT = `You are reading a servicer statement (payoff statement or monthly statement) for a commercial real estate loan. Extract the following fields and return ONLY raw JSON with no markdown or explanation:
@@ -226,6 +227,17 @@ async function extractFromUrl(url, prompt) {
   }
 }
 
+async function extractInBatches(urls, prompt, batchSize = 8) {
+  const results = [];
+  for (let i = 0; i < urls.length; i += batchSize) {
+    const batch = urls.slice(i, i + batchSize);
+    const batchResults = await Promise.all(batch.map(url => extractFromUrl(url, prompt)));
+    results.push(...batchResults);
+    if (i + batchSize < urls.length) await new Promise(r => setTimeout(r, 500));
+  }
+  return results;
+}
+
 export default async function handler(req, res) {
   if (preparePostRequest(req, res)) return;
 
@@ -238,9 +250,9 @@ export default async function handler(req, res) {
     }
 
     const [closingResults, servicerResults, historyResults] = await Promise.all([
-      Promise.all(closingDocUrls.map(url => extractFromUrl(url, CLOSING_PROMPT))),
-      Promise.all(servicerStatementUrls.map(url => extractFromUrl(url, SERVICER_PROMPT))),
-      Promise.all(paymentHistoryUrls.map(url => extractFromUrl(url, HISTORY_PROMPT))),
+      extractInBatches(closingDocUrls, CLOSING_PROMPT),
+      extractInBatches(servicerStatementUrls, SERVICER_PROMPT),
+      extractInBatches(paymentHistoryUrls, HISTORY_PROMPT),
     ]);
 
     const entries = [
