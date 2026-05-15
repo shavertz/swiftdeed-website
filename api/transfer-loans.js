@@ -50,6 +50,54 @@ function matchScore(a, b) {
   );
 }
 
+function populatedFieldCount(loan) {
+  return [
+    'borrower_name',
+    'property_address',
+    'original_loan_amount',
+    'interest_rate',
+    'loan_type',
+    'maturity_date',
+    'loan_origination_date',
+    'monthly_payment',
+    'guarantor_name',
+    'loan_id',
+    'current_principal_balance',
+    'next_payment_date',
+    'per_diem',
+    'interest_paid_to_date',
+  ].reduce((count, field) => count + (loan[field] !== null && loan[field] !== undefined && loan[field] !== '' ? 1 : 0), 0);
+}
+
+function mergeLoanRecords(primary, duplicate) {
+  [
+    'borrower_name',
+    'property_address',
+    'original_loan_amount',
+    'interest_rate',
+    'loan_type',
+    'maturity_date',
+    'loan_origination_date',
+    'monthly_payment',
+    'guarantor_name',
+    'loan_id',
+    'current_principal_balance',
+    'next_payment_date',
+    'per_diem',
+    'interest_paid_to_date',
+  ].forEach(field => {
+    if ((primary[field] === null || primary[field] === undefined || primary[field] === '') && duplicate[field]) {
+      primary[field] = duplicate[field];
+    }
+  });
+
+  primary.closing_doc_urls = [...new Set([...(primary.closing_doc_urls || []), ...(duplicate.closing_doc_urls || [])])];
+  primary.servicer_statement_urls = [...new Set([...(primary.servicer_statement_urls || []), ...(duplicate.servicer_statement_urls || [])])];
+  primary.payment_history_urls = [...new Set([...(primary.payment_history_urls || []), ...(duplicate.payment_history_urls || [])])];
+  primary.payments = primary.payments?.length ? primary.payments : (duplicate.payments || []);
+  return primary;
+}
+
 async function extractFromUrl(url, prompt) {
   try {
     const fileResponse = await fetch(url);
@@ -233,7 +281,18 @@ export default async function handler(req, res) {
       });
     });
 
-    const loans = Object.values(loanMap).map((loan, idx) => {
+    const dedupedLoans = Object.values(loanMap).reduce((loans, loan) => {
+      const matchIndex = loans.findIndex(existing => matchScore(existing, loan) >= 0.5);
+      if (matchIndex === -1) return [...loans, loan];
+
+      const existing = loans[matchIndex];
+      const primary = populatedFieldCount(existing) >= populatedFieldCount(loan) ? existing : loan;
+      const duplicate = primary === existing ? loan : existing;
+      loans[matchIndex] = mergeLoanRecords(primary, duplicate);
+      return loans;
+    }, []);
+
+    const loans = dedupedLoans.map((loan, idx) => {
       const missing = [];
       if (!loan.borrower_name) missing.push('borrower_name');
       if (!loan.property_address) missing.push('property_address');
