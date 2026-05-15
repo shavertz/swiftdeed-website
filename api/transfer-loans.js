@@ -52,6 +52,18 @@ function matchScore(a, b) {
   );
 }
 
+function extractLoanIdFromUrl(url) {
+  const fileName = decodeURIComponent(String(url || '').split('/').pop() || '').replace(/\.[a-z0-9]+(\?.*)?$/i, '');
+  const directMatch = fileName.match(/(?:^|[^A-Z0-9])((?:SD[-_]\d{4}[-_]\d{3,}|FCI[-_]\d+|LN[-_]\d+))(?:[^0-9]|$)/i);
+  if (directMatch) return directMatch[1].replace(/_/g, '-').toUpperCase();
+  const genericMatch = fileName.match(/(?:^|[^A-Z0-9])([A-Z]{2,10}[-_]\d{2,}(?:[-_]\d+)*)(?:[^0-9]|$)/i);
+  return genericMatch ? genericMatch[1].replace(/_/g, '-').toUpperCase() : null;
+}
+
+function borrowerPropertyMatch(a, b) {
+  return similarity(a.borrower_name, b.borrower_name) >= 0.8 && similarity(a.property_address, b.property_address) >= 0.8;
+}
+
 function populatedFieldCount(loan) {
   return [
     'borrower_name',
@@ -70,6 +82,30 @@ function populatedFieldCount(loan) {
     'per_diem',
     'interest_paid_to_date',
   ].reduce((count, field) => count + (loan[field] !== null && loan[field] !== undefined && loan[field] !== '' ? 1 : 0), 0);
+}
+
+function emptyLoanRecord() {
+  return {
+    borrower_name: null,
+    property_address: null,
+    original_loan_amount: null,
+    interest_rate: null,
+    loan_type: null,
+    maturity_date: null,
+    loan_origination_date: null,
+    first_payment_date: null,
+    monthly_payment: null,
+    guarantor_name: null,
+    loan_id: null,
+    current_principal_balance: null,
+    next_payment_date: null,
+    per_diem: null,
+    interest_paid_to_date: null,
+    closing_doc_urls: [],
+    servicer_statement_urls: [],
+    payment_history_urls: [],
+    payments: [],
+  };
 }
 
 function mergeLoanRecords(primary, duplicate) {
@@ -100,6 +136,30 @@ function mergeLoanRecords(primary, duplicate) {
   primary.payment_history_urls = [...new Set([...(primary.payment_history_urls || []), ...(duplicate.payment_history_urls || [])])];
   primary.payments = primary.payments?.length ? primary.payments : (duplicate.payments || []);
   return primary;
+}
+
+function recordFromExtraction(result, type, url, fileLoanId) {
+  const record = emptyLoanRecord();
+  record.borrower_name = result.borrower_name || null;
+  record.property_address = result.property_address || null;
+  record.original_loan_amount = num(result.original_loan_amount);
+  record.interest_rate = num(result.interest_rate);
+  record.loan_type = result.loan_type || null;
+  record.maturity_date = date(result.maturity_date);
+  record.loan_origination_date = date(result.loan_origination_date);
+  record.first_payment_date = date(result.first_payment_date);
+  record.monthly_payment = num(result.monthly_payment);
+  record.guarantor_name = result.guarantor_name || null;
+  record.loan_id = result.loan_id || fileLoanId || null;
+  record.current_principal_balance = num(result.current_principal_balance);
+  record.next_payment_date = date(result.next_payment_date);
+  record.per_diem = num(result.per_diem);
+  record.interest_paid_to_date = num(result.interest_paid_to_date);
+  record.payments = result.payments || [];
+  if (type === 'closing') record.closing_doc_urls = [url];
+  if (type === 'servicer') record.servicer_statement_urls = [url];
+  if (type === 'history') record.payment_history_urls = [url];
+  return record;
 }
 
 async function extractFromUrl(url, prompt) {
@@ -162,135 +222,53 @@ export default async function handler(req, res) {
       Promise.all(paymentHistoryUrls.map(url => extractFromUrl(url, HISTORY_PROMPT))),
     ]);
 
-    const loanMap = {};
-    closingResults.filter(Boolean).forEach((r, i) => {
-      const key = normalize(r.borrower_name || '') + normalize(r.property_address || '');
-      if (!key) return;
-      if (!loanMap[key]) {
-        loanMap[key] = {
-          borrower_name: r.borrower_name || null,
-          property_address: r.property_address || null,
-          original_loan_amount: num(r.original_loan_amount),
-          interest_rate: num(r.interest_rate),
-          loan_type: r.loan_type || null,
-          maturity_date: date(r.maturity_date),
-          loan_origination_date: date(r.loan_origination_date),
-          first_payment_date: date(r.first_payment_date),
-          monthly_payment: num(r.monthly_payment),
-          guarantor_name: r.guarantor_name || null,
-          loan_id: r.loan_id || null,
-          current_principal_balance: null,
-          next_payment_date: null,
-          per_diem: null,
-          interest_paid_to_date: null,
-          closing_doc_urls: [],
-          servicer_statement_urls: [],
-          payment_history_urls: [],
-          payments: [],
-        };
-      }
-      loanMap[key].closing_doc_urls.push(closingDocUrls[i]);
-      if (!loanMap[key].guarantor_name && r.guarantor_name) loanMap[key].guarantor_name = r.guarantor_name;
-      if (!loanMap[key].loan_type && r.loan_type) loanMap[key].loan_type = r.loan_type;
-    });
+    const entries = [
+      ...closingResults.map((result, i) => ({ result, type: 'closing', url: closingDocUrls[i], fileLoanId: extractLoanIdFromUrl(closingDocUrls[i]) })).filter(e => e.result),
+      ...servicerResults.map((result, i) => ({ result, type: 'servicer', url: servicerStatementUrls[i], fileLoanId: extractLoanIdFromUrl(servicerStatementUrls[i]) })).filter(e => e.result),
+      ...historyResults.flatMap((result, i) => {
+        if (!result) return [];
+        const fileLoanId = extractLoanIdFromUrl(paymentHistoryUrls[i]);
+        const historyLoans = Array.isArray(result.loans) && result.loans.length ? result.loans : [result];
+        return historyLoans.map(loan => ({ result: loan, type: 'history', url: paymentHistoryUrls[i], fileLoanId }));
+      }),
+    ];
 
-    servicerResults.filter(Boolean).forEach((r, i) => {
-      const candidates = Object.values(loanMap);
-      let best = null;
-      let bestScore = 0;
-      candidates.forEach(c => {
-        const score = matchScore(c, r);
-        if (score > bestScore) { bestScore = score; best = c; }
-      });
-
-      if (best && bestScore >= 0.5) {
-        best.current_principal_balance = num(r.current_principal_balance) || best.current_principal_balance;
-        best.next_payment_date = date(r.next_payment_date) || best.next_payment_date;
-        best.per_diem = num(r.per_diem) || best.per_diem;
-        best.interest_paid_to_date = num(r.interest_paid_to_date) || best.interest_paid_to_date;
-        if (!best.interest_rate && r.interest_rate) best.interest_rate = num(r.interest_rate);
-        best.servicer_statement_urls.push(servicerStatementUrls[i]);
+    const idGroups = new Map();
+    const unmatchedEntries = [];
+    entries.forEach(entry => {
+      if (entry.fileLoanId) {
+        const group = idGroups.get(entry.fileLoanId) || [];
+        group.push(entry);
+        idGroups.set(entry.fileLoanId, group);
       } else {
-        const key = normalize(r.borrower_name || '') + normalize(r.property_address || '') + '_servicer';
-        loanMap[key] = {
-          borrower_name: r.borrower_name || null,
-          property_address: r.property_address || null,
-          original_loan_amount: null,
-          interest_rate: num(r.interest_rate),
-          loan_type: null,
-          maturity_date: null,
-          loan_origination_date: null,
-          first_payment_date: null,
-          monthly_payment: null,
-          guarantor_name: null,
-          loan_id: r.loan_id || null,
-          current_principal_balance: num(r.current_principal_balance),
-          next_payment_date: date(r.next_payment_date),
-          per_diem: num(r.per_diem),
-          interest_paid_to_date: num(r.interest_paid_to_date),
-          closing_doc_urls: [],
-          servicer_statement_urls: [servicerStatementUrls[i]],
-          payment_history_urls: [],
-          payments: [],
-        };
+        unmatchedEntries.push(entry);
       }
     });
 
-    historyResults.filter(Boolean).forEach((r, i) => {
-      const historyLoans = r.loans || [];
-      historyLoans.forEach(hl => {
-        const candidates = Object.values(loanMap);
-        let best = null;
-        let bestScore = 0;
-        candidates.forEach(c => {
-          const score = matchScore(c, hl);
-          if (score > bestScore) { bestScore = score; best = c; }
-        });
-        if (best && bestScore >= 0.5) {
-          best.original_loan_amount = num(hl.original_loan_amount) || best.original_loan_amount;
-          best.current_principal_balance = num(hl.current_principal_balance) || best.current_principal_balance;
-          best.interest_rate = num(hl.interest_rate) || best.interest_rate;
-          best.loan_type = hl.loan_type || best.loan_type;
-          best.maturity_date = date(hl.maturity_date) || best.maturity_date;
-          best.loan_origination_date = date(hl.loan_origination_date) || best.loan_origination_date;
-          best.first_payment_date = date(hl.first_payment_date) || best.first_payment_date;
-          best.monthly_payment = num(hl.monthly_payment) || best.monthly_payment;
-          best.guarantor_name = hl.guarantor_name || best.guarantor_name;
-          best.next_payment_date = date(hl.next_payment_date) || best.next_payment_date;
-          best.per_diem = num(hl.per_diem) || best.per_diem;
-          best.interest_paid_to_date = num(hl.interest_paid_to_date) || best.interest_paid_to_date;
-          best.payments = hl.payments || [];
-          best.payment_history_urls.push(paymentHistoryUrls[i]);
-        } else {
-          const key = normalize(hl.borrower_name || '') + normalize(hl.property_address || '') + normalize(hl.loan_id || '') + '_history';
-          if (!key || key === '_history') return;
-          loanMap[key] = {
-            borrower_name: hl.borrower_name || null,
-            property_address: hl.property_address || null,
-            original_loan_amount: num(hl.original_loan_amount),
-            interest_rate: num(hl.interest_rate),
-            loan_type: hl.loan_type || null,
-            maturity_date: date(hl.maturity_date),
-            loan_origination_date: date(hl.loan_origination_date),
-            first_payment_date: date(hl.first_payment_date),
-            monthly_payment: num(hl.monthly_payment),
-            guarantor_name: hl.guarantor_name || null,
-            loan_id: hl.loan_id || null,
-            current_principal_balance: num(hl.current_principal_balance),
-            next_payment_date: date(hl.next_payment_date),
-            per_diem: num(hl.per_diem),
-            interest_paid_to_date: num(hl.interest_paid_to_date),
-            closing_doc_urls: [],
-            servicer_statement_urls: [],
-            payment_history_urls: [paymentHistoryUrls[i]],
-            payments: hl.payments || [],
-          };
-        }
-      });
+    const borrowerPropertyGroups = [];
+    unmatchedEntries.forEach(entry => {
+      const match = borrowerPropertyGroups.find(group => borrowerPropertyMatch(group.seed, entry.result));
+      if (match) {
+        match.entries.push(entry);
+      } else {
+        borrowerPropertyGroups.push({ seed: entry.result, entries: [entry] });
+      }
     });
 
-    const dedupedLoans = Object.values(loanMap).reduce((loans, loan) => {
-      const matchIndex = loans.findIndex(existing => matchScore(existing, loan) >= 0.5);
+    const groupedEntries = [
+      ...Array.from(idGroups.values()),
+      ...borrowerPropertyGroups.map(group => group.entries),
+    ];
+
+    const dedupedLoans = groupedEntries.map(group => {
+      return group.reduce((loan, entry) => {
+        return mergeLoanRecords(loan, recordFromExtraction(entry.result, entry.type, entry.url, entry.fileLoanId));
+      }, emptyLoanRecord());
+    }).reduce((loans, loan) => {
+      const matchIndex = loans.findIndex(existing => (
+        (existing.loan_id && loan.loan_id && normalize(existing.loan_id) === normalize(loan.loan_id)) ||
+        borrowerPropertyMatch(existing, loan)
+      ));
       if (matchIndex === -1) return [...loans, loan];
 
       const existing = loans[matchIndex];
