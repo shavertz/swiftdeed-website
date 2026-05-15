@@ -31,6 +31,32 @@ function date(v) {
   return isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
 }
 
+function monthDiff(start, end) {
+  const s = new Date(start);
+  const e = new Date(end);
+  if (isNaN(s.getTime()) || isNaN(e.getTime())) return 0;
+  return Math.max(0, (e.getFullYear() - s.getFullYear()) * 12 + (e.getMonth() - s.getMonth()));
+}
+
+function calculatedMonthlyPayment(loan) {
+  if (loan.monthly_payment) return loan.monthly_payment;
+  const principal = num(loan.original_loan_amount || loan.current_principal_balance);
+  const rate = num(loan.interest_rate);
+  if (!principal || !rate) return null;
+  const loanType = String(loan.loan_type || '').toLowerCase();
+  if (loanType.includes('interest only') || loanType.includes('interest-only')) {
+    return Math.round((principal * (rate / 100) / 12) * 100) / 100;
+  }
+  if (loanType.includes('amortizing') && loan.loan_origination_date && loan.maturity_date) {
+    const months = monthDiff(loan.loan_origination_date, loan.maturity_date);
+    const monthlyRate = rate / 100 / 12;
+    if (months > 0 && monthlyRate > 0) {
+      return Math.round((principal * monthlyRate / (1 - Math.pow(1 + monthlyRate, -months))) * 100) / 100;
+    }
+  }
+  return null;
+}
+
 function normalize(str) {
   return String(str || '').toLowerCase().replace(/[^a-z0-9]/g, '').trim();
 }
@@ -281,6 +307,7 @@ export default async function handler(req, res) {
     const loans = dedupedLoans.map((loan, idx) => {
       if (!loan.current_principal_balance && loan.original_loan_amount) loan.current_principal_balance = loan.original_loan_amount;
       if (!loan.next_payment_date && loan.first_payment_date) loan.next_payment_date = loan.first_payment_date;
+      if (!loan.monthly_payment) loan.monthly_payment = calculatedMonthlyPayment(loan);
       const missing = [];
       if (!loan.borrower_name) missing.push('borrower_name');
       if (!loan.property_address) missing.push('property_address');
