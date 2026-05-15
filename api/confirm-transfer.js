@@ -55,7 +55,6 @@ export default async function handler(req, res) {
         loan_document_urls: docUrls,
         verification_token: token,
         status: 'active',
-        portal_access: 'Active',
       }, { onConflict: 'loan_id_internal' });
       if (borrowerError) throw borrowerError;
 
