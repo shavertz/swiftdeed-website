@@ -75,15 +75,14 @@ function matchScore(a, b) {
 }
 
 function extractLoanIdFromUrl(url) {
-  const fileName = decodeURIComponent(String(url || '').split('/').pop() || '').replace(/\.[a-z0-9]+(\?.*)?$/i, '');
-  const directMatch = fileName.match(/(?:^|[^A-Z0-9])((?:SD[-_]\d{4}[-_]\d{3,}|FCI[-_]\d+|LN[-_]\d+))(?:[^0-9]|$)/i);
-  if (directMatch) return directMatch[1].replace(/_/g, '-').toUpperCase();
-  const genericMatch = fileName.match(/(?:^|[^A-Z0-9])([A-Z]{2,10}[-_]\d{2,}(?:[-_]\d+)*)(?:[^0-9]|$)/i);
-  return genericMatch ? genericMatch[1].replace(/_/g, '-').toUpperCase() : null;
+  const fileName = decodeURIComponent(String(url || '').split('/').pop() || '');
+  const match = fileName.match(/(?:loan[_\-\s]?)?((?:[A-Z]{2,10}[_\-]\d{4}[_\-]\d{3,}))/i);
+  if (!match) return null;
+  return match[1].replace(/_/g, '-').toUpperCase().trim();
 }
 
 function borrowerPropertyMatch(a, b) {
-  return similarity(a.borrower_name, b.borrower_name) >= 0.8 && similarity(a.property_address, b.property_address) >= 0.8;
+  return similarity(a.property_address, b.property_address) >= 0.8;
 }
 
 function populatedFieldCount(loan) {
