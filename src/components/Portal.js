@@ -1273,15 +1273,11 @@ export default function Portal({ onSubmitRequest, resetToken }) {
         const data = await res.json();
         const legacyRows = Array.isArray(data) ? data : [];
         const ids = legacyRows.map(r => r.loan_id_internal).filter(Boolean);
-        if (ids.length === 0) {
-          setRequests(visibleRows);
-          setBorrowerEmails(emailMap);
-          setBorrowerData(dataMap);
-          return;
+        let bData = [];
+        if (ids.length > 0) {
+          const bRes = await fetch(`${SUPABASE_URL}/rest/v1/borrowers?loan_id_internal=in.(${ids.map(id => `"${id}"`).join(',')})&select=*`, { headers });
+          bData = await bRes.json();
         }
-
-        const bRes = await fetch(`${SUPABASE_URL}/rest/v1/borrowers?loan_id_internal=in.(${ids.map(id => `"${id}"`).join(',')})&select=*`, { headers });
-        const bData = await bRes.json();
         if (Array.isArray(bData)) {
           bData.forEach(b => {
             if (b.loan_id_internal) {
@@ -1289,14 +1285,6 @@ export default function Portal({ onSubmitRequest, resetToken }) {
               dataMap[b.loan_id_internal] = b;
             }
           });
-          const existingIds = new Set(visibleRows.map(r => r.loan_id_internal).filter(Boolean));
-          visibleRows = [
-            ...visibleRows,
-            ...legacyRows.filter(r => !existingIds.has(r.loan_id_internal)).map(r => mergeBorrowerIntoLoanRow(r, dataMap[r.loan_id_internal])),
-          ];
-          setBorrowerEmails(emailMap);
-          setBorrowerData(dataMap);
-          setRequests(visibleRows);
 
           bData.filter(b => b.loan_id_internal && !b.lender_email).forEach(b => {
             fetch(`${SUPABASE_URL}/rest/v1/borrowers?loan_id_internal=eq.${encodeURIComponent(b.loan_id_internal)}`, {
@@ -1306,6 +1294,14 @@ export default function Portal({ onSubmitRequest, resetToken }) {
             }).catch(() => {});
           });
         }
+        const existingIds = new Set(visibleRows.map(r => r.loan_id_internal).filter(Boolean));
+        visibleRows = [
+          ...visibleRows,
+          ...legacyRows.filter(r => !existingIds.has(r.loan_id_internal)).map(r => mergeBorrowerIntoLoanRow(r, dataMap[r.loan_id_internal])),
+        ];
+        setBorrowerEmails(emailMap);
+        setBorrowerData(dataMap);
+        setRequests(visibleRows);
       } catch (e) { console.error(e); } finally { setLoading(false); }
     }
     load();
