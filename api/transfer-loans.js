@@ -6,8 +6,10 @@ export const maxDuration = 60;
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 const CLOSING_PROMPT = `You are reading a closing document for a commercial real estate loan. Extract the following fields and return ONLY raw JSON with no markdown or explanation:
-borrower_name, property_address, original_loan_amount, interest_rate, loan_type, maturity_date, loan_origination_date, monthly_payment, guarantor_name, loan_id.
-Use numbers only for money and rates. Use MM/DD/YYYY for dates. Return null for any field not found.`;
+borrower_name, property_address, original_loan_amount, interest_rate, loan_type, maturity_date, loan_origination_date, first_payment_date, monthly_payment, guarantor_name, loan_id.
+Use numbers only for money and rates. Use MM/DD/YYYY for dates. Return null for any field not found.
+If current_principal_balance is not found in a servicer statement, use original_loan_amount as the fallback value for current_principal_balance.
+Extract first_payment_date from the closing documents and use it as a fallback for next_payment_date if no servicer statement provides one.`;
 
 const SERVICER_PROMPT = `You are reading a servicer statement (payoff statement or monthly statement) for a commercial real estate loan. Extract the following fields and return ONLY raw JSON with no markdown or explanation:
 borrower_name, property_address, current_principal_balance, interest_rate, next_payment_date, per_diem, interest_paid_to_date, loan_id, servicer_name.
@@ -59,6 +61,7 @@ function populatedFieldCount(loan) {
     'loan_type',
     'maturity_date',
     'loan_origination_date',
+    'first_payment_date',
     'monthly_payment',
     'guarantor_name',
     'loan_id',
@@ -78,6 +81,7 @@ function mergeLoanRecords(primary, duplicate) {
     'loan_type',
     'maturity_date',
     'loan_origination_date',
+    'first_payment_date',
     'monthly_payment',
     'guarantor_name',
     'loan_id',
@@ -171,6 +175,7 @@ export default async function handler(req, res) {
           loan_type: r.loan_type || null,
           maturity_date: date(r.maturity_date),
           loan_origination_date: date(r.loan_origination_date),
+          first_payment_date: date(r.first_payment_date),
           monthly_payment: num(r.monthly_payment),
           guarantor_name: r.guarantor_name || null,
           loan_id: r.loan_id || null,
@@ -215,6 +220,7 @@ export default async function handler(req, res) {
           loan_type: null,
           maturity_date: null,
           loan_origination_date: null,
+          first_payment_date: null,
           monthly_payment: null,
           guarantor_name: null,
           loan_id: r.loan_id || null,
@@ -247,6 +253,7 @@ export default async function handler(req, res) {
           best.loan_type = hl.loan_type || best.loan_type;
           best.maturity_date = date(hl.maturity_date) || best.maturity_date;
           best.loan_origination_date = date(hl.loan_origination_date) || best.loan_origination_date;
+          best.first_payment_date = date(hl.first_payment_date) || best.first_payment_date;
           best.monthly_payment = num(hl.monthly_payment) || best.monthly_payment;
           best.guarantor_name = hl.guarantor_name || best.guarantor_name;
           best.next_payment_date = date(hl.next_payment_date) || best.next_payment_date;
@@ -265,6 +272,7 @@ export default async function handler(req, res) {
             loan_type: hl.loan_type || null,
             maturity_date: date(hl.maturity_date),
             loan_origination_date: date(hl.loan_origination_date),
+            first_payment_date: date(hl.first_payment_date),
             monthly_payment: num(hl.monthly_payment),
             guarantor_name: hl.guarantor_name || null,
             loan_id: hl.loan_id || null,
@@ -293,6 +301,8 @@ export default async function handler(req, res) {
     }, []);
 
     const loans = dedupedLoans.map((loan, idx) => {
+      if (!loan.current_principal_balance && loan.original_loan_amount) loan.current_principal_balance = loan.original_loan_amount;
+      if (!loan.next_payment_date && loan.first_payment_date) loan.next_payment_date = loan.first_payment_date;
       const missing = [];
       if (!loan.borrower_name) missing.push('borrower_name');
       if (!loan.property_address) missing.push('property_address');
