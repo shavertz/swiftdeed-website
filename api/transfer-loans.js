@@ -43,18 +43,14 @@ function calculatedMonthlyPayment(loan) {
   const principal = num(loan.original_loan_amount || loan.current_principal_balance);
   const rate = num(loan.interest_rate);
   if (!principal || !rate) return null;
-  const loanType = String(loan.loan_type || '').toLowerCase();
-  if (loanType.includes('interest only') || loanType.includes('interest-only')) {
-    return Math.round((principal * (rate / 100) / 12) * 100) / 100;
+  const monthlyRate = rate / 100 / 12;
+  const months = loan.loan_origination_date && loan.maturity_date
+    ? monthDiff(loan.loan_origination_date, loan.maturity_date)
+    : 0;
+  if (months > 1 && monthlyRate > 0) {
+    return Math.round((principal * monthlyRate / (1 - Math.pow(1 + monthlyRate, -months))) * 100) / 100;
   }
-  if (loanType.includes('amortizing') && loan.loan_origination_date && loan.maturity_date) {
-    const months = monthDiff(loan.loan_origination_date, loan.maturity_date);
-    const monthlyRate = rate / 100 / 12;
-    if (months > 0 && monthlyRate > 0) {
-      return Math.round((principal * monthlyRate / (1 - Math.pow(1 + monthlyRate, -months))) * 100) / 100;
-    }
-  }
-  return null;
+  return Math.round((principal * monthlyRate) * 100) / 100;
 }
 
 function normalize(str) {
