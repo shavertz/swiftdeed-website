@@ -35,7 +35,7 @@ export default async function handler(req, res) {
       ].join(',');
 
       const token = generateToken();
-      const { error: borrowerError } = await supabase.from('borrowers').upsert({
+      const { error: borrowerError } = await supabase.from('borrowers').insert({
         loan_id_internal: loanIdInternal,
         lender_email: lenderEmail,
         legal_name: loan.borrower_name || null,
@@ -55,7 +55,7 @@ export default async function handler(req, res) {
         loan_document_urls: docUrls,
         verification_token: token,
         status: 'active',
-      }, { onConflict: 'loan_id_internal' });
+      });
       if (borrowerError) throw borrowerError;
 
       if (loan.payments && loan.payments.length > 0) {
