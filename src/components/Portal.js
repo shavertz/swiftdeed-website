@@ -1246,65 +1246,67 @@ export default function Portal({ onSubmitRequest, resetToken }) {
     fetchLenderName();
   }, [email]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  async function loadLoansForLender(lenderEmail = email) {
+    if (!lenderEmail) return;
+    try {
+      const headers = { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` };
+      const borrowerRes = await fetch(`${SUPABASE_URL}/rest/v1/borrowers?lender_email=eq.${encodeURIComponent(lenderEmail)}&order=created_at.desc&select=*`, { headers });
+      const borrowerRows = borrowerRes.ok ? await borrowerRes.json() : [];
+      const emailMap = {};
+      const dataMap = {};
+      let visibleRows = [];
+      if (Array.isArray(borrowerRows) && borrowerRows.length > 0) {
+        borrowerRows.forEach(b => {
+          if (b.loan_id_internal) {
+            emailMap[b.loan_id_internal] = b.borrower_email;
+            dataMap[b.loan_id_internal] = b;
+          }
+        });
+        visibleRows = borrowerRows.map(b => mergeBorrowerIntoLoanRow({ ...b, borrower_name: b.legal_name, total_due: b.principal_balance }, b));
+      }
+
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/payoff_requests?from_email=eq.${encodeURIComponent(lenderEmail)}&order=created_at.desc`, { headers });
+      const data = await res.json();
+      const legacyRows = Array.isArray(data) ? data : [];
+      const ids = legacyRows.map(r => r.loan_id_internal).filter(Boolean);
+      let bData = [];
+      if (ids.length > 0) {
+        const bRes = await fetch(`${SUPABASE_URL}/rest/v1/borrowers?loan_id_internal=in.(${ids.map(id => `"${id}"`).join(',')})&select=*`, { headers });
+        bData = await bRes.json();
+      }
+      if (Array.isArray(bData)) {
+        bData.forEach(b => {
+          if (b.loan_id_internal) {
+            emailMap[b.loan_id_internal] = b.borrower_email;
+            dataMap[b.loan_id_internal] = b;
+          }
+        });
+
+        bData.filter(b => b.loan_id_internal && !b.lender_email).forEach(b => {
+          fetch(`${SUPABASE_URL}/rest/v1/borrowers?loan_id_internal=eq.${encodeURIComponent(b.loan_id_internal)}`, {
+            method: 'PATCH',
+            headers: { ...headers, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+            body: JSON.stringify({ lender_email: lenderEmail }),
+          }).catch(() => {});
+        });
+      }
+      const existingIds = new Set(visibleRows.map(r => r.loan_id_internal).filter(Boolean));
+      visibleRows = [
+        ...visibleRows,
+        ...legacyRows.filter(r => !existingIds.has(r.loan_id_internal)).map(r => mergeBorrowerIntoLoanRow(r, dataMap[r.loan_id_internal])),
+      ];
+      setBorrowerEmails(emailMap);
+      setBorrowerData(dataMap);
+      setRequests(visibleRows);
+    } catch (e) { console.error(e); } finally { setLoading(false); }
+  }
+
   useEffect(() => {
     if (!email) return;
     setLoanFilter({ id: 'all', label: 'All active loans', accent: '#FFD700' });
     setSearch('');
     setPage(1);
-    async function load() {
-      try {
-        const headers = { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` };
-        const borrowerRes = await fetch(`${SUPABASE_URL}/rest/v1/borrowers?lender_email=eq.${encodeURIComponent(email)}&order=created_at.desc&select=*`, { headers });
-        const borrowerRows = borrowerRes.ok ? await borrowerRes.json() : [];
-        const emailMap = {};
-        const dataMap = {};
-        let visibleRows = [];
-        if (Array.isArray(borrowerRows) && borrowerRows.length > 0) {
-          borrowerRows.forEach(b => {
-            if (b.loan_id_internal) {
-              emailMap[b.loan_id_internal] = b.borrower_email;
-              dataMap[b.loan_id_internal] = b;
-            }
-          });
-          visibleRows = borrowerRows.map(b => mergeBorrowerIntoLoanRow({ ...b, borrower_name: b.legal_name, total_due: b.principal_balance }, b));
-        }
-
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/payoff_requests?from_email=eq.${encodeURIComponent(email)}&order=created_at.desc`, { headers });
-        const data = await res.json();
-        const legacyRows = Array.isArray(data) ? data : [];
-        const ids = legacyRows.map(r => r.loan_id_internal).filter(Boolean);
-        let bData = [];
-        if (ids.length > 0) {
-          const bRes = await fetch(`${SUPABASE_URL}/rest/v1/borrowers?loan_id_internal=in.(${ids.map(id => `"${id}"`).join(',')})&select=*`, { headers });
-          bData = await bRes.json();
-        }
-        if (Array.isArray(bData)) {
-          bData.forEach(b => {
-            if (b.loan_id_internal) {
-              emailMap[b.loan_id_internal] = b.borrower_email;
-              dataMap[b.loan_id_internal] = b;
-            }
-          });
-
-          bData.filter(b => b.loan_id_internal && !b.lender_email).forEach(b => {
-            fetch(`${SUPABASE_URL}/rest/v1/borrowers?loan_id_internal=eq.${encodeURIComponent(b.loan_id_internal)}`, {
-              method: 'PATCH',
-              headers: { ...headers, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-              body: JSON.stringify({ lender_email: email }),
-            }).catch(() => {});
-          });
-        }
-        const existingIds = new Set(visibleRows.map(r => r.loan_id_internal).filter(Boolean));
-        visibleRows = [
-          ...visibleRows,
-          ...legacyRows.filter(r => !existingIds.has(r.loan_id_internal)).map(r => mergeBorrowerIntoLoanRow(r, dataMap[r.loan_id_internal])),
-        ];
-        setBorrowerEmails(emailMap);
-        setBorrowerData(dataMap);
-        setRequests(visibleRows);
-      } catch (e) { console.error(e); } finally { setLoading(false); }
-    }
-    load();
+    loadLoansForLender(email);
   }, [email]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -1475,6 +1477,7 @@ export default function Portal({ onSubmitRequest, resetToken }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Confirmation failed');
       setTransferStep(3);
+      await loadLoansForLender(email);
     } catch (e) {
       setTransferError(e.message || 'Something went wrong. Please try again.');
     } finally {
