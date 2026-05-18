@@ -215,8 +215,8 @@ function PaymentModal({ borrower, onClose, onSuccess }) {
     try {
       const paymentDate = new Date().toISOString().split('T')[0];
       const months = Math.max(1, Math.floor(amountNum / monthlyPayment));
-      const interestPortion = parseFloat((monthlyPayment * Math.min(1, months) - breakdown.principalPortion).toFixed(2));
-      const principalPortion = breakdown.principalPortion;
+      const interestPortion = parseFloat((monthlyPayment * months).toFixed(2));
+      const principalPortion = 0;
       const principalBalanceAfter = parseFloat((borrower.principal_balance - principalPortion).toFixed(2));
 
       const nextPaymentDate = (() => {
@@ -427,30 +427,30 @@ function PaymentModal({ borrower, onClose, onSuccess }) {
 function DonutChart({ principal, interestPaid, original }) {
   if (!original || original === 0) return null;
   const principalPaid = Math.max(0, original - principal);
-  const remainingPct = Math.min(100, Math.max(0, (principal / original) * 100));
-  const principalPaidPct = Math.min(100, Math.max(0, (principalPaid / original) * 100));
-  const interestPct = Math.min(100, Math.max(0, (interestPaid / original) * 100));
+  const remainingPct = Math.max(0, Math.min(100, (principal / original) * 100));
+  const principalPaidPct = Math.max(0, Math.min(100 - remainingPct, (principalPaid / original) * 100));
+  const interestPct = Math.max(0, Math.min(100 - remainingPct - principalPaidPct, (interestPaid / original) * 100));
   const circumference = 2 * Math.PI * 75;
+
   const remainingDash = (remainingPct / 100) * circumference;
   const principalDash = (principalPaidPct / 100) * circumference;
   const interestDash = (interestPct / 100) * circumference;
-  const principalOffset = -(remainingDash);
-  const interestOffset = -(remainingDash + principalDash);
+
   return (
     <svg width="200" height="200" viewBox="0 0 200 200">
       <circle cx="100" cy="100" r="75" fill="none" stroke="#1a1a1a" strokeWidth="22"/>
       <circle cx="100" cy="100" r="75" fill="none" stroke="#2a2a2a" strokeWidth="22"
-        strokeDasharray={`${remainingDash} ${circumference - remainingDash}`}
+        strokeDasharray={`${remainingDash} ${circumference}`}
         strokeDashoffset={0} transform="rotate(-90 100 100)"/>
-      {principalDash > 0 && (
+      {principalPaidPct > 0.1 && (
         <circle cx="100" cy="100" r="75" fill="none" stroke="#4a90b8" strokeWidth="22"
-          strokeDasharray={`${principalDash} ${circumference - principalDash}`}
-          strokeDashoffset={principalOffset} transform="rotate(-90 100 100)"/>
+          strokeDasharray={`${principalDash} ${circumference}`}
+          strokeDashoffset={-remainingDash} transform="rotate(-90 100 100)"/>
       )}
-      {interestDash > 0 && (
+      {interestPct > 0.1 && (
         <circle cx="100" cy="100" r="75" fill="none" stroke="#D4A017" strokeWidth="22"
-          strokeDasharray={`${interestDash} ${circumference - interestDash}`}
-          strokeDashoffset={interestOffset} transform="rotate(-90 100 100)"/>
+          strokeDasharray={`${interestDash} ${circumference}`}
+          strokeDashoffset={-(remainingDash + principalDash)} transform="rotate(-90 100 100)"/>
       )}
       <text x="100" y="94" textAnchor="middle" fontSize="13" fill="#555">Remaining</text>
       <text x="100" y="114" textAnchor="middle" fontSize="18" fontWeight="500" fill="#fff">
