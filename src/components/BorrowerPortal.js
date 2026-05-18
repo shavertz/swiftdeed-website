@@ -103,9 +103,8 @@ function getAlertConfig(daysUntil) {
 function calcBreakdown(amount, borrower) {
   const principal = parseFloat(borrower.principal_balance) || 0;
   const rate = parseFloat(borrower.interest_rate) || 0;
-  const monthlyInterest = parseFloat((principal * rate / 100 / 12).toFixed(2));
+  const interest = parseFloat((principal * rate / 100 / 12).toFixed(2));
   const paid = parseFloat(amount) || 0;
-  const interest = Math.min(paid, monthlyInterest);
   const principalPortion = parseFloat(Math.max(0, paid - interest).toFixed(2));
   const balanceAfter = parseFloat(Math.max(0, principal - principalPortion).toFixed(2));
   return { interest, principalPortion, balanceAfter };
