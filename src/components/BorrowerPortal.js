@@ -204,24 +204,54 @@ function PaymentModal({ borrower, onClose, onSuccess }) {
     setStep('processing');
     setErrorMsg('');
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const paymentDate = new Date().toISOString().split('T')[0];
+      const amount = amountNum;
+      const loan = borrower;
+      const interestPortion = breakdown.interest;
+      const principalPortion = breakdown.principalPortion;
+      const nextPaymentDate = (() => {
+        const d = new Date(loan.next_payment_date);
+        d.setMonth(d.getMonth() + 1);
+        return d.toISOString().slice(0, 10);
+      })();
+      const principalBalanceAfter = parseFloat(loan.principal_balance || 0) - parseFloat(principalPortion || 0);
+      const updates = {
+        last_payment_date: paymentDate,
+        last_payment_amount: amount,
+        next_payment_date: nextPaymentDate,
+        principal_balance: principalBalanceAfter,
+        total_interest_paid: parseFloat(loan.total_interest_paid || 0) + parseFloat(interestPortion || 0),
+      };
+      const paymentLog = {
+        loan_id_internal: borrower.loan_id_internal,
+        payment_date: paymentDate,
+        amount,
+        method: 'ACH',
+        interest_portion: interestPortion,
+        principal_portion: principalPortion,
+        principal_balance_after: principalBalanceAfter,
+        payment_status: 'current',
+        recorded_by: user?.primaryEmailAddress?.emailAddress || 'borrower',
+      };
       const res = await fetch('/api/stripe-charge', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           customerId,
           paymentMethodId,
-          amount: amountNum,
+          amount,
           borrowerId: borrower.id,
           loanIdInternal: borrower.loan_id_internal,
           borrowerName: borrower.legal_name,
           borrowerEmail: user?.primaryEmailAddress?.emailAddress,
           lenderEmail: null,
-          interestPortion: breakdown.interest,
-          principalPortion: breakdown.principalPortion,
-          principalBalanceAfter: breakdown.balanceAfter,
-          nextPaymentDate: nextMonthDate(today),
+          interestPortion,
+          principalPortion,
+          principalBalanceAfter,
+          nextPaymentDate,
           totalPaymentsMade: (borrower.total_payments_made || 0) + 1,
+          updates,
+          paymentLog,
         }),
       });
       const data = await res.json();
