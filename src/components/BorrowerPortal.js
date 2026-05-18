@@ -596,6 +596,12 @@ export default function BorrowerPortal({ onHome }) {
   const showAlert = borrower && !isPaidOff && daysUntil !== null && daysUntil <= 14;
   const alertConfig = daysUntil !== null ? getAlertConfig(daysUntil) : null;
   const docUrls = borrower?.loan_document_urls ? borrower.loan_document_urls.split(',').map(u => u.trim()).filter(Boolean) : [];
+  const monthlyPayment = borrower?.monthly_payment || (
+    borrower?.principal_balance && borrower?.interest_rate
+      ? Math.round((borrower.principal_balance * (borrower.interest_rate / 100) / 12) * 100) / 100
+      : null
+  );
+  const amountDueDisplay = monthlyPayment ? fmt$(monthlyPayment) : 'Contact servicer';
 
   return (
     <div style={s.page}>
@@ -612,10 +618,10 @@ export default function BorrowerPortal({ onHome }) {
           <div style={{ width: 7, height: 7, borderRadius: '50%', background: alertConfig.dot, flexShrink: 0 }}></div>
           <div style={{ fontSize: 13, color: alertConfig.text }}>
             {daysUntil < 0
-              ? <>Your payment of <strong>{fmt$(borrower.last_payment_amount)}</strong> was due on <strong>{fmtDate(borrower.next_payment_date)}</strong> — <strong>overdue.</strong></>
+              ? <>Your payment of <strong>{amountDueDisplay}</strong> was due on <strong>{fmtDate(borrower.next_payment_date)}</strong> — <strong>overdue.</strong></>
               : daysUntil === 0
-              ? <>Your payment of <strong>{fmt$(borrower.last_payment_amount)}</strong> is due <strong>today.</strong></>
-              : <>Your next payment of <strong>{fmt$(borrower.last_payment_amount)}</strong> is due on <strong>{fmtDate(borrower.next_payment_date)}</strong> — {daysUntil} day{daysUntil !== 1 ? 's' : ''} away.</>
+              ? <>Your payment of <strong>{amountDueDisplay}</strong> is due <strong>today.</strong></>
+              : <>Your next payment of <strong>{amountDueDisplay}</strong> is due on <strong>{fmtDate(borrower.next_payment_date)}</strong> — {daysUntil} day{daysUntil !== 1 ? 's' : ''} away.</>
             }
           </div>
         </div>
@@ -696,7 +702,7 @@ export default function BorrowerPortal({ onHome }) {
                   ) : (
                     <>
                       <div style={s.payTitle}>Amount due</div>
-                      <div style={s.payBig}>{fmt$(borrower.last_payment_amount)}</div>
+                      <div style={s.payBig}>{amountDueDisplay}</div>
                       <div style={s.payDue}>Due {fmtDate(borrower.next_payment_date)} · Monthly payment</div>
                       {(borrower.last_payment_interest != null || borrower.last_payment_principal != null) && (
                         <div style={{ background: '#1a1a1a', borderRadius: 7, padding: '10px 12px', marginBottom: 14 }}>
