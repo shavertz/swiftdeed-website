@@ -103,14 +103,9 @@ function getAlertConfig(daysUntil) {
 function calcBreakdown(amount, borrower) {
   const principal = parseFloat(borrower.principal_balance) || 0;
   const rate = parseFloat(borrower.interest_rate) || 0;
-  const lastDate = borrower.last_payment_date || borrower.loan_start_date;
-  if (!lastDate) return { interest: 0, principalPortion: 0, balanceAfter: principal };
-  const from = new Date(lastDate + 'T00:00:00');
-  const to = new Date();
-  const days = Math.max(0, Math.floor((to - from) / (1000 * 60 * 60 * 24)));
-  const dailyRate = rate / 100 / 365;
-  const interest = parseFloat((principal * dailyRate * days).toFixed(2));
+  const monthlyInterest = parseFloat((principal * rate / 100 / 12).toFixed(2));
   const paid = parseFloat(amount) || 0;
+  const interest = Math.min(paid, monthlyInterest);
   const principalPortion = parseFloat(Math.max(0, paid - interest).toFixed(2));
   const balanceAfter = parseFloat(Math.max(0, principal - principalPortion).toFixed(2));
   return { interest, principalPortion, balanceAfter };
@@ -124,7 +119,21 @@ function nextMonthDate(fromDate) {
 
 function PaymentModal({ borrower, onClose, onSuccess }) {
   const { user } = useUser();
-  const [amount, setAmount] = useState(String(borrower.last_payment_amount || ''));
+  const monthlyPayment = borrower.monthly_payment ||
+    (borrower.principal_balance && borrower.interest_rate
+      ? Math.round((borrower.principal_balance * (borrower.interest_rate / 100) / 12) * 100) / 100
+      : 0);
+
+  const nextDue = borrower.next_payment_date ? new Date(borrower.next_payment_date + 'T00:00:00') : null;
+  const today2 = new Date();
+  today2.setHours(0,0,0,0);
+  const monthsOverdue = nextDue && nextDue < today2
+    ? Math.max(0, (today2.getFullYear() - nextDue.getFullYear()) * 12 + (today2.getMonth() - nextDue.getMonth()))
+    : 0;
+  const totalToBringCurrent = monthsOverdue > 0 ? parseFloat((monthlyPayment * monthsOverdue).toFixed(2)) : monthlyPayment;
+
+  const [amount, setAmount] = useState(String(monthlyPayment || ''));
+  const [payMode, setPayMode] = useState(monthsOverdue > 1 ? 'delinquent' : 'standard');
   const [step, setStep] = useState('amount'); // amount | bank | confirm | processing | success | error
   const [errorMsg, setErrorMsg] = useState('');
   const [stripeObj, setStripeObj] = useState(null);
@@ -205,41 +214,53 @@ function PaymentModal({ borrower, onClose, onSuccess }) {
     setErrorMsg('');
     try {
       const paymentDate = new Date().toISOString().split('T')[0];
-      const amount = amountNum;
-      const loan = borrower;
-      const interestPortion = breakdown.interest;
+      const months = Math.max(1, Math.floor(amountNum / monthlyPayment));
+      const interestPortion = parseFloat((monthlyPayment * Math.min(1, months) - breakdown.principalPortion).toFixed(2));
       const principalPortion = breakdown.principalPortion;
+      const principalBalanceAfter = parseFloat((borrower.principal_balance - principalPortion).toFixed(2));
+
       const nextPaymentDate = (() => {
-        const d = new Date(loan.next_payment_date);
-        d.setMonth(d.getMonth() + 1);
+        const d = new Date(borrower.next_payment_date + 'T00:00:00');
+        d.setMonth(d.getMonth() + months);
         return d.toISOString().slice(0, 10);
       })();
-      const principalBalanceAfter = parseFloat(loan.principal_balance || 0) - parseFloat(principalPortion || 0);
+
       const updates = {
         last_payment_date: paymentDate,
-        last_payment_amount: amount,
+        last_payment_amount: amountNum,
         next_payment_date: nextPaymentDate,
         principal_balance: principalBalanceAfter,
-        total_interest_paid: parseFloat(loan.total_interest_paid || 0) + parseFloat(interestPortion || 0),
+        total_interest_paid: parseFloat(((borrower.total_interest_paid || 0) + (monthlyPayment * months - principalPortion)).toFixed(2)),
       };
-      const paymentLog = {
-        loan_id_internal: borrower.loan_id_internal,
-        payment_date: paymentDate,
-        amount,
-        method: 'ACH',
-        interest_portion: interestPortion,
-        principal_portion: principalPortion,
-        principal_balance_after: principalBalanceAfter,
-        payment_status: 'current',
-        recorded_by: user?.primaryEmailAddress?.emailAddress || 'borrower',
-      };
+
+      // Build one payment log per month covered
+      const paymentLogs = Array.from({ length: months }, (_, i) => {
+        const periodStart = new Date(borrower.next_payment_date + 'T00:00:00');
+        periodStart.setMonth(periodStart.getMonth() + i);
+        const periodEnd = new Date(periodStart);
+        periodEnd.setMonth(periodEnd.getMonth() + 1);
+        return {
+          loan_id_internal: borrower.loan_id_internal,
+          payment_date: paymentDate,
+          amount: parseFloat(monthlyPayment.toFixed(2)),
+          method: 'ACH',
+          interest_portion: parseFloat((monthlyPayment).toFixed(2)),
+          principal_portion: 0,
+          principal_balance_after: principalBalanceAfter,
+          payment_status: 'paid',
+          recorded_by: user?.primaryEmailAddress?.emailAddress || 'borrower',
+          period_start: periodStart.toISOString().slice(0, 10),
+          period_end: periodEnd.toISOString().slice(0, 10),
+        };
+      });
+
       const res = await fetch('/api/stripe-charge', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           customerId,
           paymentMethodId,
-          amount,
+          amount: amountNum,
           borrowerId: borrower.id,
           loanIdInternal: borrower.loan_id_internal,
           borrowerName: borrower.legal_name,
@@ -249,9 +270,9 @@ function PaymentModal({ borrower, onClose, onSuccess }) {
           principalPortion,
           principalBalanceAfter,
           nextPaymentDate,
-          totalPaymentsMade: (borrower.total_payments_made || 0) + 1,
+          totalPaymentsMade: (borrower.total_payments_made || 0) + months,
           updates,
-          paymentLog,
+          paymentLogs,
         }),
       });
       const data = await res.json();
@@ -290,6 +311,26 @@ function PaymentModal({ borrower, onClose, onSuccess }) {
 
         {(step === 'amount' || step === 'bank' || step === 'confirm') && (
           <div style={s.modalBody}>
+            {monthsOverdue > 1 && (
+              <div style={{ background: '#1a0000', border: '0.5px solid #3a0000', borderLeft: '3px solid #ef4444', borderRadius: 7, padding: '12px 14px', marginBottom: 16 }}>
+                <div style={{ fontSize: 13, fontWeight: 500, color: '#ef4444', marginBottom: 6 }}>
+                  {monthsOverdue} months past due
+                </div>
+                <div style={{ fontSize: 12, color: '#888', marginBottom: 12 }}>
+                  Total to bring current: <strong style={{ color: '#fff' }}>{fmt$(totalToBringCurrent)}</strong>
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    onClick={() => { setAmount(String(totalToBringCurrent)); setPayMode('delinquent'); }}
+                    style={{ flex: 1, background: payMode === 'delinquent' ? '#ef4444' : 'transparent', color: payMode === 'delinquent' ? '#fff' : '#888', border: '0.5px solid #3a0000', borderRadius: 5, padding: '7px 10px', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}
+                  >Pay {fmt$(totalToBringCurrent)} to bring current</button>
+                  <button
+                    onClick={() => { setAmount(String(monthlyPayment)); setPayMode('standard'); }}
+                    style={{ flex: 1, background: payMode === 'standard' ? '#2a2a2a' : 'transparent', color: payMode === 'standard' ? '#fff' : '#555', border: '0.5px solid #2a2a2a', borderRadius: 5, padding: '7px 10px', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}
+                  >Pay one month only</button>
+                </div>
+              </div>
+            )}
 
             {/* Amount */}
             <label style={s.inputLabel}>Payment amount</label>
@@ -323,6 +364,18 @@ function PaymentModal({ borrower, onClose, onSuccess }) {
                   <span style={{ color: '#888' }}>Total</span>
                   <span style={{ color: '#fff', fontWeight: 500 }}>{fmt$(amountNum)}</span>
                 </div>
+              </div>
+            )}
+
+            {monthsOverdue > 0 && amountNum > 0 && !overLimit && (
+              <div style={{ fontSize: 12, color: '#555', marginBottom: 16, padding: '8px 12px', background: '#1a1a1a', borderRadius: 6 }}>
+                {(() => {
+                  const months = Math.floor(amountNum / monthlyPayment);
+                  if (months === 0) return 'This payment covers a partial month.';
+                  const newNextDate = new Date(borrower.next_payment_date + 'T00:00:00');
+                  newNextDate.setMonth(newNextDate.getMonth() + months);
+                  return `This payment covers ${months} month${months !== 1 ? 's' : ''}. Next payment due: ${newNextDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}.`;
+                })()}
               </div>
             )}
 
