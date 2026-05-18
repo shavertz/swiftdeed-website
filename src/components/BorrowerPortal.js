@@ -111,12 +111,6 @@ function calcBreakdown(amount, borrower) {
   return { interest, principalPortion, balanceAfter };
 }
 
-function nextMonthDate(fromDate) {
-  const d = fromDate ? new Date(fromDate + 'T00:00:00') : new Date();
-  d.setMonth(d.getMonth() + 1);
-  return d.toISOString().split('T')[0];
-}
-
 function PaymentModal({ borrower, onClose, onSuccess }) {
   const { user } = useUser();
   const monthlyPayment = borrower.monthly_payment ||
