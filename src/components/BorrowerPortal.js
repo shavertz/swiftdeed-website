@@ -103,11 +103,21 @@ function getAlertConfig(daysUntil) {
 function calcBreakdown(amount, borrower) {
   const principal = parseFloat(borrower.principal_balance) || 0;
   const rate = parseFloat(borrower.interest_rate) || 0;
-  const interest = parseFloat((principal * rate / 100 / 12).toFixed(2));
+  const loanType = String(borrower.loan_type || '').toLowerCase();
+  const isInterestOnly = loanType.includes('interest') || loanType.includes('deed') || loanType.includes('commercial') || !loanType.includes('amortiz');
   const paid = parseFloat(amount) || 0;
+  if (isInterestOnly) {
+    const monthlyInterest = parseFloat((principal * rate / 100 / 12).toFixed(2));
+    const interest = Math.min(paid, monthlyInterest);
+    const principalPortion = parseFloat(Math.max(0, paid - monthlyInterest).toFixed(2));
+    const balanceAfter = parseFloat(Math.max(0, principal - principalPortion).toFixed(2));
+    return { interest, principalPortion, balanceAfter, isInterestOnly: true };
+  }
+  const monthlyInterest = parseFloat((principal * rate / 100 / 12).toFixed(2));
+  const interest = Math.min(paid, monthlyInterest);
   const principalPortion = parseFloat(Math.max(0, paid - interest).toFixed(2));
   const balanceAfter = parseFloat(Math.max(0, principal - principalPortion).toFixed(2));
-  return { interest, principalPortion, balanceAfter };
+  return { interest, principalPortion, balanceAfter, isInterestOnly: false };
 }
 
 function PaymentModal({ borrower, onClose, onSuccess }) {
@@ -208,8 +218,12 @@ function PaymentModal({ borrower, onClose, onSuccess }) {
     try {
       const paymentDate = new Date().toISOString().split('T')[0];
       const months = Math.max(1, Math.floor(amountNum / monthlyPayment));
-      const interestPortion = parseFloat((monthlyPayment * months).toFixed(2));
-      const principalPortion = 0;
+      const loanType = String(borrower.loan_type || '').toLowerCase();
+      const isInterestOnly = loanType.includes('interest') || loanType.includes('deed') || loanType.includes('commercial') || !loanType.includes('amortiz');
+      const principalPortion = isInterestOnly ? 0 : breakdown.principalPortion;
+      const interestPortion = isInterestOnly
+        ? parseFloat((monthlyPayment * months).toFixed(2))
+        : parseFloat((breakdown.interest * months).toFixed(2));
       const principalBalanceAfter = parseFloat((borrower.principal_balance - principalPortion).toFixed(2));
 
       const nextPaymentDate = (() => {
@@ -237,9 +251,9 @@ function PaymentModal({ borrower, onClose, onSuccess }) {
           payment_date: paymentDate,
           amount: parseFloat(monthlyPayment.toFixed(2)),
           method: 'ACH',
-          interest_portion: parseFloat((monthlyPayment).toFixed(2)),
+          interest_portion: parseFloat(monthlyPayment.toFixed(2)),
           principal_portion: 0,
-          principal_balance_after: principalBalanceAfter,
+          principal_balance_after: parseFloat((borrower.principal_balance - principalPortion).toFixed(2)),
           payment_status: 'paid',
           recorded_by: user?.primaryEmailAddress?.emailAddress || 'borrower',
           period_start: periodStart.toISOString().slice(0, 10),
