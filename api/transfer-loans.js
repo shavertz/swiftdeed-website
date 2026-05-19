@@ -8,13 +8,30 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const CLOSING_PROMPT = `You are reading a closing document for a commercial real estate loan. Extract the following fields and return ONLY raw JSON with no markdown or explanation:
 borrower_name, property_address, original_loan_amount, interest_rate, loan_type, maturity_date, loan_origination_date, first_payment_date, monthly_payment, guarantor_name, loan_id.
 Use numbers only for money and rates. Use MM/DD/YYYY for dates. Return null for any field not found.
-If this is a Commercial Guaranty document, the guarantor_name is the individual who is personally guaranteeing the loan — look for language like "personally guarantees", "Guarantor:", or a signature block with an individual's name. Extract that individual's full name as guarantor_name.
+
+CRITICAL - loan_type must reflect the PAYMENT STRUCTURE, not the document type. Use exactly one of these values:
+- "Interest Only" - borrower pays only interest each month, principal does not decrease
+- "Fully Amortizing" - each payment reduces principal and interest on a schedule
+- "Partially Amortizing" - payments reduce principal but a balloon payment remains at maturity
+- "Interest Only with Balloon" - interest-only payments with full principal due at maturity
+
+Do NOT use document names like "Commercial Deed to Secure Debt", "Promissory Note", or "Commercial Loan" as the loan type. Look for language like "interest only", "fully amortizing", "balloon payment", or "monthly installments of principal and interest" to determine the correct payment structure.
+
+If this is a Commercial Guaranty document, the guarantor_name is the individual who is personally guaranteeing the loan - look for language like "personally guarantees", "Guarantor:", or a signature block with an individual's name. Extract that individual's full name as guarantor_name.
 If current_principal_balance is not found, use original_loan_amount as the fallback value for current_principal_balance.
 Extract first_payment_date from the closing documents and use it as a fallback for next_payment_date if no servicer statement provides one.`;
 
 const SERVICER_PROMPT = `You are reading a servicer statement (payoff statement or monthly statement) for a commercial real estate loan. Extract the following fields and return ONLY raw JSON with no markdown or explanation:
-borrower_name, property_address, current_principal_balance, interest_rate, next_payment_date, per_diem, interest_paid_to_date, loan_id, servicer_name.
-Use numbers only for money and rates. Use MM/DD/YYYY for dates. Return null for any field not found.`;
+borrower_name, property_address, current_principal_balance, interest_rate, loan_type, next_payment_date, per_diem, interest_paid_to_date, loan_id, servicer_name.
+Use numbers only for money and rates. Use MM/DD/YYYY for dates. Return null for any field not found.
+
+CRITICAL - loan_type must reflect the PAYMENT STRUCTURE. Use exactly one of these values:
+- "Interest Only"
+- "Fully Amortizing"
+- "Partially Amortizing"
+- "Interest Only with Balloon"
+
+Do NOT use document names as the loan type.`;
 
 const HISTORY_PROMPT = `You are reading a payment history export or spreadsheet for one or more commercial real estate loans. Extract loan-level data when present and an array of payment records. Return ONLY raw JSON with no markdown or explanation.
 Return: { loans: [ { borrower_name, property_address, loan_id, original_loan_amount, current_principal_balance, interest_rate, loan_type, maturity_date, loan_origination_date, monthly_payment, guarantor_name, next_payment_date, per_diem, interest_paid_to_date, payments: [ { date, amount, principal, interest, balance_after } ] } ] }
@@ -339,3 +356,4 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: e.message });
   }
 }
+

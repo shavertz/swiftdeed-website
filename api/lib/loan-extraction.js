@@ -46,6 +46,7 @@ Important:
 - If the document has a main date under the loan number or a "Close Date", return it as loan_origination_date.
 - If the table shows "First Payment Date", return that as next_payment_due_date.
 - If the table shows "Loan Type", return it as loan_type. If it says "Interest Only", return exactly "Interest Only".
+- CRITICAL - loan_type must reflect the PAYMENT STRUCTURE, not the document type. Use exactly one of these values: "Interest Only", "Fully Amortizing", "Partially Amortizing", or "Interest Only with Balloon". Look for language like "interest only", "fully amortizing", "balloon payment", or "monthly installments of principal and interest". Do NOT use document names like "Commercial Deed to Secure Debt" or "Promissory Note" as the loan type.
 - If the loan is interest only and no monthly_payment is stated, leave monthly_payment null.
 - Always extract guarantor_name from "Guarantor", "Guarantor(s)", or the Commercial Guaranty.
 
