@@ -749,13 +749,16 @@ export default function BorrowerPortal({ onHome }) {
           </div>
         ) : (
           <>
-            <div style={s.loanHeader}>
-              <div style={s.loanLabel}>Loan account</div>
-              <div style={s.loanName}>
-                {borrower.legal_name}
-                <span style={s.loanId}> · {borrower.loan_id_internal}</span>
+            <div style={{ padding: '28px 32px 20px 32px', borderBottom: '0.5px solid #1e1e1e' }}>
+              <div style={{ fontSize: 28, fontWeight: 600, color: '#fff', marginBottom: 6, fontFamily: 'inherit' }}>
+                {borrower.loan_id_internal}
               </div>
-              <div style={s.loanAddress}>{borrower.property_address}</div>
+              <div style={{ fontSize: 14, color: '#888', marginBottom: 2 }}>
+                {borrower.legal_name || borrower.borrower_name || 'Borrower'}
+              </div>
+              <div style={{ fontSize: 13, color: '#555' }}>
+                {borrower.property_address}
+              </div>
             </div>
 
             <div style={s.loanBar}>
@@ -954,4 +957,5 @@ export default function BorrowerPortal({ onHome }) {
     </div>
   );
 }
+
 

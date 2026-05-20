@@ -444,7 +444,7 @@ export default function App() {
 
   return (
     <div style={{ background: '#0f0f0f', minHeight: '100vh', fontFamily: 'system-ui, sans-serif' }}>
-      {nav}
+      {page !== 'borrower-portal' && nav}
       {page === 'home' && (
         <HomePage
           activePortalType={isSignedIn ? portalType : null}
