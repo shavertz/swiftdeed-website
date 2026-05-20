@@ -706,15 +706,15 @@ export default function BorrowerPortal({ onHome }) {
         <div style={{ display: 'flex', gap: 10 }}>
           <button
             onClick={() => setActiveTab('profile')}
-            style={{ background: 'transparent', border: '0.5px solid #2a2a2a', color: '#fff', borderRadius: 7, padding: '8px 16px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = '#FFD700'; e.currentTarget.style.color = '#FFD700'; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = '#2a2a2a'; e.currentTarget.style.color = '#fff'; }}
+            style={{ background: 'transparent', border: '0.5px solid #FFD700', color: '#fff', borderRadius: 7, padding: '8px 16px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', transition: 'box-shadow 0.15s' }}
+            onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 0 16px rgba(255, 215, 0, 0.45)'; }}
+            onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; }}
           >My profile</button>
           <button
             onClick={onHome}
-            style={{ background: 'transparent', border: '0.5px solid #2a2a2a', color: '#fff', borderRadius: 7, padding: '8px 16px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = '#FFD700'; e.currentTarget.style.color = '#FFD700'; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = '#2a2a2a'; e.currentTarget.style.color = '#fff'; }}
+            style={{ background: 'transparent', border: '0.5px solid #FFD700', color: '#fff', borderRadius: 7, padding: '8px 16px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', transition: 'box-shadow 0.15s' }}
+            onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 0 16px rgba(255, 215, 0, 0.45)'; }}
+            onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; }}
           >Log out</button>
         </div>
       </div>
