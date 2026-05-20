@@ -749,7 +749,7 @@ export default function BorrowerPortal({ onHome }) {
           </div>
         ) : (
           <>
-            <div style={{ padding: '28px 32px 20px 32px', borderBottom: '0.5px solid #1e1e1e' }}>
+            <div style={{ padding: '28px 0 20px 0', borderBottom: '0.5px solid #1e1e1e' }}>
               <div style={{ fontSize: 28, fontWeight: 600, color: '#fff', marginBottom: 6, fontFamily: 'inherit' }}>
                 {borrower.loan_id_internal}
               </div>
