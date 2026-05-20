@@ -20,7 +20,7 @@ const s = {
   lsVal: { fontSize: 15, fontWeight: 500, color: '#fff' },
   grid2: { display: 'grid', gridTemplateColumns: '1fr 2fr 2fr', gap: 20, marginBottom: 20 },
   tabBar: { display: 'flex', gap: 0, borderBottom: '0.5px solid #2a2a2a', marginBottom: 20 },
-  tab: (active) => ({ background: 'none', border: 'none', borderBottom: active ? '2px solid #D4A017' : '2px solid transparent', color: active ? '#D4A017' : '#555', fontSize: 13, padding: '10px 20px', cursor: 'pointer', fontFamily: 'inherit', transition: 'color 0.15s' }),
+  tab: (active) => ({ background: 'none', border: 'none', borderBottom: active ? '2px solid #FFD700' : '2px solid transparent', color: active ? '#FFD700' : '#555', fontSize: 13, padding: '10px 20px', cursor: 'pointer', fontFamily: 'inherit', transition: 'color 0.15s' }),
   card: { background: '#111', border: '0.5px solid #2a2a2a', borderRadius: 10, overflow: 'hidden' },
   cardHead: { padding: '14px 18px', borderBottom: '0.5px solid #1e1e1e', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   cardTitle: { fontSize: 13, fontWeight: 500, color: '#fff' },
@@ -33,13 +33,13 @@ const s = {
   payTitle: { fontSize: 12, color: '#555', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 },
   payBig: { fontSize: 32, fontWeight: 500, color: '#fff', marginBottom: 4 },
   payDue: { fontSize: 13, color: '#888', marginBottom: 16 },
-  btnPay: { width: '100%', background: '#D4A017', color: '#0f0f0f', border: 'none', borderRadius: 7, padding: 12, fontSize: 14, fontWeight: 500, cursor: 'pointer', marginBottom: 8, transition: 'box-shadow 0.15s' },
+  btnPay: { width: '100%', background: '#FFD700', color: '#0f0f0f', border: 'none', borderRadius: 7, padding: 12, fontSize: 14, fontWeight: 500, cursor: 'pointer', marginBottom: 8, transition: 'box-shadow 0.15s' },
   btnAutopay: { width: '100%', background: 'transparent', color: '#fff', border: '0.5px solid #FFD700', borderRadius: 7, padding: 10, fontSize: 13, cursor: 'pointer', transition: 'all 0.15s' },
   divider: { border: 'none', borderTop: '0.5px solid #1e1e1e', margin: '14px 0' },
   accrualBar: { background: '#1a1800', border: '0.5px solid #3a3000', borderRadius: 8, padding: '14px 16px', marginTop: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   accLabel: { fontSize: 12, color: '#888' },
   accSub: { fontSize: 11, color: '#555', marginTop: 2 },
-  accVal: { fontSize: 15, fontWeight: 500, color: '#D4A017', textAlign: 'right' },
+  accVal: { fontSize: 15, fontWeight: 500, color: '#FFD700', textAlign: 'right' },
   accValSub: { fontSize: 11, color: '#555', marginTop: 2, textAlign: 'right' },
   infoRow: { display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '0.5px solid #1a1a1a', alignItems: 'center' },
   irLabel: { fontSize: 13, color: '#555' },
@@ -47,7 +47,7 @@ const s = {
   wireRow: { display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '0.5px solid #1a1a1a', alignItems: 'center' },
   wireLabel: { fontSize: 13, color: '#555' },
   wireVal: { fontSize: 13, color: '#ccc', textAlign: 'right' },
-  wireRef: { fontSize: 13, color: '#D4A017', textAlign: 'right', fontFamily: 'monospace' },
+  wireRef: { fontSize: 13, color: '#FFD700', textAlign: 'right', fontFamily: 'monospace' },
   wireNote: { fontSize: 12, color: '#444', marginTop: 14, lineHeight: 1.6, background: '#1a1800', border: '0.5px solid #3a3000', borderRadius: 6, padding: '10px 12px' },
   emptyWrap: { textAlign: 'center', padding: '80px 40px' },
   emptyTitle: { fontSize: 18, fontWeight: 500, color: '#fff', marginBottom: 12 },
@@ -67,7 +67,7 @@ const s = {
   breakdownRow: { display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 5 },
   breakdownTotal: { borderTop: '0.5px solid #2a2a2a', marginTop: 6, paddingTop: 6, display: 'flex', justifyContent: 'space-between', fontSize: 12 },
   wireWarning: { background: '#0f1a0f', border: '0.5px solid #1a3a1a', borderRadius: 7, padding: '10px 12px', marginBottom: 16, fontSize: 12, color: '#555', lineHeight: 1.6 },
-  btnConfirm: { width: '100%', background: '#D4A017', color: '#0f0f0f', border: 'none', borderRadius: 7, padding: 13, fontSize: 14, fontWeight: 500, cursor: 'pointer', marginBottom: 8 },
+  btnConfirm: { width: '100%', background: '#FFD700', color: '#0f0f0f', border: 'none', borderRadius: 7, padding: 13, fontSize: 14, fontWeight: 500, cursor: 'pointer', marginBottom: 8 },
   btnConfirmDisabled: { width: '100%', background: '#2a2a2a', color: '#555', border: 'none', borderRadius: 7, padding: 13, fontSize: 14, fontWeight: 500, cursor: 'not-allowed', marginBottom: 8 },
   btnCancel: { width: '100%', background: 'transparent', color: '#555', border: '0.5px solid #2a2a2a', borderRadius: 7, padding: 11, fontSize: 13, cursor: 'pointer' },
   successBox: { textAlign: 'center', padding: '32px 20px' },
@@ -100,7 +100,7 @@ function getAlertConfig(daysUntil) {
   if (daysUntil < 0) return { bg: '#1a0000', border: '#3a0000', dot: '#ef4444', text: '#ef4444' };
   if (daysUntil === 0) return { bg: '#1a0000', border: '#3a0000', dot: '#ef4444', text: '#ef4444' };
   if (daysUntil <= 7) return { bg: '#1a0d00', border: '#3a1a00', dot: '#f97316', text: '#f97316' };
-  return { bg: '#1a1800', border: '#3a3000', dot: '#D4A017', text: '#D4A017' };
+  return { bg: '#1a1800', border: '#3a3000', dot: '#FFD700', text: '#FFD700' };
 }
 
 function calcBreakdown(amount, borrower) {
@@ -458,7 +458,7 @@ function DonutChart({ principal, interestPaid, original }) {
           strokeDashoffset={-remainingDash} transform="rotate(-90 100 100)"/>
       )}
       {interestPct > 0.1 && (
-        <circle cx="100" cy="100" r="75" fill="none" stroke="#D4A017" strokeWidth="22"
+        <circle cx="100" cy="100" r="75" fill="none" stroke="#FFD700" strokeWidth="22"
           strokeDasharray={`${interestDash} ${circumference}`}
           strokeDashoffset={-(remainingDash + principalDash)} transform="rotate(-90 100 100)"/>
       )}
@@ -546,7 +546,7 @@ function PaymentHistoryCard({ loanIdInternal }) {
     fetchPayments();
   }, [loanIdInternal]);
 
-  const headStyle = { fontSize: 10, color: '#D4A017', textTransform: 'uppercase', letterSpacing: 0.6, padding: '8px 8px', borderBottom: '0.5px solid #2a2a2a', textAlign: 'right' };
+  const headStyle = { fontSize: 10, color: '#FFD700', textTransform: 'uppercase', letterSpacing: 0.6, padding: '8px 8px', borderBottom: '0.5px solid #2a2a2a', textAlign: 'right' };
   const colStyle = { fontSize: 12, color: '#555', padding: '10px 8px', borderBottom: '0.5px solid #1a1a1a' };
   const valStyle = { fontSize: 12, color: '#ccc', padding: '10px 8px', borderBottom: '0.5px solid #1a1a1a', textAlign: 'right' };
 
@@ -699,6 +699,22 @@ export default function BorrowerPortal({ onHome }) {
 
   return (
     <div style={s.page}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 32px', borderBottom: '0.5px solid #1e1e1e', background: '#0f0f0f' }}>
+        <div style={{ fontSize: 18, fontWeight: 500, color: '#fff' }}>
+          Swift<span style={{ color: '#FFD700' }}>Deed</span>
+        </div>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button
+            onClick={() => setActiveTab('profile')}
+            style={{ background: 'transparent', border: '0.5px solid #2a2a2a', color: '#fff', borderRadius: 7, padding: '8px 16px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}
+          >My profile</button>
+          <button
+            onClick={onHome}
+            style={{ background: 'transparent', border: '0.5px solid #2a2a2a', color: '#fff', borderRadius: 7, padding: '8px 16px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}
+          >Log out</button>
+        </div>
+      </div>
+
       {showPaymentModal && borrower && (
         <PaymentModal
           borrower={borrower}
@@ -728,7 +744,7 @@ export default function BorrowerPortal({ onHome }) {
           <div style={s.emptyWrap}>
             <div style={s.emptyTitle}>Your loan hasn't been processed yet</div>
             <div style={s.emptyText}>
-              Once your lender submits your loan documents to SwiftDeed, your account will be activated and you'll receive a confirmation email at <strong style={{ color: '#D4A017' }}>{email}</strong>.
+              Once your lender submits your loan documents to SwiftDeed, your account will be activated and you'll receive a confirmation email at <strong style={{ color: '#FFD700' }}>{email}</strong>.
             </div>
           </div>
         ) : (
@@ -745,7 +761,7 @@ export default function BorrowerPortal({ onHome }) {
             <div style={s.loanBar}>
               <div style={s.loanStat(false)}>
                 <div style={s.lsLabel}>Principal balance</div>
-                <div style={{ ...s.lsVal, color: isPaidOff ? '#4a9a4a' : '#D4A017' }}>{isPaidOff ? '$0.00' : fmt$(borrower.principal_balance)}</div>
+                <div style={{ ...s.lsVal, color: isPaidOff ? '#4a9a4a' : '#FFD700' }}>{isPaidOff ? '$0.00' : fmt$(borrower.principal_balance)}</div>
               </div>
               <div style={s.loanStat(false)}>
                 <div style={s.lsLabel}>Interest rate</div>
@@ -876,12 +892,12 @@ export default function BorrowerPortal({ onHome }) {
                       <span style={{ color: '#888' }}>{fmt$(borrower.original_loan_amount ? borrower.original_loan_amount - borrower.principal_balance : null)}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, color: '#666' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><div style={{ width: 9, height: 9, borderRadius: '50%', background: '#D4A017', flexShrink: 0 }}></div>Interest paid</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><div style={{ width: 9, height: 9, borderRadius: '50%', background: '#FFD700', flexShrink: 0 }}></div>Interest paid</div>
                       <span style={{ color: '#888' }}>{fmt$(borrower.total_interest_paid)}</span>
                     </div>
                   </div>
                   <div style={s.statGrid}>
-                    <div style={s.statBox}><div style={s.sbLabel}>Principal balance</div><div style={{ ...s.sbVal, color: '#D4A017' }}>{fmt$(borrower.principal_balance)}</div></div>
+                    <div style={s.statBox}><div style={s.sbLabel}>Principal balance</div><div style={{ ...s.sbVal, color: '#FFD700' }}>{fmt$(borrower.principal_balance)}</div></div>
                     <div style={s.statBox}><div style={s.sbLabel}>Interest rate</div><div style={s.sbVal}>{fmtPct(borrower.interest_rate)}</div></div>
                   </div>
                 </div>
@@ -914,7 +930,7 @@ export default function BorrowerPortal({ onHome }) {
                     </div>
                     <div style={{ ...s.infoRow, borderBottom: 'none' }}>
                       <span style={s.irLabel}>Servicer</span>
-                      <span style={{ ...s.irVal, color: '#D4A017' }}>SwiftDeed LLC</span>
+                      <span style={{ ...s.irVal, color: '#FFD700' }}>SwiftDeed LLC</span>
                     </div>
                   </div>
                 </div>
@@ -938,3 +954,4 @@ export default function BorrowerPortal({ onHome }) {
     </div>
   );
 }
+
