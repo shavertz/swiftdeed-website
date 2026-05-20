@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useUser } from '@clerk/clerk-react';
+import BorrowerProfilePage from './BorrowerProfilePage';
 
 const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY;
@@ -929,21 +930,7 @@ export default function BorrowerPortal({ onHome }) {
               <LoanDocumentsCard docUrls={docUrls} />
             )}
             {activeTab === 'profile' && (
-              <div style={{ background: '#111', border: '0.5px solid #2a2a2a', borderRadius: 10, padding: 24, maxWidth: 480 }}>
-                <div style={{ fontSize: 13, fontWeight: 500, color: '#fff', marginBottom: 16 }}>Account</div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '0.5px solid #1a1a1a', fontSize: 13 }}>
-                  <span style={{ color: '#555' }}>Email</span>
-                  <span style={{ color: '#ccc' }}>{email}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '0.5px solid #1a1a1a', fontSize: 13 }}>
-                  <span style={{ color: '#555' }}>Loan ID</span>
-                  <span style={{ color: '#4a90b8', fontFamily: 'monospace', fontSize: 12 }}>{borrower.loan_id_internal}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', fontSize: 13 }}>
-                  <span style={{ color: '#555' }}>Servicer</span>
-                  <span style={{ color: '#D4A017' }}>SwiftDeed LLC</span>
-                </div>
-              </div>
+              <BorrowerProfilePage onBack={() => setActiveTab('overview')} />
             )}
           </>
         )}

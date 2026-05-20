@@ -8,7 +8,6 @@ import BorrowerOnboarding from './components/BorrowerOnboarding';
 import LenderOnboarding from './components/LenderOnboarding';
 import TermsPage from './components/TermsPage';
 import PrivacyPage from './components/PrivacyPage';
-import BorrowerProfilePage from './components/BorrowerProfilePage';
 import './App.css';
 
 const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
@@ -65,13 +64,6 @@ const LenderIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFD700" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
     <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
     <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
-  </svg>
-);
-
-const ProfileIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-    <circle cx="12" cy="7" r="4"/>
   </svg>
 );
 
@@ -287,12 +279,6 @@ export default function App() {
             {portalType === 'borrower' ? (
               <>
                 <button
-                  onClick={() => setPage('borrower-profile')}
-                  title="Profile"
-                  style={{ background: 'transparent', color: '#fff', fontSize: 14, padding: '7px 10px', borderRadius: 6, border: '0.5px solid #FFD700', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}
-                  {...hov.outline}
-                ><ProfileIcon /></button>
-                <button
                   onClick={() => routeByEmail(user.primaryEmailAddress?.emailAddress)}
                   style={{ background: 'transparent', color: '#fff', fontSize: 14, fontWeight: 500, padding: '8px 18px', borderRadius: 6, border: '0.5px solid #FFD700', cursor: 'pointer', transition: 'all 0.15s' }}
                   {...hov.outline}
@@ -471,7 +457,6 @@ export default function App() {
       {page === 'auth' && (ACTIVATION_TOKEN ? activationAuthPage : standardAuthPage)}
       {page === 'request' && <RequestForm />}
       {page === 'portal' && <Portal onSubmitRequest={() => setPage('request')} resetToken={portalResetToken} />}
-      {page === 'borrower-profile' && <BorrowerProfilePage onBack={() => routeByEmail(user?.primaryEmailAddress?.emailAddress)} />}
       {page === 'borrower-portal' && <BorrowerPortal onHome={() => setPage('home')} />}
       {page === 'borrower-onboarding' && (
         <BorrowerOnboarding
