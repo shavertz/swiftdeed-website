@@ -707,14 +707,14 @@ export default function BorrowerPortal({ onHome }) {
           <button
             onClick={() => setActiveTab('profile')}
             style={{ background: 'transparent', border: '0.5px solid #FFD700', color: '#fff', borderRadius: 7, padding: '8px 16px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', transition: 'box-shadow 0.15s' }}
-            onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 0 16px rgba(255, 215, 0, 0.45)'; }}
-            onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; }}
+            onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 0 16px rgba(255, 215, 0, 0.45)'; e.currentTarget.style.color = '#FFD700'; }}
+            onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.color = '#fff'; }}
           >My profile</button>
           <button
             onClick={onHome}
             style={{ background: 'transparent', border: '0.5px solid #FFD700', color: '#fff', borderRadius: 7, padding: '8px 16px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', transition: 'box-shadow 0.15s' }}
-            onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 0 16px rgba(255, 215, 0, 0.45)'; }}
-            onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; }}
+            onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 0 16px rgba(255, 215, 0, 0.45)'; e.currentTarget.style.color = '#FFD700'; }}
+            onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.color = '#fff'; }}
           >Log out</button>
         </div>
       </div>
