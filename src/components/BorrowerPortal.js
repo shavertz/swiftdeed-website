@@ -706,11 +706,11 @@ export default function BorrowerPortal({ onHome }) {
         <div style={{ display: 'flex', gap: 10 }}>
           <button
             onClick={() => setActiveTab('profile')}
-            style={{ background: 'transparent', border: '0.5px solid #FFD700', color: '#fff', borderRadius: 7, padding: '8px 16px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}
+            style={{ background: 'transparent', border: '0.5px solid #2a2a2a', color: '#fff', borderRadius: 7, padding: '8px 16px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}
           >My profile</button>
           <button
             onClick={onHome}
-            style={{ background: 'transparent', border: '0.5px solid #FFD700', color: '#fff', borderRadius: 7, padding: '8px 16px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}
+            style={{ background: 'transparent', border: '0.5px solid #2a2a2a', color: '#fff', borderRadius: 7, padding: '8px 16px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}
           >Log out</button>
         </div>
       </div>
