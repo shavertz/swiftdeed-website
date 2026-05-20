@@ -768,6 +768,7 @@ export default function BorrowerPortal({ onHome }) {
               <button style={s.tab(activeTab === 'overview')} onClick={() => setActiveTab('overview')}>Overview</button>
               <button style={s.tab(activeTab === 'payments')} onClick={() => setActiveTab('payments')}>Payments</button>
               <button style={s.tab(activeTab === 'documents')} onClick={() => setActiveTab('documents')}>Documents</button>
+              <button style={s.tab(activeTab === 'profile')} onClick={() => setActiveTab('profile')}>Profile</button>
             </div>
 
             {activeTab === 'overview' && (
@@ -926,6 +927,23 @@ export default function BorrowerPortal({ onHome }) {
             )}
             {activeTab === 'documents' && (
               <LoanDocumentsCard docUrls={docUrls} />
+            )}
+            {activeTab === 'profile' && (
+              <div style={{ background: '#111', border: '0.5px solid #2a2a2a', borderRadius: 10, padding: 24, maxWidth: 480 }}>
+                <div style={{ fontSize: 13, fontWeight: 500, color: '#fff', marginBottom: 16 }}>Account</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '0.5px solid #1a1a1a', fontSize: 13 }}>
+                  <span style={{ color: '#555' }}>Email</span>
+                  <span style={{ color: '#ccc' }}>{email}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '0.5px solid #1a1a1a', fontSize: 13 }}>
+                  <span style={{ color: '#555' }}>Loan ID</span>
+                  <span style={{ color: '#4a90b8', fontFamily: 'monospace', fontSize: 12 }}>{borrower.loan_id_internal}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', fontSize: 13 }}>
+                  <span style={{ color: '#555' }}>Servicer</span>
+                  <span style={{ color: '#D4A017' }}>SwiftDeed LLC</span>
+                </div>
+              </div>
             )}
           </>
         )}
