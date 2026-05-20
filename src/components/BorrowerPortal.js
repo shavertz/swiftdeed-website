@@ -14,7 +14,7 @@ const s = {
   loanName: { fontSize: 20, fontWeight: 500, color: '#fff' },
   loanId: { fontSize: 14, color: '#555', fontWeight: 400 },
   loanAddress: { fontSize: 13, color: '#555', marginTop: 2 },
-  loanBar: { display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', border: '0.5px solid #2a2a2a', borderRadius: 10, overflow: 'hidden', marginBottom: 24 },
+  loanBar: { display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', border: '0.5px solid #2a2a2a', borderRadius: 10, overflow: 'hidden', marginTop: 0, marginBottom: 24, padding: '0 32px' },
   loanStat: (last) => ({ padding: '16px 18px', borderRight: last ? 'none' : '0.5px solid #1e1e1e', background: '#111' }),
   lsLabel: { fontSize: 11, color: '#555', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px' },
   lsVal: { fontSize: 15, fontWeight: 500, color: '#fff' },
