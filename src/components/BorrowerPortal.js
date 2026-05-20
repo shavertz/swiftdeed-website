@@ -707,10 +707,14 @@ export default function BorrowerPortal({ onHome }) {
           <button
             onClick={() => setActiveTab('profile')}
             style={{ background: 'transparent', border: '0.5px solid #2a2a2a', color: '#fff', borderRadius: 7, padding: '8px 16px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = '#FFD700'; e.currentTarget.style.color = '#FFD700'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = '#2a2a2a'; e.currentTarget.style.color = '#fff'; }}
           >My profile</button>
           <button
             onClick={onHome}
             style={{ background: 'transparent', border: '0.5px solid #2a2a2a', color: '#fff', borderRadius: 7, padding: '8px 16px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = '#FFD700'; e.currentTarget.style.color = '#FFD700'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = '#2a2a2a'; e.currentTarget.style.color = '#fff'; }}
           >Log out</button>
         </div>
       </div>
