@@ -18,6 +18,8 @@ const s = {
   lsLabel: { fontSize: 11, color: '#555', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px' },
   lsVal: { fontSize: 15, fontWeight: 500, color: '#fff' },
   grid2: { display: 'grid', gridTemplateColumns: '1fr 2fr 2fr', gap: 20, marginBottom: 20 },
+  tabBar: { display: 'flex', gap: 0, borderBottom: '0.5px solid #2a2a2a', marginBottom: 20 },
+  tab: (active) => ({ background: 'none', border: 'none', borderBottom: active ? '2px solid #D4A017' : '2px solid transparent', color: active ? '#D4A017' : '#555', fontSize: 13, padding: '10px 20px', cursor: 'pointer', fontFamily: 'inherit', transition: 'color 0.15s' }),
   card: { background: '#111', border: '0.5px solid #2a2a2a', borderRadius: 10, overflow: 'hidden' },
   cardHead: { padding: '14px 18px', borderBottom: '0.5px solid #1e1e1e', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   cardTitle: { fontSize: 13, fontWeight: 500, color: '#fff' },
@@ -640,6 +642,7 @@ export default function BorrowerPortal({ onHome }) {
   const [borrower, setBorrower] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [activeTab, setActiveTab] = useState('overview');
 
   const fetchBorrower = useCallback(async () => {
     if (!user) return;
@@ -761,6 +764,13 @@ export default function BorrowerPortal({ onHome }) {
               </div>
             </div>
 
+            <div style={s.tabBar}>
+              <button style={s.tab(activeTab === 'overview')} onClick={() => setActiveTab('overview')}>Overview</button>
+              <button style={s.tab(activeTab === 'payments')} onClick={() => setActiveTab('payments')}>Payments</button>
+              <button style={s.tab(activeTab === 'documents')} onClick={() => setActiveTab('documents')}>Documents</button>
+            </div>
+
+            {activeTab === 'overview' && (
             <div style={s.grid2}>
               {/* Payment card */}
               <div style={s.card}>
@@ -909,9 +919,14 @@ export default function BorrowerPortal({ onHome }) {
                 <WireInstructionsCard loanIdInternal={borrower.loan_id_internal} />
               </div>
             </div>
+            )}
 
-            <PaymentHistoryCard loanIdInternal={borrower.loan_id_internal} />
-            <LoanDocumentsCard docUrls={docUrls} />
+            {activeTab === 'payments' && (
+              <PaymentHistoryCard loanIdInternal={borrower.loan_id_internal} />
+            )}
+            {activeTab === 'documents' && (
+              <LoanDocumentsCard docUrls={docUrls} />
+            )}
           </>
         )}
       </div>
